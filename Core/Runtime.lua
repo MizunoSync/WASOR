@@ -5,6 +5,19 @@ local S = State.S
 local Utils = VH.Utils
 local UI = VH.UI
 
+local themeToggles = UI.themeToggles
+local themeHeaders = UI.themeHeaders
+local themeFills = UI.themeFills
+local themeTexts = UI.themeTexts
+
+local hudWatermark = UI.hudWatermark
+local hudCoords = UI.hudCoords
+local hudServerAge = UI.hudServerAge
+local hudArrayListFrame = UI.hudArrayListFrame
+
+local rowHomeFPS = State.rowHomeFPS
+local rowHomePing = State.rowHomePing
+
 local Players = Services.Players
 local LP = Services.LP
 local Mouse = Services.Mouse
@@ -881,7 +894,7 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
     
     local request = (http and http.request) or http_request or (syn and syn.request)
 
-    clearNetworkTags = function()
+    VH.clearNetworkTags = function()
         for p, bill in pairs(networkTagsPool) do
             pcall(function() bill:Destroy() end)
         end
@@ -1163,5 +1176,3 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
     runNetworkTagsSync()
 
 print("[WeAreSkidding] Custom GUI loaded successfully!")
-
-
