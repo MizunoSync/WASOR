@@ -904,6 +904,15 @@ UI.InitializeUI = function()
     
     selectTab("Modules")
     UI.applyThemeColor(S.ThemeColor or "Purple")
+    
+    UI.hudWatermark = hudWatermark
+    UI.hudCoords = hudCoords
+    UI.hudServerAge = hudServerAge
+    UI.hudArrayListFrame = hudArrayListFrame
+    UI.themeToggles = themeToggles
+    UI.themeHeaders = themeHeaders
+    UI.themeFills = themeFills
+    UI.themeTexts = themeTexts
 end
 
 
