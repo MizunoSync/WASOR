@@ -71,7 +71,7 @@ registerModule("Render", "Network User Tags", 440, 50, true, S.NetworkTags, func
     S.NetworkTags = v
     if networkUsersHUD then networkUsersHUD.Visible = v end
     if not v then
-        clearNetworkTags()
+        if VH.clearNetworkTags then VH.clearNetworkTags() end
     end
     saveConfig()
 end)
