@@ -1,7 +1,7 @@
 _G.VoidHub = {}
 
 local GITHUB_USERNAME = "MizunoSync"
-local GITHUB_REPO = "VoidUtilityHub"
+local GITHUB_REPO = "WASOR"
 local GITHUB_BRANCH = "main"
 
 local BASE_URL = string.format("https://raw.githubusercontent.com/%s/%s/%s/", GITHUB_USERNAME, GITHUB_REPO, GITHUB_BRANCH)
