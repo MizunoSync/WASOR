@@ -40,6 +40,10 @@ local stuckTime = 0
 local jumpDebounce = 0
 local lastPathRecalcTime = 0
 
+-- Target Lock Hysteresis
+local currentLockTarget = nil
+local lastVisibleTargetTime = 0
+
 -- Drawing pool
 local pathLines = {}
 local waypointCircles = {}
@@ -64,36 +68,6 @@ local function clearDrawings()
     end
 end
 
--- Helper to draw 3D circles projected onto the viewport
-local function updateCircle3D(circle, center3D, radius)
-    local points = {}
-    local steps = 8
-    local onScreenCount = 0
-    
-    for i = 0, steps - 1 do
-        local angle = (i / steps) * math.pi * 2
-        local offset = Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
-        local p3D = center3D + offset
-        local p2D, onScreen = Camera:WorldToViewportPoint(p3D)
-        if onScreen then
-            onScreenCount = onScreenCount + 1
-        end
-        table.insert(points, Vector2.new(p2D.X, p2D.Y))
-    end
-    
-    if onScreenCount > 0 then
-        circle.Visible = true
-        circle.PointA = points[1]
-        circle.PointB = points[2]
-        circle.PointC = points[3]
-        circle.PointD = points[4]
-        -- Expand outer bounds dynamically if needed or just use standard Quad Drawing
-        return true
-    end
-    circle.Visible = false
-    return false
-end
-
 local function drawPath(waypoints, startIndex)
     clearDrawings()
     if not waypoints or #waypoints == 0 then return end
@@ -104,19 +78,25 @@ local function drawPath(waypoints, startIndex)
     for i = startIndex, #waypoints do
         local wp = waypoints[i]
         if wp then
-            -- Draw 3D Circle on the ground (using a Quadrilateral drawing component for visual highlights)
-            local circ = waypointCircles[circleIndex]
-            if not circ then
-                circ = Drawing.new("Quad")
-                circ.Thickness = 1.5
-                circ.Filled = false
-                circ.Transparency = 0.65
-                waypointCircles[circleIndex] = circ
-            end
-            
-            circ.Color = (i == startIndex) and Color3.fromRGB(50, 205, 50) or (State.currentThemeColor or Color3.fromRGB(141, 47, 196))
-            local success = updateCircle3D(circ, wp.Position, 2.0)
-            if success then
+            local pos, onScreen = Camera:WorldToViewportPoint(wp.Position)
+            if onScreen then
+                local circ = waypointCircles[circleIndex]
+                if not circ then
+                    circ = Drawing.new("Circle")
+                    circ.Thickness = 1.5
+                    circ.Filled = false
+                    circ.Transparency = 0.7
+                    waypointCircles[circleIndex] = circ
+                end
+                
+                local dist = (wp.Position - Camera.CFrame.Position).Magnitude
+                local radius = math.clamp(120 / math.max(dist, 1), 3, 20)
+                
+                circ.Color = (i == startIndex) and Color3.fromRGB(50, 205, 50) or (State.currentThemeColor or Color3.fromRGB(141, 47, 196))
+                circ.Position = Vector2.new(pos.X, pos.Y)
+                circ.Radius = radius
+                circ.Visible = true
+                
                 circleIndex = circleIndex + 1
             end
         end
@@ -200,6 +180,22 @@ local function isAimingAtMe(p, myHRP)
     return false
 end
 
+local function isTargetValid(p)
+    if not p or p.Parent ~= Players then return false end
+    if S.AutoplayTeamCheck and p.Team == LP.Team then return false end
+    if S.AutoplayFriendCheck and checkFriendship(p.UserId) then return false end
+    local char = p.Character
+    local hrp = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char.PrimaryPart)
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hrp and hum and hum.Health > 0 then
+        local myHRP = getHRP()
+        if myHRP and (hrp.Position - myHRP.Position).Magnitude <= S.AutoplayRange then
+            return true
+        end
+    end
+    return false
+end
+
 local function getBestTarget()
     local myHRP = getHRP()
     if not myHRP then return nil end
@@ -229,6 +225,15 @@ local function getBestTarget()
 
     -- 1. Prioritize attackers (people aiming at us)
     if #attackers > 0 then
+        -- If our current locked target is already an attacker, stick to them
+        if currentLockTarget then
+            for _, entry in ipairs(attackers) do
+                if entry.player == currentLockTarget then
+                    return currentLockTarget
+                end
+            end
+        end
+
         local best = nil
         local bestVal = math.huge
         for _, entry in ipairs(attackers) do
@@ -244,10 +249,16 @@ local function getBestTarget()
                 end
             end
         end
+        currentLockTarget = best
         return best
     end
 
-    -- 2. Fallback to normal close targets
+    -- 2. Stickiness: If we have a valid target we are already lock-tracking, stick to them
+    if currentLockTarget and isTargetValid(currentLockTarget) then
+        return currentLockTarget
+    end
+
+    -- 3. Fallback to normal close targets
     if #closePlayers > 0 then
         local best = nil
         local bestVal = math.huge
@@ -264,9 +275,11 @@ local function getBestTarget()
                 end
             end
         end
+        currentLockTarget = best
         return best
     end
 
+    currentLockTarget = nil
     return nil
 end
 
@@ -394,6 +407,7 @@ local function stopAutoplay()
     activeWaypoints = {}
     lastMoveToPos = nil
     lastPosition = nil
+    currentLockTarget = nil
     stuckTime = 0
     clearDrawings()
     for _, line in ipairs(pathLines) do
@@ -415,6 +429,7 @@ local function startAutoplay()
     
     lastPositionCheckTime = tick()
     stuckTime = 0
+    lastVisibleTargetTime = 0
 
     autoplayConn = RunService.Heartbeat:Connect(function()
         if not S.AutoplayBot then
@@ -422,7 +437,7 @@ local function startAutoplay()
             return
         end
 
-        pcall(function()
+        local ok, err = pcall(function()
             local char = getChar()
             local hum = getHum()
             local myHRP = getHRP()
@@ -430,6 +445,25 @@ local function startAutoplay()
 
             local target = activeTarget
             local targetHRP = target and target.Character and (target.Character:FindFirstChild("HumanoidRootPart") or target.Character:FindFirstChild("Torso") or target.Character.PrimaryPart)
+
+            -- Stuck/Wall check logic (checks movement speed over time)
+            local currentPos = myHRP.Position
+            if lastPosition then
+                local deltaCheck = tick() - lastPositionCheckTime
+                if deltaCheck >= 0.5 then
+                    local distTraveled = (Vector3.new(currentPos.X, lastPosition.Y, currentPos.Z) - lastPosition).Magnitude
+                    if distTraveled < 1.8 then
+                        stuckTime = stuckTime + deltaCheck
+                    else
+                        stuckTime = 0
+                    end
+                    lastPosition = currentPos
+                    lastPositionCheckTime = tick()
+                end
+            else
+                lastPosition = currentPos
+                lastPositionCheckTime = tick()
+            end
 
             -- Determine movement scan direction for raycast detection rather than camera look direction
             local scanDir = myHRP.CFrame.LookVector
@@ -453,25 +487,6 @@ local function startAutoplay()
                 yDiff = targetWP.Position.Y - myHRP.Position.Y
             end
 
-            -- Stuck/Wall check logic (checks movement speed over time)
-            local currentPos = myHRP.Position
-            if lastPosition then
-                local deltaCheck = tick() - lastPositionCheckTime
-                if deltaCheck >= 0.5 then
-                    local distTraveled = (Vector3.new(currentPos.X, lastPosition.Y, currentPos.Z) - lastPosition).Magnitude
-                    if distTraveled < 1.8 then
-                        stuckTime = stuckTime + deltaCheck
-                    else
-                        stuckTime = 0
-                    end
-                    lastPosition = currentPos
-                    lastPositionCheckTime = tick()
-                end
-            else
-                lastPosition = currentPos
-                lastPositionCheckTime = tick()
-            end
-
             -- Force Jumps if stuck on objects or climbing ladders/trusses, or trying to drop into a hole
             if stuckTime >= 1.0 and tick() - jumpDebounce > 0.4 then
                 hum.Jump = true
@@ -485,30 +500,40 @@ local function startAutoplay()
             end
 
             -- 1. Auto Aim, Shoot, & Reload (Smooth Aimlock)
+            local isAiming = false
             if target and targetHRP then
                 local dist = (targetHRP.Position - myHRP.Position).Magnitude
                 local inRange = (dist <= S.AutoplayRange)
                 local hasLOS = checkLineOfSight(targetHRP)
+                
+                if hasLOS then
+                    lastVisibleTargetTime = tick()
+                end
+                
+                local targetIsRecent = (tick() - lastVisibleTargetTime) < 0.5
 
-                if S.AutoplayShoot and inRange and hasLOS then
-                    -- Aimlock camera rotation targeting Head
+                if S.AutoplayShoot and inRange and (hasLOS or targetIsRecent) then
+                    isAiming = true
+                    -- Aimlock camera rotation targeting Head smoothly
                     local targetHead = target.Character:FindFirstChild("Head") or targetHRP
                     local goalCF = CFrame.new(Camera.CFrame.Position, targetHead.Position)
                     Camera.CFrame = Camera.CFrame:Lerp(goalCF, 0.22)
 
-                    -- Auto equip weapons from backpack
-                    local tool = char:FindFirstChildOfClass("Tool")
-                    if not tool then
-                        local weapon = LP.Backpack:FindFirstChildOfClass("Tool")
-                        if weapon then hum:EquipTool(weapon) end
-                    else
-                        tool:Activate()
-                        pcall(function()
-                            VirtualInputManager:SendMouseButtonEvent(Mouse.X, Mouse.Y, 0, true, game, 1)
-                            task.wait(0.01)
-                            VirtualInputManager:SendMouseButtonEvent(Mouse.X, Mouse.Y, 0, false, game, 1)
-                        end)
-                        shootTimer = shootTimer + 0.016
+                    -- Auto equip weapons from backpack and fire only if we have direct LOS
+                    if hasLOS then
+                        local tool = char:FindFirstChildOfClass("Tool")
+                        if not tool then
+                            local weapon = LP.Backpack:FindFirstChildOfClass("Tool")
+                            if weapon then hum:EquipTool(weapon) end
+                        else
+                            tool:Activate()
+                            pcall(function()
+                                VirtualInputManager:SendMouseButtonEvent(Mouse.X, Mouse.Y, 0, true, game, 1)
+                                task.wait(0.01)
+                                VirtualInputManager:SendMouseButtonEvent(Mouse.X, Mouse.Y, 0, false, game, 1)
+                            end)
+                            shootTimer = shootTimer + 0.016
+                        end
                     end
                 end
 
@@ -554,7 +579,6 @@ local function startAutoplay()
                     end
 
                     -- Elevational / Truss / Ladder Check:
-                    -- If the waypoint is significantly higher than our current head height, climb/jump
                     if (wpPos.Y - myHRP.Position.Y) > 2.5 then
                         hum.Jump = true
                     end
@@ -564,7 +588,6 @@ local function startAutoplay()
                     end
 
                     -- Human-like camera panning towards direction of travel when not shooting
-                    local isAiming = (S.AutoplayShoot and target and targetHRP and (targetHRP.Position - myHRP.Position).Magnitude <= S.AutoplayRange and checkLineOfSight(targetHRP))
                     if not isAiming then
                         local moveDir = (targetWP.Position - myHRP.Position)
                         local horizontalDir = Vector3.new(moveDir.X, 0, moveDir.Z)
@@ -640,10 +663,8 @@ local function startAutoplay()
 
                 if not target or not inst:IsDescendantOf(target.Character) then
                     hum.Jump = true
-                    -- Visual Laser Highlight indicating detected block/surface
                     drawScanningLaser(myHRP.Position, hitRay.Position, true)
                 else
-                    -- Projecting scanning line to targeted player
                     drawScanningLaser(myHRP.Position, hitRay.Position, false)
                 end
             else
@@ -657,6 +678,10 @@ local function startAutoplay()
                 end
             end
         end)
+        
+        if not ok then
+            warn("[WASOR Autoplay Error]: " .. tostring(err))
+        end
     end)
 
     table.insert(S.Connections, autoplayConn)
