@@ -39,6 +39,8 @@ local lastPositionCheckTime = 0
 local stuckTime = 0
 local jumpDebounce = 0
 local lastPathRecalcTime = 0
+local lockedTarget = nil
+local lockedTargetLostLOSTime = 0
 
 -- Drawing pool
 local pathLines = {}
@@ -200,74 +202,95 @@ local function isAimingAtMe(p, myHRP)
     return false
 end
 
+local function isValidTarget(p, myHRP)
+    if not p or p.Parent ~= Players then return false end
+    if S.AutoplayTeamCheck and p.Team == LP.Team then return false end
+    if S.AutoplayFriendCheck and checkFriendship(p.UserId) then return false end
+    
+    local char = p.Character
+    local hrp = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char.PrimaryPart)
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    
+    if hrp and hum and hum.Health > 0 then
+        local dist = (hrp.Position - myHRP.Position).Magnitude
+        if dist <= S.AutoplayRange then
+            return true, hrp, hum, dist
+        end
+    end
+    return false
+end
+
 local function getBestTarget()
     local myHRP = getHRP()
     if not myHRP then return nil end
 
+    -- 1. If target locking is active, stick to current target
+    if lockedTarget then
+        local valid, hrp, hum, dist = isValidTarget(lockedTarget, myHRP)
+        if valid then
+            local hasLOS = checkLineOfSight(hrp)
+            if hasLOS then
+                lockedTargetLostLOSTime = 0
+                return lockedTarget
+            else
+                if lockedTargetLostLOSTime == 0 then
+                    lockedTargetLostLOSTime = tick()
+                elseif tick() - lockedTargetLostLOSTime < 1.5 then
+                    return lockedTarget
+                end
+            end
+        else
+            lockedTarget = nil
+            lockedTargetLostLOSTime = 0
+        end
+    end
+
+    -- 2. Scan for best targets
     local attackers = {}
-    local closePlayers = {}
+    local normalTargets = {}
 
     for _, p in ipairs(Players:GetPlayers()) do
         if p == LP then continue end
-        if S.AutoplayTeamCheck and p.Team == LP.Team then continue end
-        if S.AutoplayFriendCheck and checkFriendship(p.UserId) then continue end
-
-        local char = p.Character
-        local hrp = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char.PrimaryPart)
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hrp and hum and hum.Health > 0 then
-            local dist = (hrp.Position - myHRP.Position).Magnitude
-            if dist <= S.AutoplayRange then
-                if isAimingAtMe(p, myHRP) then
-                    table.insert(attackers, { player = p, dist = dist, hp = hum.Health, hrp = hrp })
-                else
-                    table.insert(closePlayers, { player = p, dist = dist, hp = hum.Health, hrp = hrp })
-                end
+        local valid, hrp, hum, dist = isValidTarget(p, myHRP)
+        if valid then
+            local hasLOS = checkLineOfSight(hrp)
+            
+            -- Priority weight: Enemies in line-of-sight appear 40% closer for target selection
+            local effectiveDist = hasLOS and (dist * 0.6) or dist
+            local scoreVal = (S.AutoplayTargetMode == "Closest") and effectiveDist or hum.Health
+            
+            if isAimingAtMe(p, myHRP) then
+                table.insert(attackers, { player = p, score = scoreVal, hrp = hrp })
+            else
+                table.insert(normalTargets, { player = p, score = scoreVal, hrp = hrp })
             end
         end
     end
 
-    -- 1. Prioritize attackers (people aiming at us)
+    local bestCandidate = nil
+    local bestScore = math.huge
+
     if #attackers > 0 then
-        local best = nil
-        local bestVal = math.huge
         for _, entry in ipairs(attackers) do
-            if S.AutoplayTargetMode == "Closest" then
-                if entry.dist < bestVal then
-                    bestVal = entry.dist
-                    best = entry.player
-                end
-            elseif S.AutoplayTargetMode == "Lowest HP" then
-                if entry.hp < bestVal then
-                    bestVal = entry.hp
-                    best = entry.player
-                end
+            if entry.score < bestScore then
+                bestScore = entry.score
+                bestCandidate = entry.player
             end
         end
-        return best
-    end
-
-    -- 2. Fallback to normal close targets
-    if #closePlayers > 0 then
-        local best = nil
-        local bestVal = math.huge
-        for _, entry in ipairs(closePlayers) do
-            if S.AutoplayTargetMode == "Closest" then
-                if entry.dist < bestVal then
-                    bestVal = entry.dist
-                    best = entry.player
-                end
-            elseif S.AutoplayTargetMode == "Lowest HP" then
-                if entry.hp < bestVal then
-                    bestVal = entry.hp
-                    best = entry.player
-                end
+    elseif #normalTargets > 0 then
+        for _, entry in ipairs(normalTargets) do
+            if entry.score < bestScore then
+                bestScore = entry.score
+                bestCandidate = entry.player
             end
         end
-        return best
     end
 
-    return nil
+    if bestCandidate then
+        lockedTarget = bestCandidate
+        lockedTargetLostLOSTime = 0
+    end
+    return bestCandidate
 end
 
 local function checkLineOfSight(targetHRP)
@@ -395,6 +418,8 @@ local function stopAutoplay()
     lastMoveToPos = nil
     lastPosition = nil
     stuckTime = 0
+    lockedTarget = nil
+    lockedTargetLostLOSTime = 0
     clearDrawings()
     for _, line in ipairs(pathLines) do
         pcall(function() line:Remove() end)
