@@ -67,4 +67,46 @@ local consoleLogs = State.consoleLogs
 local consoleLogsMap = State.consoleLogsMap
 
 
-registerModule("Player", "Reset Character", 160, 50, false, false, function() local hum = getHum(); if hum then hum.Health = 0; notify("Character reset!", Color3.fromRGB(218, 38, 38)) end end)
+registerModule("Player", "Reset Character", 160, 50, false, false, function()
+    local char = getChar()
+    local hum = getHum()
+    local hrp = getHRP()
+    
+    if hum then
+        pcall(function() hum.Health = 0 end)
+    end
+    
+    task.delay(0.1, function()
+        if char and hum and hum.Parent and hum.Health > 0 then
+            pcall(function() char:BreakJoints() end)
+        end
+    end)
+    
+    task.delay(0.2, function()
+        if char and hum and hum.Parent and hum.Health > 0 then
+            if hrp then
+                pcall(function() hrp.CFrame = CFrame.new(0, -99999, 0) end)
+            end
+        end
+    end)
+    
+    task.delay(0.3, function()
+        if char and hum and hum.Parent and hum.Health > 0 then
+            local head = char:FindFirstChild("Head")
+            local neck = head and (head:FindFirstChild("Neck") or char:FindFirstChild("Neck", true))
+            if neck then
+                pcall(function() neck:Destroy() end)
+            elseif head then
+                pcall(function() head:Destroy() end)
+            end
+        end
+    end)
+    
+    task.delay(0.4, function()
+        if char and hum and hum.Parent and hum.Health > 0 then
+            pcall(function() hum:Destroy() end)
+        end
+    end)
+    
+    notify("Character reset!", Color3.fromRGB(218, 38, 38))
+end)

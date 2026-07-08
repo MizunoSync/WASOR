@@ -5,6 +5,9 @@ local S = State.S
 local Utils = VH.Utils
 local UI = VH.UI
 
+local applyCustomIdle = Utils.applyCustomIdle
+local animPresets = State.animPresets
+
 local Players = Services.Players
 local LP = Services.LP
 local Mouse = Services.Mouse
