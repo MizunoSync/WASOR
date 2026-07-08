@@ -5,6 +5,10 @@ local S = State.S
 local Utils = VH.Utils
 local UI = VH.UI
 
+local Lighting = Services.Lighting
+local originalAmbient = State.originalAmbient
+local originalOutdoor = State.originalOutdoor
+
 local Players = Services.Players
 local LP = Services.LP
 local Mouse = Services.Mouse
