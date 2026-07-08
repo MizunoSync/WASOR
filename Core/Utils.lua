@@ -14,7 +14,7 @@ Utils.notify = function(msg, color)
     if VH.UI and VH.UI.showToast then
         VH.UI.showToast(msg, color)
     else
-        print("[VoidHub] Notification:", tostring(msg))
+        print("[WASOR] Notification:", tostring(msg))
     end
 end
 
@@ -285,7 +285,7 @@ Utils.setupAutoReinject = function()
             pcall(queue_on_teleport, code) 
         end
         if writefile then 
-            pcall(writefile, "autoexec/VoidUtilityHub.lua", code) 
+            pcall(writefile, "autoexec/WASOR.lua", code) 
         end
     end
 end
