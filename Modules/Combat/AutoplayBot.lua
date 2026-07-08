@@ -39,20 +39,88 @@ local lastPositionCheckTime = 0
 local stuckTime = 0
 local jumpDebounce = 0
 
+-- Drawing pool
 local pathLines = {}
-VH.AutoplayPathLines = pathLines
+local waypointCircles = {}
+local scannerLine = nil
+local scannerHitDot = nil
 
-local function clearPathLines()
+VH.AutoplayPathLines = pathLines
+VH.AutoplayWaypointCircles = waypointCircles
+
+local function clearDrawings()
     for _, line in ipairs(pathLines) do
         pcall(function() line.Visible = false end)
     end
+    for _, circ in ipairs(waypointCircles) do
+        pcall(function() circ.Visible = false end)
+    end
+    if scannerLine then
+        pcall(function() scannerLine.Visible = false end)
+    end
+    if scannerHitDot then
+        pcall(function() scannerHitDot.Visible = false end)
+    end
+end
+
+-- Helper to draw 3D circles projected onto the viewport
+local function updateCircle3D(circle, center3D, radius)
+    local points = {}
+    local steps = 8
+    local onScreenCount = 0
+    
+    for i = 0, steps - 1 do
+        local angle = (i / steps) * math.pi * 2
+        local offset = Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+        local p3D = center3D + offset
+        local p2D, onScreen = Camera:WorldToViewportPoint(p3D)
+        if onScreen then
+            onScreenCount = onScreenCount + 1
+        end
+        table.insert(points, Vector2.new(p2D.X, p2D.Y))
+    end
+    
+    if onScreenCount > 0 then
+        circle.Visible = true
+        circle.PointA = points[1]
+        circle.PointB = points[2]
+        circle.PointC = points[3]
+        circle.PointD = points[4]
+        -- Expand outer bounds dynamically if needed or just use standard Quad Drawing
+        return true
+    end
+    circle.Visible = false
+    return false
 end
 
 local function drawPath(waypoints, startIndex)
-    clearPathLines()
+    clearDrawings()
     if not waypoints or #waypoints == 0 then return end
 
     local lineIndex = 1
+    local circleIndex = 1
+    
+    for i = startIndex, #waypoints do
+        local wp = waypoints[i]
+        if wp then
+            -- Draw 3D Circle on the ground (using a Quadrilateral drawing component for visual highlights)
+            local circ = waypointCircles[circleIndex]
+            if not circ then
+                circ = Drawing.new("Quad")
+                circ.Thickness = 1.5
+                circ.Filled = false
+                circ.Transparency = 0.65
+                waypointCircles[circleIndex] = circ
+            end
+            
+            circ.Color = (i == startIndex) and Color3.fromRGB(50, 205, 50) or (State.currentThemeColor or Color3.fromRGB(141, 47, 196))
+            local success = updateCircle3D(circ, wp.Position, 2.0)
+            if success then
+                circleIndex = circleIndex + 1
+            end
+        end
+    end
+
     for i = startIndex, #waypoints - 1 do
         local wp1 = waypoints[i]
         local wp2 = waypoints[i+1]
@@ -78,9 +146,45 @@ local function drawPath(waypoints, startIndex)
         end
     end
 
-    -- Hide remaining lines in the pool
+    -- Hide remaining lines/circles in pool
     for i = lineIndex, #pathLines do
         pcall(function() pathLines[i].Visible = false end)
+    end
+    for i = circleIndex, #waypointCircles do
+        pcall(function() waypointCircles[i].Visible = false end)
+    end
+end
+
+local function drawScanningLaser(startPos, hitPos, isWall)
+    if not scannerLine then
+        scannerLine = Drawing.new("Line")
+        scannerLine.Thickness = 2.5
+        VH.AutoplayScannerLine = scannerLine
+    end
+    if not scannerHitDot then
+        scannerHitDot = Drawing.new("Circle")
+        scannerHitDot.Radius = 5
+        scannerHitDot.Filled = true
+        scannerHitDot.Transparency = 0.9
+        VH.AutoplayScannerHitDot = scannerHitDot
+    end
+
+    local start2D, on1 = Camera:WorldToViewportPoint(startPos)
+    local hit2D, on2 = Camera:WorldToViewportPoint(hitPos)
+
+    if on1 or on2 then
+        scannerLine.Color = isWall and Color3.fromRGB(220, 38, 38) or Color3.fromRGB(241, 196, 15)
+        scannerLine.From = Vector2.new(start2D.X, start2D.Y)
+        scannerLine.To = Vector2.new(hit2D.X, hit2D.Y)
+        scannerLine.Transparency = 0.75
+        scannerLine.Visible = true
+
+        scannerHitDot.Color = scannerLine.Color
+        scannerHitDot.Position = Vector2.new(hit2D.X, hit2D.Y)
+        scannerHitDot.Visible = true
+    else
+        scannerLine.Visible = false
+        scannerHitDot.Visible = false
     end
 end
 
@@ -265,11 +369,19 @@ local function stopAutoplay()
     lastMoveToPos = nil
     lastPosition = nil
     stuckTime = 0
-    clearPathLines()
+    clearDrawings()
     for _, line in ipairs(pathLines) do
         pcall(function() line:Remove() end)
     end
+    for _, circ in ipairs(waypointCircles) do
+        pcall(function() circ:Remove() end)
+    end
+    if scannerLine then pcall(function() scannerLine:Remove() end) end
+    if scannerHitDot then pcall(function() scannerHitDot:Remove() end) end
     pathLines = {}
+    waypointCircles = {}
+    scannerLine = nil
+    scannerHitDot = nil
 end
 
 local function startAutoplay()
@@ -401,9 +513,10 @@ local function startAutoplay()
                     -- Human-like camera panning towards direction of travel when not shooting
                     local isAiming = (S.AutoplayShoot and target and targetHRP and (targetHRP.Position - myHRP.Position).Magnitude <= S.AutoplayRange and checkLineOfSight(targetHRP))
                     if not isAiming then
-                        local moveDir = (targetWP.Position - myHRP.Position).Unit
-                        if moveDir.Magnitude > 0.1 then
-                            local goalCF = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + moveDir)
+                        local moveDir = (targetWP.Position - myHRP.Position)
+                        local horizontalDir = Vector3.new(moveDir.X, 0, moveDir.Z)
+                        if horizontalDir.Magnitude > 0.1 then
+                            local goalCF = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + horizontalDir.Unit)
                             Camera.CFrame = Camera.CFrame:Lerp(goalCF, 0.05)
                         end
                     end
@@ -417,10 +530,10 @@ local function startAutoplay()
                     end
                 end
                 
-                -- Draw path tracking lines
+                -- Draw path tracking lines & ground waypoint circles
                 drawPath(activeWaypoints, activeWaypointIndex)
             else
-                clearPathLines()
+                clearDrawings()
                 if targetHRP then
                     if S.WalkSpeed and S.WalkSpeed > 16 then
                         hum.WalkSpeed = S.WalkSpeed
@@ -436,7 +549,7 @@ local function startAutoplay()
                 end
             end
 
-            -- Front-facing surface obstacle detection (jump assistance)
+            -- Front-facing surface obstacle detection (jump assistance & visual scanner line)
             local lookDir = myHRP.CFrame.LookVector
             local rayParams = RaycastParams.new()
             rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -447,9 +560,24 @@ local function startAutoplay()
             local midRay = workspace:Raycast(myHRP.Position, lookDir * 4.5, rayParams)
             
             if (lowRay and lowRay.Instance) or (midRay and midRay.Instance) then
-                local inst = (lowRay and lowRay.Instance) or midRay.Instance
+                local ray = lowRay or midRay
+                local inst = ray.Instance
                 if not target or not inst:IsDescendantOf(target.Character) then
                     hum.Jump = true
+                    -- Visual Laser Highlight indicating detected block/surface
+                    drawScanningLaser(myHRP.Position, ray.Position, true)
+                else
+                    -- Projecting scanning line to targeted player
+                    drawScanningLaser(myHRP.Position, ray.Position, false)
+                end
+            else
+                -- Trace ground line directly in front of the local character
+                local groundRay = workspace:Raycast(myHRP.Position, Vector3.new(0, -6, 0), rayParams)
+                if groundRay and groundRay.Instance then
+                    drawScanningLaser(myHRP.Position, groundRay.Position, false)
+                else
+                    if scannerLine then scannerLine.Visible = false end
+                    if scannerHitDot then scannerHitDot.Visible = false end
                 end
             end
         end)
