@@ -447,24 +447,6 @@ local function startAutoplay()
             local targetHRP = target and target.Character and (target.Character:FindFirstChild("HumanoidRootPart") or target.Character:FindFirstChild("Torso") or target.Character.PrimaryPart)
 
             -- Stuck/Wall check logic (checks movement speed over time)
-            local currentPos = myHRP.Position
-            if lastPosition then
-                local deltaCheck = tick() - lastPositionCheckTime
-                if deltaCheck >= 0.5 then
-                    local distTraveled = (Vector3.new(currentPos.X, lastPosition.Y, currentPos.Z) - lastPosition).Magnitude
-                    if distTraveled < 1.8 then
-                        stuckTime = stuckTime + deltaCheck
-                    else
-                        stuckTime = 0
-                    end
-                    lastPosition = currentPos
-                    lastPositionCheckTime = tick()
-                end
-            else
-                lastPosition = currentPos
-                lastPositionCheckTime = tick()
-            end
-
             -- Determine movement scan direction for raycast detection rather than camera look direction
             local scanDir = myHRP.CFrame.LookVector
             local targetWP = (#activeWaypoints > 0) and activeWaypoints[activeWaypointIndex]
@@ -487,11 +469,45 @@ local function startAutoplay()
                 yDiff = targetWP.Position.Y - myHRP.Position.Y
             end
 
+            -- Stuck/Wall check logic (checks movement speed over time, only when moving)
+            local isMoving = (targetWP ~= nil) or (targetHRP ~= nil)
+            local currentPos = myHRP.Position
+            if isMoving then
+                if lastPosition then
+                    local deltaCheck = tick() - lastPositionCheckTime
+                    if deltaCheck >= 0.5 then
+                        local distTraveled = (Vector3.new(currentPos.X, lastPosition.Y, currentPos.Z) - lastPosition).Magnitude
+                        if distTraveled < 1.8 then
+                            stuckTime = stuckTime + deltaCheck
+                        else
+                            stuckTime = 0
+                        end
+                        lastPosition = currentPos
+                        lastPositionCheckTime = tick()
+                    end
+                else
+                    lastPosition = currentPos
+                    lastPositionCheckTime = tick()
+                end
+            else
+                lastPosition = nil
+                stuckTime = 0
+            end
+
             -- Force Jumps if stuck on objects or climbing ladders/trusses, or trying to drop into a hole
             if stuckTime >= 1.0 and tick() - jumpDebounce > 0.4 then
                 hum.Jump = true
                 jumpDebounce = tick()
-                stuckTime = 0
+                
+                -- Teleport nudge sideways if stuck for > 2.0s to bypass geometry corner clips
+                if stuckTime >= 2.0 then
+                    local rightVec = myHRP.CFrame.RightVector
+                    local nudgeDir = (math.random() > 0.5) and rightVec or -rightVec
+                    myHRP.CFrame = myHRP.CFrame + nudgeDir * 1.5
+                    stuckTime = 0
+                else
+                    stuckTime = 0
+                end
             elseif yDiff < -3.5 and stuckTime >= 0.5 and tick() - jumpDebounce > 0.4 then
                 -- Waypoint is down a hole and we are stuck at the lip. Jump forward to drop in!
                 hum.Jump = true
@@ -634,20 +650,26 @@ local function startAutoplay()
             local scanRight = Vector3.new(-scanDir.Z, 0, scanDir.X).Unit
             local scanLeft = -scanRight
             
-            -- Multi-ray parallel sweep (waist and knee heights for left, center, and right character bounds)
+            -- Multi-ray parallel sweep (waist, knee, and head heights for left, center, and right character bounds)
             local scanDist = 4.5
-            local offsets = { Vector3.zero, scanLeft * 1.5, scanRight * 1.5 }
+            local offsets = { Vector3.zero, scanLeft * 1.2, scanRight * 1.2 }
             local hitRay = nil
+            local hitHigh = false
             
             for _, offset in ipairs(offsets) do
                 local originLow = myHRP.Position + offset - Vector3.new(0, 1.8, 0)
                 local originMid = myHRP.Position + offset
+                local originHigh = myHRP.Position + offset + Vector3.new(0, 2.2, 0)
                 
                 local rLow = workspace:Raycast(originLow, scanDir * scanDist, rayParams)
                 local rMid = workspace:Raycast(originMid, scanDir * scanDist, rayParams)
+                local rHigh = workspace:Raycast(originHigh, scanDir * scanDist, rayParams)
                 
                 if rLow or rMid then
                     hitRay = rLow or rMid
+                    if rHigh then
+                        hitHigh = true
+                    end
                     break
                 end
             end
@@ -657,12 +679,24 @@ local function startAutoplay()
                 
                 -- Check if the hit part is a Truss/climbable/ladder structure
                 local isClimbable = inst:IsA("TrussPart") or inst.Name:lower():find("ladder") or inst.Name:lower():find("truss") or inst.Name:lower():find("climb")
+                
+                -- Jump only if it is climbable OR a low obstacle (not hitting head-height)
                 if isClimbable then
-                    hum.Jump = true
+                    if tick() - jumpDebounce > 0.4 then
+                        hum.Jump = true
+                        jumpDebounce = tick()
+                    end
+                elseif not hitHigh then
+                    -- Low ledge detected! Jump over it.
+                    if not target or not inst:IsDescendantOf(target.Character) then
+                        if tick() - jumpDebounce > 0.8 then
+                            hum.Jump = true
+                            jumpDebounce = tick()
+                        end
+                    end
                 end
 
                 if not target or not inst:IsDescendantOf(target.Character) then
-                    hum.Jump = true
                     drawScanningLaser(myHRP.Position, hitRay.Position, true)
                 else
                     drawScanningLaser(myHRP.Position, hitRay.Position, false)
