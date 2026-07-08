@@ -322,6 +322,7 @@ end
 
 -- Slow pathfinding computation loop (runs in background)
 local lastComputedTargetPos = nil
+local lastTargetVelocity = Vector3.zero
 
 task.spawn(function()
     while true do
@@ -342,18 +343,24 @@ task.spawn(function()
                     local targetHRP = target.Character and (target.Character:FindFirstChild("HumanoidRootPart") or target.Character:FindFirstChild("Torso") or target.Character.PrimaryPart)
                     if targetHRP then
                         local targetPos = targetHRP.Position
+                        local targetVel = targetHRP.AssemblyLinearVelocity
                         local shouldRecalculate = false
                         
+                        -- Track target velocity changes (sudden changes, jumps, or stops require recalculation)
+                        local velChange = (targetVel - lastTargetVelocity).Magnitude
+                        lastTargetVelocity = targetVel
+
                         if not lastComputedTargetPos then
                             shouldRecalculate = true
                         else
                             local distMoved = (targetPos - lastComputedTargetPos).Magnitude
-                            if distMoved > 4.0 then
+                            if distMoved > 3.0 or velChange > 8.0 then
                                 shouldRecalculate = true
                             end
                         end
                         
-                        if not shouldRecalculate and (not lastPathRecalcTime or (tick() - lastPathRecalcTime) > 0.8) then
+                        -- Standard refresh interval
+                        if not shouldRecalculate and (not lastPathRecalcTime or (tick() - lastPathRecalcTime) > 0.6) then
                             shouldRecalculate = true
                         end
 
@@ -379,12 +386,14 @@ task.spawn(function()
                 else
                     activeWaypoints = {}
                     lastComputedTargetPos = nil
+                    lastTargetVelocity = Vector3.zero
                 end
             end)
         else
             activeTarget = nil
             activeWaypoints = {}
             lastComputedTargetPos = nil
+            lastTargetVelocity = Vector3.zero
             task.wait(0.5)
         end
     end
@@ -539,7 +548,7 @@ local function startAutoplay()
                     if hasLOS then
                         local tool = char:FindFirstChildOfClass("Tool")
                         if not tool then
-                            local weapon = LP.Backpack:FindFirstChildOfClass("Tool")
+                            local weapon = LP.Backpack:FindFirstChildOfClass("Tool") or char:FindFirstChildOfClass("Tool")
                             if weapon then hum:EquipTool(weapon) end
                         else
                             tool:Activate()
@@ -571,12 +580,43 @@ local function startAutoplay()
                 end
             end
 
-            -- 2. Human-like Pathfinding Navigation
-            if #activeWaypoints > 0 then
+            -- 2. Smart Pathfinding Navigation
+            -- Shortcut directly to target if we have clear line-of-sight and are within 30 studs
+            local directShortcut = false
+            if targetHRP then
+                local distToTarget = (targetHRP.Position - myHRP.Position).Magnitude
+                if distToTarget < 30.0 and checkLineOfSight(targetHRP) then
+                    directShortcut = true
+                end
+            end
+
+            if directShortcut and targetHRP then
+                clearDrawings()
+                if S.WalkSpeed and S.WalkSpeed > 16 then
+                    hum.WalkSpeed = S.WalkSpeed
+                end
+                local tPos = targetHRP.Position
+                if not lastMoveToPos or (lastMoveToPos - tPos).Magnitude > 0.2 then
+                    hum:MoveTo(tPos)
+                    lastMoveToPos = tPos
+                end
+            elseif #activeWaypoints > 0 then
+                -- Verify waypoint line of sight to make sure the path wasn't blocked since last recalculation
                 local currentWP = activeWaypoints[activeWaypointIndex]
                 if currentWP then
                     local wpPos = currentWP.Position
                     local distToWP = (Vector3.new(myHRP.Position.X, wpPos.Y, myHRP.Position.Z) - wpPos).Magnitude
+                    
+                    -- Check if a wall appeared between player and waypoint. If blocked, force path recalculation.
+                    local wallParams = RaycastParams.new()
+                    wallParams.FilterType = Enum.RaycastFilterType.Exclude
+                    wallParams.FilterDescendantsInstances = {char}
+                    local wpDir = (wpPos - myHRP.Position)
+                    local wpRay = workspace:Raycast(myHRP.Position, wpDir, wallParams)
+                    if wpRay and wpRay.Instance and not wpRay.Instance:IsDescendantOf(target.Character) then
+                        lastComputedTargetPos = nil -- Forces recalculation immediately
+                    end
+
                     if distToWP < 2.2 then
                         activeWaypointIndex = activeWaypointIndex + 1
                     end
