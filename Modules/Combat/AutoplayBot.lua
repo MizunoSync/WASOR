@@ -200,8 +200,7 @@ local function getBestTarget()
     local myHRP = getHRP()
     if not myHRP then return nil end
 
-    local attackers = {}
-    local closePlayers = {}
+    local scoredTargets = {}
 
     for _, p in ipairs(Players:GetPlayers()) do
         if p == LP then continue end
@@ -214,73 +213,55 @@ local function getBestTarget()
         if hrp and hum and hum.Health > 0 then
             local dist = (hrp.Position - myHRP.Position).Magnitude
             if dist <= S.AutoplayRange then
-                if isAimingAtMe(p, myHRP) then
-                    table.insert(attackers, { player = p, dist = dist, hp = hum.Health, hrp = hrp })
-                else
-                    table.insert(closePlayers, { player = p, dist = dist, hp = hum.Health, hrp = hrp })
+                -- Calculate screen-space position to prioritize players in view
+                local pos2D, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                local screenWeight = 0
+                if onScreen then
+                    -- Closer to the center of the screen = higher priority
+                    local viewportSize = Camera.ViewportSize
+                    local screenCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+                    local distToCenter = (Vector2.new(pos2D.X, pos2D.Y) - screenCenter).Magnitude
+                    -- Scale center proximity: 0 (edge) to 1 (dead center)
+                    local maxCenterDist = screenCenter.Magnitude
+                    screenWeight = 1.0 - math.clamp(distToCenter / maxCenterDist, 0, 1)
                 end
+
+                -- Attacker check (players aiming at us get a large priority boost)
+                local attackerMultiplier = isAimingAtMe(p, myHRP) and 12.0 or 1.0
+
+                -- Target score calculation:
+                -- Base score is range proximity (closer target = higher score)
+                local rangeScore = (1.0 - math.clamp(dist / S.AutoplayRange, 0, 1)) * 10.0
+                
+                -- Add screen presence bonus
+                local fovScore = screenWeight * 6.0
+                
+                -- Combined raw score scaled by attacker status
+                local totalScore = (rangeScore + fovScore) * attackerMultiplier
+
+                -- Lock Stickiness bonus (gives a small buffer to avoid target swapping unless scores differ greatly)
+                if currentLockTarget and p == currentLockTarget then
+                    totalScore = totalScore + 2.5
+                end
+
+                table.insert(scoredTargets, { player = p, score = totalScore })
             end
         end
     end
 
-    -- 1. Prioritize attackers (people aiming at us)
-    if #attackers > 0 then
-        -- If our current locked target is already an attacker, stick to them
-        if currentLockTarget then
-            for _, entry in ipairs(attackers) do
-                if entry.player == currentLockTarget then
-                    return currentLockTarget
-                end
-            end
-        end
+    -- Select target with highest calculated score
+    local bestTarget = nil
+    local bestScore = -math.huge
 
-        local best = nil
-        local bestVal = math.huge
-        for _, entry in ipairs(attackers) do
-            if S.AutoplayTargetMode == "Closest" then
-                if entry.dist < bestVal then
-                    bestVal = entry.dist
-                    best = entry.player
-                end
-            elseif S.AutoplayTargetMode == "Lowest HP" then
-                if entry.hp < bestVal then
-                    bestVal = entry.hp
-                    best = entry.player
-                end
-            end
+    for _, entry in ipairs(scoredTargets) do
+        if entry.score > bestScore then
+            bestScore = entry.score
+            bestTarget = entry.player
         end
-        currentLockTarget = best
-        return best
     end
 
-    -- 2. Stickiness: If we have a valid target we are already lock-tracking, stick to them
-    if currentLockTarget and isTargetValid(currentLockTarget) then
-        return currentLockTarget
-    end
-
-    -- 3. Fallback to normal close targets
-    if #closePlayers > 0 then
-        local best = nil
-        local bestVal = math.huge
-        for _, entry in ipairs(closePlayers) do
-            if S.AutoplayTargetMode == "Closest" then
-                if entry.dist < bestVal then
-                    bestVal = entry.dist
-                    best = entry.player
-                end
-            elseif S.AutoplayTargetMode == "Lowest HP" then
-                if entry.hp < bestVal then
-                    bestVal = entry.hp
-                    best = entry.player
-                end
-            end
-        end
-        currentLockTarget = best
-        return best
-    end
-
-    currentLockTarget = nil
-    return nil
+    currentLockTarget = bestTarget
+    return bestTarget
 end
 
 local function checkLineOfSight(targetHRP)
