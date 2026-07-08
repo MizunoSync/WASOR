@@ -115,7 +115,7 @@ local Modules = {
 }
 
 local function runFile(path)
-    local url = BASE_URL .. path .. ".lua"
+    local url = BASE_URL .. path .. ".lua?t=" .. tostring(os.time())
     local success, content = pcall(game.HttpGet, game, url)
     if success and content then
         local func, err = loadstring(content, path)
@@ -144,4 +144,4 @@ end
 
 runFile("Core/Runtime")
 
-print("Loaded")
+print("Misan nessa porra.")
