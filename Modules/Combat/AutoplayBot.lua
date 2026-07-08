@@ -405,6 +405,28 @@ local function startAutoplay()
             local target = activeTarget
             local targetHRP = target and target.Character and (target.Character:FindFirstChild("HumanoidRootPart") or target.Character:FindFirstChild("Torso") or target.Character.PrimaryPart)
 
+            -- Determine movement scan direction for raycast detection rather than camera look direction
+            local scanDir = myHRP.CFrame.LookVector
+            local targetWP = (#activeWaypoints > 0) and activeWaypoints[activeWaypointIndex]
+            if targetWP then
+                local diff = (targetWP.Position - myHRP.Position)
+                local diffH = Vector3.new(diff.X, 0, diff.Z)
+                if diffH.Magnitude > 0.1 then
+                    scanDir = diffH.Unit
+                end
+            elseif targetHRP then
+                local diff = (targetHRP.Position - myHRP.Position)
+                local diffH = Vector3.new(diff.X, 0, diff.Z)
+                if diffH.Magnitude > 0.1 then
+                    scanDir = diffH.Unit
+                end
+            end
+
+            local yDiff = 0
+            if targetWP then
+                yDiff = targetWP.Position.Y - myHRP.Position.Y
+            end
+
             -- Stuck/Wall check logic (checks movement speed over time)
             local currentPos = myHRP.Position
             if lastPosition then
@@ -424,8 +446,13 @@ local function startAutoplay()
                 lastPositionCheckTime = tick()
             end
 
-            -- Force Jumps if stuck on objects or climbing ladders/trusses
+            -- Force Jumps if stuck on objects or climbing ladders/trusses, or trying to drop into a hole
             if stuckTime >= 1.0 and tick() - jumpDebounce > 0.4 then
+                hum.Jump = true
+                jumpDebounce = tick()
+                stuckTime = 0
+            elseif yDiff < -3.5 and stuckTime >= 0.5 and tick() - jumpDebounce > 0.4 then
+                -- Waypoint is down a hole and we are stuck at the lip. Jump forward to drop in!
                 hum.Jump = true
                 jumpDebounce = tick()
                 stuckTime = 0
@@ -549,19 +576,25 @@ local function startAutoplay()
                 end
             end
 
-            -- Front-facing surface obstacle detection (jump assistance & visual scanner line)
-            local lookDir = myHRP.CFrame.LookVector
+            -- Obstacle detection and scanning laser line (along scanDir)
             local rayParams = RaycastParams.new()
             rayParams.FilterType = Enum.RaycastFilterType.Exclude
             rayParams.FilterDescendantsInstances = {char}
             
-            -- Multi-ray assistance (checking waist-height and knee-height for walls/surfaces)
-            local lowRay = workspace:Raycast(myHRP.Position - Vector3.new(0, 2, 0), lookDir * 4.5, rayParams)
-            local midRay = workspace:Raycast(myHRP.Position, lookDir * 4.5, rayParams)
+            -- Multi-ray assistance (checking waist-height and knee-height for walls/surfaces along scanDir)
+            local lowRay = workspace:Raycast(myHRP.Position - Vector3.new(0, 2, 0), scanDir * 4.5, rayParams)
+            local midRay = workspace:Raycast(myHRP.Position, scanDir * 4.5, rayParams)
             
             if (lowRay and lowRay.Instance) or (midRay and midRay.Instance) then
                 local ray = lowRay or midRay
                 local inst = ray.Instance
+                
+                -- Check if the hit part is a Truss/climbable/ladder structure
+                local isClimbable = inst:IsA("TrussPart") or inst.Name:lower():find("ladder") or inst.Name:lower():find("truss") or inst.Name:lower():find("climb")
+                if isClimbable then
+                    hum.Jump = true
+                end
+
                 if not target or not inst:IsDescendantOf(target.Character) then
                     hum.Jump = true
                     -- Visual Laser Highlight indicating detected block/surface
@@ -571,8 +604,8 @@ local function startAutoplay()
                     drawScanningLaser(myHRP.Position, ray.Position, false)
                 end
             else
-                -- Trace ground line directly in front of the local character
-                local groundRay = workspace:Raycast(myHRP.Position, Vector3.new(0, -6, 0), rayParams)
+                -- Trace ground line directly in front of the local character along scanDir
+                local groundRay = workspace:Raycast(myHRP.Position, (scanDir * 4.5) - Vector3.new(0, 5, 0), rayParams)
                 if groundRay and groundRay.Instance then
                     drawScanningLaser(myHRP.Position, groundRay.Position, false)
                 else
