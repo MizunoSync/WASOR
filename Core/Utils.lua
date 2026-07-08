@@ -277,15 +277,27 @@ Utils.setupAutoReinject = function()
     local S = State.S
     local code = [[ 
         repeat task.wait() until game:IsLoaded() 
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/WASOR_bundled.lua"))() 
+        local success, err = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/github_loader.lua"))() 
+        end)
+        if not success then
+            pcall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/WASOR_bundled.lua"))() 
+            end)
+        end
     ]]
     
+    local qot = queue_on_teleport or queueteleport or (syn and syn.queue_on_teleport)
     if S.AutoReinject then
-        if queue_on_teleport then 
-            pcall(queue_on_teleport, code) 
+        if qot then 
+            pcall(qot, code) 
         end
         if writefile then 
             pcall(writefile, "autoexec/WASOR.lua", code) 
+        end
+    else
+        if writefile and isfile and isfile("autoexec/WASOR.lua") then
+            pcall(delfile, "autoexec/WASOR.lua")
         end
     end
 end
