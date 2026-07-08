@@ -38,6 +38,7 @@ local lastPosition = nil
 local lastPositionCheckTime = 0
 local stuckTime = 0
 local jumpDebounce = 0
+local lastPathRecalcTime = 0
 
 -- Drawing pool
 local pathLines = {}
@@ -307,9 +308,11 @@ local function simulateReload()
 end
 
 -- Slow pathfinding computation loop (runs in background)
+local lastComputedTargetPos = nil
+
 task.spawn(function()
     while true do
-        task.wait(0.35)
+        task.wait(0.1)
         if S.AutoplayBot then
             pcall(function()
                 local myHRP = getHRP()
@@ -325,27 +328,50 @@ task.spawn(function()
                 if target then
                     local targetHRP = target.Character and (target.Character:FindFirstChild("HumanoidRootPart") or target.Character:FindFirstChild("Torso") or target.Character.PrimaryPart)
                     if targetHRP then
-                        local path = PathfindingService:CreatePath({
-                            AgentRadius = 2.0,
-                            AgentHeight = 5.0,
-                            AgentCanJump = true,
-                            AgentCanClimb = true
-                        })
-                        path:ComputeAsync(myHRP.Position, targetHRP.Position)
-                        if path.Status == Enum.PathStatus.Success then
-                            activeWaypoints = path:GetWaypoints()
-                            activeWaypointIndex = 1
+                        local targetPos = targetHRP.Position
+                        local shouldRecalculate = false
+                        
+                        if not lastComputedTargetPos then
+                            shouldRecalculate = true
                         else
-                            activeWaypoints = {}
+                            local distMoved = (targetPos - lastComputedTargetPos).Magnitude
+                            if distMoved > 4.0 then
+                                shouldRecalculate = true
+                            end
+                        end
+                        
+                        if not shouldRecalculate and (not lastPathRecalcTime or (tick() - lastPathRecalcTime) > 0.8) then
+                            shouldRecalculate = true
+                        end
+
+                        if shouldRecalculate then
+                            lastComputedTargetPos = targetPos
+                            lastPathRecalcTime = tick()
+                            
+                            local path = PathfindingService:CreatePath({
+                                AgentRadius = 2.0,
+                                AgentHeight = 5.0,
+                                AgentCanJump = true,
+                                AgentCanClimb = true
+                            })
+                            path:ComputeAsync(myHRP.Position, targetPos)
+                            if path.Status == Enum.PathStatus.Success then
+                                activeWaypoints = path:GetWaypoints()
+                                activeWaypointIndex = 1
+                            else
+                                activeWaypoints = {}
+                            end
                         end
                     end
                 else
                     activeWaypoints = {}
+                    lastComputedTargetPos = nil
                 end
             end)
         else
             activeTarget = nil
             activeWaypoints = {}
+            lastComputedTargetPos = nil
             task.wait(0.5)
         end
     end
@@ -510,7 +536,7 @@ local function startAutoplay()
                 if currentWP then
                     local wpPos = currentWP.Position
                     local distToWP = (Vector3.new(myHRP.Position.X, wpPos.Y, myHRP.Position.Z) - wpPos).Magnitude
-                    if distToWP < 3.5 then
+                    if distToWP < 2.2 then
                         activeWaypointIndex = activeWaypointIndex + 1
                     end
                 end
@@ -581,13 +607,30 @@ local function startAutoplay()
             rayParams.FilterType = Enum.RaycastFilterType.Exclude
             rayParams.FilterDescendantsInstances = {char}
             
-            -- Multi-ray assistance (checking waist-height and knee-height for walls/surfaces along scanDir)
-            local lowRay = workspace:Raycast(myHRP.Position - Vector3.new(0, 2, 0), scanDir * 4.5, rayParams)
-            local midRay = workspace:Raycast(myHRP.Position, scanDir * 4.5, rayParams)
+            -- Perpendicular vectors for left/right sweep offsets
+            local scanRight = Vector3.new(-scanDir.Z, 0, scanDir.X).Unit
+            local scanLeft = -scanRight
             
-            if (lowRay and lowRay.Instance) or (midRay and midRay.Instance) then
-                local ray = lowRay or midRay
-                local inst = ray.Instance
+            -- Multi-ray parallel sweep (waist and knee heights for left, center, and right character bounds)
+            local scanDist = 4.5
+            local offsets = { Vector3.zero, scanLeft * 1.5, scanRight * 1.5 }
+            local hitRay = nil
+            
+            for _, offset in ipairs(offsets) do
+                local originLow = myHRP.Position + offset - Vector3.new(0, 1.8, 0)
+                local originMid = myHRP.Position + offset
+                
+                local rLow = workspace:Raycast(originLow, scanDir * scanDist, rayParams)
+                local rMid = workspace:Raycast(originMid, scanDir * scanDist, rayParams)
+                
+                if rLow or rMid then
+                    hitRay = rLow or rMid
+                    break
+                end
+            end
+            
+            if hitRay and hitRay.Instance then
+                local inst = hitRay.Instance
                 
                 -- Check if the hit part is a Truss/climbable/ladder structure
                 local isClimbable = inst:IsA("TrussPart") or inst.Name:lower():find("ladder") or inst.Name:lower():find("truss") or inst.Name:lower():find("climb")
@@ -598,14 +641,14 @@ local function startAutoplay()
                 if not target or not inst:IsDescendantOf(target.Character) then
                     hum.Jump = true
                     -- Visual Laser Highlight indicating detected block/surface
-                    drawScanningLaser(myHRP.Position, ray.Position, true)
+                    drawScanningLaser(myHRP.Position, hitRay.Position, true)
                 else
                     -- Projecting scanning line to targeted player
-                    drawScanningLaser(myHRP.Position, ray.Position, false)
+                    drawScanningLaser(myHRP.Position, hitRay.Position, false)
                 end
             else
                 -- Trace ground line directly in front of the local character along scanDir
-                local groundRay = workspace:Raycast(myHRP.Position, (scanDir * 4.5) - Vector3.new(0, 5, 0), rayParams)
+                local groundRay = workspace:Raycast(myHRP.Position, (scanDir * scanDist) - Vector3.new(0, 5, 0), rayParams)
                 if groundRay and groundRay.Instance then
                     drawScanningLaser(myHRP.Position, groundRay.Position, false)
                 else
