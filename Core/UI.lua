@@ -31,6 +31,7 @@ local navBar = nil
 
 local settingsPanel = nil
 local settingsContent = nil
+local searchBox = nil
 
 UI.showToast = function(message, color)
     local S = State.S
@@ -640,8 +641,20 @@ local function selectTab(tabName)
     UI.updateMenuBlur()
     if tabName == "Modules" then
         if settingsPanel then settingsPanel.Visible = false end
+        local query = (searchBox and searchBox.Text or ""):lower()
         for _, win in pairs(UI.windows) do
-            win.Frame.Visible = true
+            local hasVisibleModule = false
+            for _, child in ipairs(win.List:GetChildren()) do
+                if child:IsA("Frame") and child.Name:sub(1, 4) == "Mod_" then
+                    local modName = child.Name:sub(5)
+                    local matches = (query == "") or (modName:lower():find(query, 1, true) ~= nil)
+                    child.Visible = matches
+                    if matches then
+                        hasVisibleModule = true
+                    end
+                end
+            end
+            win.Frame.Visible = (query == "" or hasVisibleModule)
         end
         for _, win in ipairs(UI.floatingWindows) do
             if win:GetAttribute("UserOpen") == true then win.Visible = true end
@@ -967,6 +980,65 @@ UI.InitializeUI = function()
         UI.tabButtons[tabName] = btn
     end
     
+    searchBox = Instance.new("TextBox")
+    searchBox.Name = "SearchBox"
+    searchBox.Size = UDim2.new(0, 110, 0, 16)
+    searchBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    searchBox.BorderSizePixel = 0
+    searchBox.Font = Enum.Font.Gotham
+    searchBox.TextSize = 9
+    searchBox.TextColor3 = Color3.fromRGB(240, 240, 240)
+    searchBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
+    searchBox.PlaceholderText = "Search..."
+    searchBox.Text = ""
+    searchBox.ClearTextOnFocus = false
+    searchBox.Parent = navBar
+
+    local searchCorner = Instance.new("UICorner")
+    searchCorner.CornerRadius = UDim.new(0, 4)
+    searchCorner.Parent = searchBox
+
+    local searchStroke = Instance.new("UIStroke")
+    searchStroke.Color = Color3.fromRGB(45, 45, 45)
+    searchStroke.Thickness = 1
+    searchStroke.Parent = searchBox
+
+    local searchPadding = Instance.new("UIPadding")
+    searchPadding.PaddingLeft = UDim.new(0, 6)
+    searchPadding.PaddingRight = UDim.new(0, 6)
+    searchPadding.Parent = searchBox
+
+    searchBox.Focused:Connect(function()
+        Services.TweenService:Create(searchStroke, TweenInfo.new(0.15), {Color = State.currentThemeColor}):Play()
+    end)
+    searchBox.FocusLost:Connect(function()
+        Services.TweenService:Create(searchStroke, TweenInfo.new(0.15), {Color = Color3.fromRGB(45, 45, 45)}):Play()
+    end)
+
+    local function filterModules(query)
+        query = query:lower()
+        for _, win in pairs(UI.windows) do
+            local hasVisibleModule = false
+            for _, child in ipairs(win.List:GetChildren()) do
+                if child:IsA("Frame") and child.Name:sub(1, 4) == "Mod_" then
+                    local modName = child.Name:sub(5)
+                    local matches = (query == "") or (modName:lower():find(query, 1, true) ~= nil)
+                    child.Visible = matches
+                    if matches then
+                        hasVisibleModule = true
+                    end
+                end
+            end
+            win.Frame.Visible = (activeTab == "Modules") and (query == "" or hasVisibleModule)
+        end
+    end
+
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        if searchBox.Text ~= "" and activeTab ~= "Modules" then
+            selectTab("Modules")
+        end
+        filterModules(searchBox.Text)
+    end)
     
     catPositions = { ["Combat"] = 20, ["Player"] = 210, ["Movement"] = 400, ["Render"] = 590, ["World"] = 780, ["Misc"] = 970, ["Search"] = 1160 }
     
