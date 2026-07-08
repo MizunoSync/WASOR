@@ -66,5 +66,8 @@ Config.loadConfig = function()
     S.WallRun = false; S.FlyBypass = false; S.PathfindingWalk = false
 end
 
+Config.loadConfig()
+Config.loadFavorites()
+
 VH.Config = Config
 return Config

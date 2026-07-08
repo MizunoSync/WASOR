@@ -98,7 +98,7 @@ local function protectUIFonts(gui)
     gui.DescendantAdded:Connect(lockFont)
 end
 
-local function updateMenuBlur()
+UI.updateMenuBlur = function()
     if not menuBlur then return end
     if not State.uiVisible then
         Services.TweenService:Create(menuBlur, TweenInfo.new(0.25), {Size = 0}):Play()
@@ -586,6 +586,7 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         else
             if not drawer then
                 drawer = Instance.new("Frame"); drawer.Name = "drawer"; drawer.Size = UDim2.new(1, 0, 0, 0)
+                drawer.Position = UDim2.new(0, 0, 0, 20)
                 drawer.AutomaticSize = Enum.AutomaticSize.Y; drawer.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
                 drawer.BorderSizePixel = 0; drawer.Visible = false; drawer.Parent = container
                 local layout = Instance.new("UIListLayout"); layout.Padding = UDim.new(0, 2); layout.Parent = drawer
@@ -607,11 +608,19 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     end
     
     btn.MouseButton1Click:Connect(function()
-        if isToggle then active = not active; updateColor(); callback(active) else callback() end
+        if isToggle then active = not active; updateColor(); if callback then callback(active) end else if callback then callback() end end
     end)
     
     local itemObj = {
-        SetActive = function(val) active = val; updateColor() end,
+        SetActive = function(val)
+            if isToggle and active ~= val then
+                active = val
+                updateColor()
+                if callback then callback(val) end
+            elseif not isToggle then
+                if callback then callback() end
+            end
+        end,
         IsActive = function() return isToggle and active end,
         ToggleMenu = toggleMenu
     }
@@ -628,7 +637,7 @@ local function selectTab(tabName)
             btn.TextColor3 = Color3.fromRGB(200, 200, 200); btn.Font = Enum.Font.Gotham
         end
     end
-    updateMenuBlur()
+    UI.updateMenuBlur()
     if tabName == "Modules" then
         if settingsPanel then settingsPanel.Visible = false end
         for _, win in pairs(UI.windows) do
@@ -723,7 +732,7 @@ UI.InitializeUI = function()
     hudArrayListFrame.Size = UDim2.new(0, 120, 0, 0); hudArrayListFrame.AutomaticSize = Enum.AutomaticSize.Y
     hudArrayListFrame.Position = UDim2.new(0, S.HUDArrayListX or 10, 0, S.HUDArrayListY or 70)
     hudArrayListFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15); hudArrayListFrame.BackgroundTransparency = 0.3; hudArrayListFrame.BorderSizePixel = 0
-    hudArrayListFrame.Visible = false; hudArrayListFrame.Parent = mainUIContainer
+    hudArrayListFrame.Visible = false; hudArrayListFrame.Parent = screenGui
     
     local hudStroke = Instance.new("UIStroke"); hudStroke.Color = Color3.fromRGB(45, 45, 45); hudStroke.Thickness = 1; hudStroke.Parent = hudArrayListFrame
     local hudPadding = Instance.new("UIPadding"); hudPadding.PaddingTop = UDim.new(0, 4); hudPadding.PaddingBottom = UDim.new(0, 4)
@@ -768,7 +777,7 @@ UI.InitializeUI = function()
     topTitle.Size = UDim2.new(0, 450, 1, 0); topTitle.Position = UDim2.new(0, 10, 0, 0); topTitle.BackgroundTransparency = 1
     topTitle.Font = Enum.Font.GothamBold; topTitle.TextSize = 11; topTitle.TextColor3 = State.currentThemeColor
     topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.Text = "WeAreSkidding <font color='#ffffff'>On Roblox v1.4</font> <font color='#888888'>(" .. executorName .. ")</font>"
+    topTitle.Text = "WeAreSkidding <font color='#ffffff'>On Roblox v1.5</font> <font color='#888888'>(" .. executorName .. ")</font>"
     topTitle.RichText = true; topTitle.Parent = topBar; table.insert(themeTexts, topTitle)
     
     local hudTextLabel = Instance.new("TextLabel")
@@ -782,20 +791,68 @@ UI.InitializeUI = function()
     toastContainer.BackgroundTransparency = 1; toastContainer.BorderSizePixel = 0; toastContainer.Parent = screenGui
     local toastLayout = Instance.new("UIListLayout"); toastLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom; toastLayout.Padding = UDim.new(0, 6); toastLayout.Parent = toastContainer
     
+    local networkUsersHUD = Instance.new("Frame")
+    networkUsersHUD.Name = "NetworkUsersHUD"
+    networkUsersHUD.Size = UDim2.new(0, 180, 0, 0)
+    networkUsersHUD.Position = UDim2.new(0, 10, 1, -10)
+    networkUsersHUD.AnchorPoint = Vector2.new(0, 1)
+    networkUsersHUD.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    networkUsersHUD.BackgroundTransparency = 0.85
+    networkUsersHUD.BorderSizePixel = 0
+    networkUsersHUD.Active = true
+    networkUsersHUD.ZIndex = 10
+    networkUsersHUD.AutomaticSize = Enum.AutomaticSize.Y
+    networkUsersHUD.Visible = false
+    networkUsersHUD.Parent = screenGui
+    
+    local netCorner = Instance.new("UICorner")
+    netCorner.CornerRadius = UDim.new(0, 4)
+    netCorner.Parent = networkUsersHUD
+    
+    local netStroke = Instance.new("UIStroke")
+    netStroke.Color = Color3.fromRGB(45, 45, 45)
+    netStroke.Thickness = 1
+    netStroke.Parent = networkUsersHUD
+    
+    local netPadding = Instance.new("UIPadding")
+    netPadding.PaddingTop = UDim.new(0, 4)
+    netPadding.PaddingBottom = UDim.new(0, 4)
+    netPadding.PaddingLeft = UDim.new(0, 6)
+    netPadding.PaddingRight = UDim.new(0, 6)
+    netPadding.Parent = networkUsersHUD
+    
+    local netLayout = Instance.new("UIListLayout")
+    netLayout.Padding = UDim.new(0, 2)
+    netLayout.Parent = networkUsersHUD
+    
+    local netHeader = Instance.new("TextLabel")
+    netHeader.Size = UDim2.new(1, 0, 0, 14)
+    netHeader.BackgroundTransparency = 1
+    netHeader.Font = Enum.Font.GothamBold
+    netHeader.TextSize = 10
+    netHeader.TextColor3 = State.currentThemeColor
+    netHeader.TextXAlignment = Enum.TextXAlignment.Left
+    netHeader.Text = "Network Users (0)"
+    netHeader.Parent = networkUsersHUD
+    table.insert(themeTexts, netHeader)
+    
+    UI.networkUsersHUD = networkUsersHUD
+    UI.netHeader = netHeader
+    
     hudWatermark = Instance.new("TextLabel")
     hudWatermark.Size = UDim2.new(0, 200, 0, 14); hudWatermark.Position = UDim2.new(0, 10, 0, 30); hudWatermark.BackgroundTransparency = 1
     hudWatermark.Font = Enum.Font.GothamBold; hudWatermark.TextSize = 10; hudWatermark.TextColor3 = State.currentThemeColor
-    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "Void Utility Hub v1.4"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = mainUIContainer
+    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 1.5"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
     
     hudCoords = Instance.new("TextLabel")
     hudCoords.Size = UDim2.new(0, 250, 0, 14); hudCoords.Position = UDim2.new(0, 10, 0, 44); hudCoords.BackgroundTransparency = 1
     hudCoords.Font = Enum.Font.Code; hudCoords.TextSize = 9; hudCoords.TextColor3 = Color3.fromRGB(200, 200, 200)
-    hudCoords.TextXAlignment = Enum.TextXAlignment.Left; hudCoords.Text = "XYZ: 0.0, 0.0, 0.0"; hudCoords.Visible = S.HUDCoords; hudCoords.Parent = mainUIContainer
+    hudCoords.TextXAlignment = Enum.TextXAlignment.Left; hudCoords.Text = "XYZ: 0.0, 0.0, 0.0"; hudCoords.Visible = S.HUDCoords; hudCoords.Parent = screenGui
     
     hudServerAge = Instance.new("TextLabel")
     hudServerAge.Size = UDim2.new(0, 250, 0, 14); hudServerAge.Position = UDim2.new(0, 10, 0, 58); hudServerAge.BackgroundTransparency = 1
     hudServerAge.Font = Enum.Font.Code; hudServerAge.TextSize = 9; hudServerAge.TextColor3 = Color3.fromRGB(150, 150, 150)
-    hudServerAge.TextXAlignment = Enum.TextXAlignment.Left; hudServerAge.Text = "Server Age: 0h 0m 0s"; hudServerAge.Visible = S.ServerAgeHUD; hudServerAge.Parent = mainUIContainer
+    hudServerAge.TextXAlignment = Enum.TextXAlignment.Left; hudServerAge.Text = "Server Age: 0h 0m 0s"; hudServerAge.Visible = S.ServerAgeHUD; hudServerAge.Parent = screenGui
     
     
     settingsPanel, settingsContent = createPanel("Client Settings", 280, 350)
@@ -881,23 +938,34 @@ UI.InitializeUI = function()
     
     
     navBar = Instance.new("Frame")
-    navBar.Size = UDim2.new(0, 190, 1, -24); navBar.Position = UDim2.new(0, 0, 0, 24); navBar.BackgroundColor3 = Color3.fromRGB(15, 15, 15); navBar.BorderSizePixel = 0; navBar.Parent = mainUIContainer
-    local navStroke = Instance.new("UIStroke"); navStroke.Color = Color3.fromRGB(30, 30, 30); navStroke.Thickness = 1; navStroke.Parent = navBar
-    local navLayout = Instance.new("UIListLayout"); navLayout.Padding = UDim.new(0, 4); navLayout.Parent = navBar
+    navBar.Size = UDim2.new(0, 600, 1, 0)
+    navBar.Position = UDim2.new(0.5, -300, 0, 0)
+    navBar.BackgroundTransparency = 1
+    navBar.Parent = topBar
+    
+    local navLayout = Instance.new("UIListLayout")
+    navLayout.FillDirection = Enum.FillDirection.Horizontal
+    navLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    navLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    navLayout.Padding = UDim.new(0, 16)
+    navLayout.Parent = navBar
     
     local tabs = {"Modules", "Settings"}
     for _, tabName in ipairs(tabs) do
-        local btn = Instance.new("TextButton"); btn.Size = UDim2.new(0, 95, 1, 0); btn.BackgroundTransparency = 1
-        btn.Font = Enum.Font.Gotham; btn.TextSize = 12; btn.TextColor3 = (tabName == activeTab) and State.currentThemeColor or Color3.fromRGB(200, 200, 200)
-        if tabName == activeTab then btn.Font = Enum.Font.GothamBold end; btn.Text = tabName; btn.Parent = navBar
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0, 95, 1, 0)
+        btn.BackgroundTransparency = 1
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 12
+        btn.TextColor3 = (tabName == activeTab) and State.currentThemeColor or Color3.fromRGB(200, 200, 200)
+        if tabName == activeTab then btn.Font = Enum.Font.GothamBold end
+        btn.Text = tabName
+        btn.Parent = navBar
         btn.MouseEnter:Connect(function() if activeTab ~= tabName then btn.TextColor3 = Color3.fromRGB(255, 255, 255) end end)
         btn.MouseLeave:Connect(function() if activeTab ~= tabName then btn.TextColor3 = Color3.fromRGB(200, 200, 200) end end)
-        btn.MouseButton1Click:Connect(function() selectTab(tabName) end); UI.tabButtons[tabName] = btn
+        btn.MouseButton1Click:Connect(function() selectTab(tabName) end)
+        UI.tabButtons[tabName] = btn
     end
-    
-    
-    navLayout.FillDirection = Enum.FillDirection.Horizontal
-    navBar.Size = UDim2.new(1, 0, 0, 24); navBar.Position = UDim2.new(0, 0, 0, 24)
     
     
     catPositions = { ["Combat"] = 20, ["Player"] = 210, ["Movement"] = 400, ["Render"] = 590, ["World"] = 780, ["Misc"] = 970, ["Search"] = 1160 }
@@ -913,6 +981,211 @@ UI.InitializeUI = function()
     UI.themeHeaders = themeHeaders
     UI.themeFills = themeFills
     UI.themeTexts = themeTexts
+    
+    local function runWelcomeToasts()
+        task.spawn(function()
+            task.wait(1.5)
+            local visited = false
+            if isfile and readfile then
+                visited = isfile("utility_hub_visited.txt")
+            end
+            if not visited then
+                if writefile then
+                    pcall(function() writefile("utility_hub_visited.txt", "true") end)
+                end
+                UI.showToast("Welcome to Void Utility Hub!", State.currentThemeColor)
+                task.wait(2.2)
+                UI.showToast("Toggle UI with [Right Control]", State.currentThemeColor)
+                task.wait(2.2)
+                UI.showToast("Configure settings in the Settings tab", State.currentThemeColor)
+                task.wait(2.2)
+                UI.showToast("Press [End] to Panic (disable all)", Color3.fromRGB(218, 38, 38))
+            end
+        end)
+    end
+
+    if S.EulaAccepted == true then
+        runWelcomeToasts()
+    else
+        mainUIContainer.Visible = false
+        hudWatermark.Visible = false
+        hudCoords.Visible = false
+        hudServerAge.Visible = false
+        hudArrayListFrame.Visible = false
+        
+        local eulaFrame = Instance.new("Frame")
+        eulaFrame.Name = "EulaFrame"
+        eulaFrame.Size = UDim2.new(0, 360, 0, 240)
+        eulaFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        eulaFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+        eulaFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        eulaFrame.BorderSizePixel = 0
+        eulaFrame.Parent = screenGui
+
+        local eulaCorner = Instance.new("UICorner")
+        eulaCorner.CornerRadius = UDim.new(0, 6)
+        eulaCorner.Parent = eulaFrame
+
+        local eulaStroke = Instance.new("UIStroke")
+        eulaStroke.Color = Color3.fromRGB(45, 45, 45)
+        eulaStroke.Thickness = 1.2
+        eulaStroke.Parent = eulaFrame
+
+        local header = Instance.new("Frame")
+        header.Size = UDim2.new(1, 0, 0, 24)
+        header.BackgroundColor3 = State.currentThemeColor
+        header.BorderSizePixel = 0
+        header.Parent = eulaFrame
+        table.insert(themeHeaders, header)
+        
+        local headerCorner = Instance.new("UICorner")
+        headerCorner.CornerRadius = UDim.new(0, 6)
+        headerCorner.Parent = header
+        
+        local headerHide = Instance.new("Frame")
+        headerHide.Size = UDim2.new(1, 0, 0, 6)
+        headerHide.Position = UDim2.new(0, 0, 1, -6)
+        headerHide.BackgroundColor3 = State.currentThemeColor
+        headerHide.BorderSizePixel = 0
+        headerHide.Parent = header
+        table.insert(themeFills, headerHide)
+
+        local titleLbl = Instance.new("TextLabel")
+        titleLbl.Size = UDim2.new(1, -20, 1, 0)
+        titleLbl.Position = UDim2.new(0, 10, 0, 0)
+        titleLbl.BackgroundTransparency = 1
+        titleLbl.Font = Enum.Font.GothamBold
+        titleLbl.TextSize = 10
+        titleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+        titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+        titleLbl.Text = "VOID UTILITY HUB - EULA"
+        titleLbl.Parent = header
+
+        local textLbl = Instance.new("TextLabel")
+        textLbl.Size = UDim2.new(1, -24, 0, 130)
+        textLbl.Position = UDim2.new(0, 12, 0, 36)
+        textLbl.BackgroundTransparency = 1
+        textLbl.Font = Enum.Font.GothamMedium
+        textLbl.TextSize = 10
+        textLbl.TextColor3 = Color3.fromRGB(220, 220, 220)
+        textLbl.TextXAlignment = Enum.TextXAlignment.Left
+        textLbl.TextYAlignment = Enum.TextYAlignment.Top
+        textLbl.TextWrapped = true
+        textLbl.RichText = true
+        textLbl.Text = "This script may bans in games that have strict anti cheats towards unallowed services before injecting to a new game. saving it always after the use decision.\n\nBy agreeing to this you will be connected to a SUPABASE database whenever you use the script for client detection and more😨, If it seems to evasive you can fork the repository and remove it."
+        textLbl.Parent = eulaFrame
+
+        local buttonsFrame = Instance.new("Frame")
+        buttonsFrame.Size = UDim2.new(1, -24, 0, 32)
+        buttonsFrame.Position = UDim2.new(0, 12, 1, -44)
+        buttonsFrame.BackgroundTransparency = 1
+        buttonsFrame.Parent = eulaFrame
+
+        local function createButton(name, xPosition, bgColor, callback)
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(0.48, 0, 1, 0)
+            btn.Position = xPosition
+            btn.BackgroundColor3 = bgColor
+            btn.BorderSizePixel = 0
+            btn.Font = Enum.Font.GothamBold
+            btn.TextSize = 10
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn.Text = name
+            btn.Parent = buttonsFrame
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 4)
+            corner.Parent = btn
+
+            local stroke = Instance.new("UIStroke")
+            stroke.Color = Color3.fromRGB(255, 255, 255)
+            stroke.Transparency = 0.85
+            stroke.Parent = btn
+
+            btn.MouseEnter:Connect(function()
+                Services.TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(math.clamp(bgColor.R*255 + 20, 0, 255), math.clamp(bgColor.G*255 + 20, 0, 255), math.clamp(bgColor.B*255 + 20, 0, 255))}):Play()
+            end)
+            btn.MouseLeave:Connect(function()
+                Services.TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = bgColor}):Play()
+            end)
+
+            btn.MouseButton1Click:Connect(callback)
+            return btn
+        end
+
+        local function agreeCallback()
+            S.EulaAccepted = true
+            VH.Config.saveConfig()
+            eulaFrame:Destroy()
+            mainUIContainer.Visible = true
+            hudWatermark.Visible = S.HUDWatermark
+            hudCoords.Visible = S.HUDCoords
+            hudServerAge.Visible = S.ServerAgeHUD
+            
+            if VH.runNetworkTagsSync then
+                pcall(VH.runNetworkTagsSync)
+            end
+            
+            runWelcomeToasts()
+        end
+
+        local function declineCallback()
+            S.EulaAccepted = false
+            VH.Config.saveConfig()
+            VH.Cleanup.cleanupAll()
+        end
+
+        createButton("Agree", UDim2.new(0, 0, 0, 0), Color3.fromRGB(46, 204, 113), agreeCallback)
+        createButton("Decline", UDim2.new(0.52, 0, 0, 0), Color3.fromRGB(218, 38, 38), declineCallback)
+        
+        makeDraggable(eulaFrame, header)
+    end
+end
+
+UI.updateNetworkUsersHUD = function(activeInServer)
+    if not UI.networkUsersHUD then return end
+    for _, child in ipairs(UI.networkUsersHUD:GetChildren()) do
+        if child:IsA("TextLabel") and child ~= UI.netHeader then
+            child:Destroy()
+        end
+    end
+    
+    local userCount = 0
+    for username, userData in pairs(activeInServer) do
+        userCount = userCount + 1
+        local p = Services.Players:FindFirstChild(username)
+        local dispName = p and p.DisplayName or username
+        local executor = userData.executor or "Unknown"
+        local is_admin = userData.is_admin
+        
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, 0, 0, 14)
+        lbl.BackgroundTransparency = 1
+        lbl.Font = Enum.Font.GothamMedium
+        lbl.TextSize = 9
+        lbl.TextColor3 = Color3.fromRGB(220, 220, 220)
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        
+        local roleColor = is_admin and "#ffeb3b" or "#9ba3af"
+        local nameText = is_admin and " " .. dispName or dispName
+        lbl.Text = string.format("%s <font color='%s'>[%s]</font>", nameText, roleColor, executor)
+        lbl.RichText = true
+        lbl.Parent = UI.networkUsersHUD
+    end
+    
+    UI.netHeader.Text = string.format("Network Users (%d)", userCount)
+    
+    if userCount == 0 then
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, 0, 0, 14)
+        lbl.BackgroundTransparency = 1
+        lbl.Font = Enum.Font.Gotham
+        lbl.TextSize = 9
+        lbl.TextColor3 = Color3.fromRGB(120, 120, 120)
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.Text = "No other users found"
+        lbl.Parent = UI.networkUsersHUD
+    end
 end
 
 

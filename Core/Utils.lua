@@ -195,8 +195,10 @@ Utils.toggleClearVision = function(v)
         Services.Lighting.FogEnd = 100000
         for _, descendant in ipairs(Services.Lighting:GetDescendants()) do
             if descendant:IsA("BlurEffect") or descendant:IsA("DepthOfFieldEffect") or descendant:IsA("Atmosphere") or descendant:IsA("ColorCorrectionEffect") then
-                if S.OriginalLightingEffects[descendant] == nil then S.OriginalLightingEffects[descendant] = descendant.Enabled end
-                descendant.Enabled = false
+                pcall(function()
+                    if S.OriginalLightingEffects[descendant] == nil then S.OriginalLightingEffects[descendant] = descendant.Enabled end
+                    descendant.Enabled = false
+                end)
             end
         end
     else
@@ -212,18 +214,45 @@ Utils.toggleGraphicsReducer = function(v)
     local S = State.S
     S.GraphicsReducer = v
     if v then
-        for _, descendant in ipairs(Services.Workspace:GetDescendants()) do
-            if descendant:IsA("BasePart") then descendant.Material = Enum.Material.SmoothPlastic
-            elseif descendant:IsA("Decal") or descendant:IsA("Texture") then descendant.Transparency = 1
-            elseif descendant:IsA("ParticleEmitter") or descendant:IsA("Fire") or descendant:IsA("Smoke") or descendant:IsA("Sparkles") then descendant.Enabled = false end
-        end
-        Services.Lighting.GlobalShadows = false
+        pcall(function()
+            for _, descendant in ipairs(Services.Workspace:GetDescendants()) do
+                if descendant:IsA("BasePart") and S.LagReducePotatoMode then
+                    descendant.Material = Enum.Material.SmoothPlastic
+                elseif (descendant:IsA("Decal") or descendant:IsA("Texture")) and S.LagReduceDecals then
+                    descendant.Transparency = 1
+                elseif (descendant:IsA("ParticleEmitter") or descendant:IsA("Fire") or descendant:IsA("Smoke") or descendant:IsA("Sparkles")) and S.LagReduceParticles then
+                    descendant.Enabled = false
+                end
+            end
+            if S.LagReduceShadows then
+                Services.Lighting.GlobalShadows = false
+            end
+            if S.LagReduceEffects then
+                for _, effect in ipairs(Services.Lighting:GetChildren()) do
+                    if effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") then
+                        effect.Enabled = false
+                    end
+                end
+            end
+        end)
     else
-        Services.Lighting.GlobalShadows = true
-        for _, descendant in ipairs(Services.Workspace:GetDescendants()) do
-            if descendant:IsA("Decal") or descendant:IsA("Texture") then descendant.Transparency = 0
-            elseif descendant:IsA("ParticleEmitter") or descendant:IsA("Fire") or descendant:IsA("Smoke") or descendant:IsA("Sparkles") then descendant.Enabled = true end
-        end
+        pcall(function()
+            Services.Lighting.GlobalShadows = true
+            for _, descendant in ipairs(Services.Workspace:GetDescendants()) do
+                if descendant:IsA("BasePart") then
+                    descendant.Material = Enum.Material.Plastic
+                elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+                    descendant.Transparency = 0
+                elseif descendant:IsA("ParticleEmitter") or descendant:IsA("Fire") or descendant:IsA("Smoke") or descendant:IsA("Sparkles") then
+                    descendant.Enabled = true
+                end
+            end
+            for _, effect in ipairs(Services.Lighting:GetChildren()) do
+                if effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") then
+                    effect.Enabled = true
+                end
+            end
+        end)
     end
 end
 

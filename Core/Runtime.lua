@@ -5,6 +5,27 @@ local S = State.S
 local Utils = VH.Utils
 local UI = VH.UI
 
+local applyGodMode = Utils.applyGodMode
+local applyCustomIdle = Utils.applyCustomIdle
+local updateLocalNametag = Utils.updateLocalNametag
+local toggleFloat = Utils.toggleFloat
+local enableGhostMode = Utils.enableGhostMode
+local disableGhostMode = Utils.disableGhostMode
+local applyTallAnimations = Utils.applyTallAnimations
+local toggleClearVision = Utils.toggleClearVision
+local Lighting = Services.Lighting
+local refreshOverheads = Utils.refreshOverheads
+local toggleGraphicsReducer = Utils.toggleGraphicsReducer
+local toggleMapXray = Utils.toggleMapXray
+local moduleButtons = UI.moduleButtons
+local setupAutoReinject = Utils.setupAutoReinject
+local TeleportService = Services.TeleportService
+local HttpService = Services.HttpService
+local UserInputService = Services.UserInputService
+local MarketplaceService = Services.MarketplaceService
+local VirtualUser = Services.VirtualUser
+local RunService = Services.RunService
+
 local themeToggles = UI.themeToggles
 local themeHeaders = UI.themeHeaders
 local themeFills = UI.themeFills
@@ -394,10 +415,10 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
                     rowHomePing:SetValue(pingVal .. "ms"); rowPing:SetValue(pingVal .. "ms")
                     rowPlayers:SetValue(string.format("%d / %d", #Players:GetPlayers(), Players.MaxPlayers))
                     rowAge:SetValue(string.format("%.2f hours", Workspace.DistributedGameTime / 3600))
-                    Win.HUDLabel.Text = string.format("FPS: %d  |  PING: %dms", fpsCount, pingVal)
+                    UI.HUDLabel.Text = string.format("FPS: %d  |  PING: %dms", fpsCount, pingVal)
                 end)
             end)
-        elseif updated then Win.HUDLabel.Text = string.format("FPS: %d  |  PING: %dms", fpsCount, pingVal) end
+        elseif updated then UI.HUDLabel.Text = string.format("FPS: %d  |  PING: %dms", fpsCount, pingVal) end
         if S.ServerAgeHUD and hudServerAge then
             local secs = math.floor(Workspace.DistributedGameTime); local mins = math.floor(secs / 60); local hrs = math.floor(mins / 60)
             mins = mins % 60; secs = secs % 60; hudServerAge.Text = string.format("Server Age: %dh %dm %ds", hrs, mins, secs)
@@ -489,39 +510,34 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
             local speed = horizontalVel.Magnitude
 
             if myHum.FloorMaterial ~= Enum.Material.Air then
-                
                 myHum:ChangeState(Enum.HumanoidStateType.Jumping)
                 local targetVel = lastAirVelocity or horizontalVel
                 if moveDir.Magnitude > 0.1 then
-                    targetVel = targetVel + (moveDir.Unit * 4)
-                end
-                
-                local maxSpeed = 150
-                if targetVel.Magnitude > maxSpeed then
-                    targetVel = targetVel.Unit * maxSpeed
-                elseif targetVel.Magnitude < 16 then
-                    targetVel = targetVel.Unit * 16
+                    -- Build speed on landing/jump transition (like CS 1.6)
+                    local newSpeed = math.clamp(speed * 1.05 + 1.5, 16, 140)
+                    targetVel = moveDir.Unit * newSpeed
+                else
+                    targetVel = targetVel.Unit * math.clamp(speed, 16, 140)
                 end
                 
                 myHRP.AssemblyLinearVelocity = Vector3.new(targetVel.X, currentVel.Y, targetVel.Z)
                 lastAirVelocity = nil
             else
-                
                 if S.BHopAutoStrafe then
                     local strafeDir = nil
                     if deltaYaw > 0.001 then 
-                        strafeDir = -Camera.CFrame.RightVector
-                    elseif deltaYaw < -0.001 then 
                         strafeDir = Camera.CFrame.RightVector
+                    elseif deltaYaw < -0.001 then 
+                        strafeDir = -Camera.CFrame.RightVector
                     end
 
                     if strafeDir then
                         local strafeDirH = Vector3.new(strafeDir.X, 0, strafeDir.Z)
                         if strafeDirH.Magnitude > 0.1 then
                             strafeDirH = strafeDirH.Unit
-                            local accel = 0.8
-                            local newSpeed = math.clamp(speed + accel, 16, 150)
-                            local blendFactor = 0.15
+                            local accel = 1.0
+                            local newSpeed = math.clamp(speed + accel, 16, 140)
+                            local blendFactor = 0.18
                             local newHorizontal = (horizontalVel.Unit * (1 - blendFactor) + strafeDirH * blendFactor).Unit * newSpeed
                             myHRP.AssemblyLinearVelocity = Vector3.new(newHorizontal.X, currentVel.Y, newHorizontal.Z)
                             lastAirVelocity = newHorizontal
@@ -529,9 +545,8 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
                             lastAirVelocity = horizontalVel
                         end
                     else
-                        
                         if moveDir.Magnitude > 0.1 then
-                            local newHorizontal = (horizontalVel + moveDir.Unit * 0.5).Unit * math.clamp(speed, 16, 150)
+                            local newHorizontal = (horizontalVel + moveDir.Unit * 0.5).Unit * math.clamp(speed, 16, 140)
                             myHRP.AssemblyLinearVelocity = Vector3.new(newHorizontal.X, currentVel.Y, newHorizontal.Z)
                             lastAirVelocity = newHorizontal
                         else
@@ -539,9 +554,8 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
                         end
                     end
                 else
-                    
                     if moveDir.Magnitude > 0.1 then
-                        local newHorizontal = (horizontalVel + moveDir.Unit * 0.5).Unit * math.clamp(speed, 16, 150)
+                        local newHorizontal = (horizontalVel + moveDir.Unit * 0.5).Unit * math.clamp(speed, 16, 140)
                         myHRP.AssemblyLinearVelocity = Vector3.new(newHorizontal.X, currentVel.Y, newHorizontal.Z)
                         lastAirVelocity = newHorizontal
                     else
@@ -556,19 +570,32 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
     
     pcall(function()
         if S.AirWalk then
-            if myHum and myHRP then
-                if myHum.FloorMaterial == Enum.Material.Air then
-                    if not S.AirWalkPlat then
-                        local plat = Instance.new("Part"); plat.Name = "VoidAirWalkPlat"; plat.Size = Vector3.new(6, 1, 6); plat.Anchored = true; plat.CanCollide = true; plat.Transparency = 1; plat.Parent = Workspace
-                        S.AirWalkPlat = plat
-                    end
-                    S.AirWalkPlat.CFrame = CFrame.new(myHRP.Position.X, myHRP.Position.Y - 3.5, myHRP.Position.Z)
+            if myHRP then
+                if not S.AirWalkPlat then
+                    local plat = Instance.new("Part")
+                    plat.Name = "VoidAirWalkPlat"
+                    plat.Size = Vector3.new(10, 1, 10)
+                    plat.Anchored = true
+                    plat.CanCollide = true
+                    plat.Transparency = 1
+                    plat.Parent = Workspace
+                    plat.CFrame = CFrame.new(myHRP.Position.X, myHRP.Position.Y - 3.5, myHRP.Position.Z)
+                    S.AirWalkPlat = plat
                 else
-                    if S.AirWalkPlat then S.AirWalkPlat:Destroy(); S.AirWalkPlat = nil end
+                    local targetY = S.AirWalkPlat.Position.Y
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                        targetY = myHRP.Position.Y - 2.0
+                    elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+                        targetY = myHRP.Position.Y - 5.0
+                    end
+                    S.AirWalkPlat.CFrame = CFrame.new(myHRP.Position.X, targetY, myHRP.Position.Z)
                 end
             end
         else
-            if S.AirWalkPlat then S.AirWalkPlat:Destroy(); S.AirWalkPlat = nil end
+            if S.AirWalkPlat then
+                pcall(function() S.AirWalkPlat:Destroy() end)
+                S.AirWalkPlat = nil
+            end
         end
     end)
     
@@ -677,7 +704,7 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
     pcall(function() if S.AutoClicker and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then VirtualUser:ClickButton1(Vector2.new()) end end)
     
     pcall(function()
-        if not isFreecam and Camera.CameraType == Enum.CameraType.Watch then
+        if not State.isFreecam and Camera.CameraType == Enum.CameraType.Watch then
             local subj = Camera.CameraSubject
             if not subj or typeof(subj) ~= "Instance" or not subj.Parent then
                 Camera.CameraType = Enum.CameraType.Custom; if myHum then Camera.CameraSubject = myHum end
@@ -754,17 +781,23 @@ table.insert(S.Connections, RunService.Stepped:Connect(function()
 end))
 
 local function toggleUIVisibility()
-    uiVisible = not uiVisible; mainUIContainer.Visible = uiVisible; updateHUDArrayList(); if updateMenuBlur then updateMenuBlur() end
+    State.uiVisible = not State.uiVisible
+    local container = UI.GetMainContainer()
+    if container then container.Visible = State.uiVisible end
+    updateHUDArrayList()
+    UI.updateMenuBlur()
 end
 
 table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gpe)
     if S.SilentAim and inp.UserInputType == Enum.UserInputType.MouseButton1 and not UserInputService:GetFocusedTextBox() then
-        local target = getAimbotTarget()
-        if target then local oldCF = Camera.CFrame; Camera.CFrame = CFrame.new(oldCF.Position, target.Position); RunService.RenderStepped:Wait(); Camera.CFrame = oldCF end
+        if not getrawmetatable then
+            local target = getAimbotTarget()
+            if target then local oldCF = Camera.CFrame; Camera.CFrame = CFrame.new(oldCF.Position, target.Position); RunService.RenderStepped:Wait(); Camera.CFrame = oldCF end
+        end
     end
     if inp.KeyCode == (S.UIToggleKey or Enum.KeyCode.RightControl) or inp.KeyCode == Enum.KeyCode.RightControl then toggleUIVisibility(); return end
     if S.PanicKey and inp.KeyCode == S.PanicKey then
-        Win:ResetAllToggles(); uiVisible = false; mainUIContainer.Visible = false; updateHUDArrayList(); notify("PANIC! All modules disabled.", Color3.fromRGB(218, 38, 38)); return
+        UI:ResetAllToggles(); State.uiVisible = false; local container = UI.GetMainContainer(); if container then container.Visible = false end; updateHUDArrayList(); UI.updateMenuBlur(); notify("PANIC! All modules disabled.", Color3.fromRGB(218, 38, 38)); return
     end
     if S.UserIDGrabKey and inp.KeyCode == S.UserIDGrabKey then
         local mouseHit = Mouse.Target; local char = mouseHit and mouseHit.Parent; local p = char and Players:GetPlayerFromCharacter(char)
@@ -869,7 +902,7 @@ table.insert(S.Connections, Players.PlayerRemoving:Connect(function(p)
         destroyESP(p)
         if S.OverheadPool[p] then pcall(function() S.OverheadPool[p]:Destroy() end); S.OverheadPool[p] = nil end
         if S.ChatConnections[p] then pcall(function() S.ChatConnections[p]:Disconnect() end); S.ChatConnections[p] = nil end
-        if currentSpectateTarget == p then spectatePlayer(nil) end
+        if State.currentSpectateTarget == p then spectatePlayer(nil) end
     end)
 end))
 
@@ -899,7 +932,7 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
             pcall(function() bill:Destroy() end)
         end
         table.clear(networkTagsPool)
-        pcall(function() updateNetworkUsersHUD({}) end)
+        pcall(function() UI.updateNetworkUsersHUD({}) end)
     end
 
     local function updateNetworkTags(activeUsers)
@@ -913,7 +946,7 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
             end
         end
         
-        pcall(function() updateNetworkUsersHUD(activeInServer) end)
+        pcall(function() UI.updateNetworkUsersHUD(activeInServer) end)
         
         for username, bill in pairs(networkTagsPool) do
             if not activeInServer[username] then
@@ -972,6 +1005,7 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
     end
 
     runNetworkTagsSync = function()
+        if not S.EulaAccepted then return end
         if not request then return end
         
         local SUPABASE_URL = "https://nlavwcbdqcmoqmojraeu.supabase.co"
@@ -1133,6 +1167,7 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
             end
         end)
     end
+    VH.runNetworkTagsSync = runNetworkTagsSync
 
     
     table.insert(themeToggles, function()
@@ -1173,6 +1208,51 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
 
     
     networkTagsRunning = true
-    runNetworkTagsSync()
+    if S.EulaAccepted then
+        runNetworkTagsSync()
+    end
+
+    pcall(function()
+        local mt = getrawmetatable(game)
+        local oldIndex = mt.__index
+        local oldNamecall = mt.__namecall
+        
+        setreadonly(mt, false)
+        
+        mt.__index = newcclosure(function(self, idx)
+            if idx == "Hit" and S.SilentAim and self == Mouse then
+                local targetPart = Utils.getAimbotTarget()
+                if targetPart then
+                    return targetPart.CFrame
+                end
+            end
+            if idx == "Target" and S.SilentAim and self == Mouse then
+                local targetPart = Utils.getAimbotTarget()
+                if targetPart then
+                    return targetPart
+                end
+            end
+            return oldIndex(self, idx)
+        end)
+        
+        mt.__namecall = newcclosure(function(self, ...)
+            local method = getnamecallmethod()
+            local args = {...}
+            if method == "Raycast" and S.SilentAim and self.ClassName == "Workspace" then
+                local targetPart = Utils.getAimbotTarget()
+                if targetPart then
+                    local origin = args[1]
+                    local newDir = (targetPart.Position - origin).Unit * 1000
+                    args[2] = newDir
+                    return oldNamecall(self, table.unpack(args))
+                end
+            end
+            return oldNamecall(self, ...)
+        end)
+        
+        setreadonly(mt, true)
+    end)
 
 print("[WeAreSkidding] Custom GUI loaded successfully!")
+
+

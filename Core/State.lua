@@ -65,7 +65,8 @@ State.S = {
     TimeOfDay = 14, CameraMaxZoom = 128, ViewModelFOV = 70,
     ClickDelete = false, CameraFOV = 70, ForceShiftLock = false, ESPColor = "Red", AntiAnchor = false,
     No3DRender = false, FPSCap = 60, ClickTeleport = false, SprintEnabled = false, SprintSpeed = 35,
-    AntiSit = false, GraphicsReducer = false, AutoRejoin = false, NetworkChat = true, NetworkTags = true, FreecamSpeed = 40, TracerOrigin = "Bottom",
+    AntiSit = false, GraphicsReducer = false, AutoRejoin = false, NetworkChat = true, NetworkTags = true, ShowNetworkUsersHUD = true, FreecamSpeed = 40, TracerOrigin = "Bottom",
+    LagReducePotatoMode = true, LagReduceShadows = true, LagReduceDecals = true, LagReduceParticles = true, LagReduceEffects = true,
     FloatBody = nil, WaterPlat = nil, WaterRaycastParams = nil, TallWalkTrack = nil, TallIdleTrack = nil,
     CustomIdleTrack = nil, TallRunningConn = nil, GodModeConn = nil,
     OriginalPartTransparencies = {}, OriginalLightingEffects = {}, OriginalFogEnd = nil,
@@ -79,6 +80,7 @@ State.S = {
     AimbotHoldMode = "M2", AimbotHoldKey = Enum.KeyCode.Unknown, HUDArrayListX = 10, HUDArrayListY = 70,
     TriggerbotActive = false, TriggerbotTeamCheck = true, TriggerbotIgnoreFriends = false, TriggerbotDelay = 0.05,
     PanicKey = Enum.KeyCode.End, UserIDGrabKey = Enum.KeyCode.K,
+    EulaAccepted = false,
     currentOptionsModule = ""
 }
 
