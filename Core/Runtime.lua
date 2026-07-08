@@ -1214,8 +1214,15 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
 
     pcall(function()
         local mt = getrawmetatable(game)
-        local oldIndex = mt.__index
-        local oldNamecall = mt.__namecall
+        if not getgenv()._WASOR_OriginalIndex then
+            getgenv()._WASOR_OriginalIndex = mt.__index
+        end
+        if not getgenv()._WASOR_OriginalNamecall then
+            getgenv()._WASOR_OriginalNamecall = mt.__namecall
+        end
+        
+        local oldIndex = getgenv()._WASOR_OriginalIndex
+        local oldNamecall = getgenv()._WASOR_OriginalNamecall
         
         setreadonly(mt, false)
         
@@ -1253,6 +1260,6 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
         setreadonly(mt, true)
     end)
 
+    pcall(setupAutoReinject)
+
 print("[WeAreSkidding] Custom GUI loaded successfully!")
-
-
