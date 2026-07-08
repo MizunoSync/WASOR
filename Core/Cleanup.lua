@@ -91,6 +91,10 @@ Cleanup.cleanupAll = function()
     
     pcall(function() VH.Utils.toggleMapXray(false); VH.Utils.toggleClearVision(false) end)
     pcall(function() Services.Lighting.Ambient = State.originalAmbient; Services.Lighting.OutdoorAmbient = State.originalOutdoor end)
+    pcall(function()
+        local oldBlur = Services.Lighting:FindFirstChild("WeAreSkiddingBlur")
+        if oldBlur then oldBlur:Destroy() end
+    end)
     pcall(function() if getgenv().VoidFOVCircle then getgenv().VoidFOVCircle:Remove(); getgenv().VoidFOVCircle = nil end end)
 end
 
