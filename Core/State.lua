@@ -50,6 +50,7 @@ State.S = {
     FollowTarget = nil, FollowActive = false,
     InstantPrompts = false, AntiVoid = false, AntiVoidY = -500,
     ToastEnabled = true, ToastChatEnabled = false, AutoReinject = true,
+    AutoplayBot = false, AutoplayShoot = true, AutoplayReload = true, AutoplayRange = 150, AutoplayReloadInterval = 10, AutoplayTargetMode = "Closest", AutoplayTeamCheck = true, AutoplayFriendCheck = true,
     Float = false, WaterWalk = false, TallAnim = false, Spin = false, SpinSpeed = 15,
     GravityEnabled = false, CustomGravity = 196.2, ForceWalkSpeed = false, ForceJumpPower = false,
     AntiAFK = false, GhostTeleportToEnd = false,
