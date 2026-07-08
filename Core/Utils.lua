@@ -264,9 +264,16 @@ Utils.setupAutoRejoin = function()
     if State.rejoinHooked then return end; State.rejoinHooked = true
     pcall(function()
         local conn = game:GetService("GuiService").ErrorMessageChanged:Connect(function()
+            pcall(function()
+                if VH.Cleanup and VH.Cleanup.cleanupAll then
+                    VH.Cleanup.cleanupAll()
+                end
+            end)
             if S.AutoRejoin then
-                Utils.notify("Kicked from server! Rejoining in 5 seconds...", Color3.fromRGB(218, 38, 38))
-                task.wait(5); Services.TeleportService:Teleport(game.PlaceId, Services.LP)
+                task.spawn(function()
+                    task.wait(5)
+                    pcall(function() Services.TeleportService:Teleport(game.PlaceId, Services.LP) end)
+                end)
             end
         end)
         table.insert(S.Connections, conn)
