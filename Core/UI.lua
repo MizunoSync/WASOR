@@ -993,7 +993,7 @@ UI.InitializeUI = function()
                 if writefile then
                     pcall(function() writefile("utility_hub_visited.txt", "true") end)
                 end
-                UI.showToast("Welcome to Void Utility Hub!", State.currentThemeColor)
+                UI.showToast("Welcome to WASOR!", State.currentThemeColor)
                 task.wait(2.2)
                 UI.showToast("Toggle UI with [Right Control]", State.currentThemeColor)
                 task.wait(2.2)
@@ -1058,7 +1058,7 @@ UI.InitializeUI = function()
         titleLbl.TextSize = 10
         titleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
         titleLbl.TextXAlignment = Enum.TextXAlignment.Left
-        titleLbl.Text = "VOID UTILITY HUB - EULA"
+        titleLbl.Text = "WASOR - EULA"
         titleLbl.Parent = header
 
         local textLbl = Instance.new("TextLabel")
