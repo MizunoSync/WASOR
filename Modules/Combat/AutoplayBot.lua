@@ -27,12 +27,28 @@ local saveConfig = VH.Config.saveConfig
 
 local lastReloadTime = 0
 local shootTimer = 0
+local autoplayConn = nil
+local activeWaypoints = {}
+local activeWaypointIndex = 1
+local activeTarget = nil
+
+local function isAimingAtMe(p, myHRP)
+    local char = p.Character
+    local head = char and (char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart)
+    if head and myHRP then
+        local look = head.CFrame.LookVector
+        local dir = (myHRP.Position - head.Position).Unit
+        return look:Dot(dir) > 0.75
+    end
+    return false
+end
 
 local function getBestTarget()
-    local best = nil
-    local bestVal = math.huge
     local myHRP = getHRP()
     if not myHRP then return nil end
+
+    local attackers = {}
+    local closePlayers = {}
 
     for _, p in ipairs(Players:GetPlayers()) do
         if p == LP then continue end
@@ -43,22 +59,58 @@ local function getBestTarget()
         local hrp = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char.PrimaryPart)
         local hum = char and char:FindFirstChildOfClass("Humanoid")
         if hrp and hum and hum.Health > 0 then
-            if S.AutoplayTargetMode == "Closest" then
-                local dist = (hrp.Position - myHRP.Position).Magnitude
-                if dist < bestVal then
-                    bestVal = dist
-                    best = p
-                end
-            elseif S.AutoplayTargetMode == "Lowest HP" then
-                local hp = hum.Health
-                if hp < bestVal then
-                    bestVal = hp
-                    best = p
+            local dist = (hrp.Position - myHRP.Position).Magnitude
+            if dist <= S.AutoplayRange then
+                if isAimingAtMe(p, myHRP) then
+                    table.insert(attackers, { player = p, dist = dist, hp = hum.Health, hrp = hrp })
+                else
+                    table.insert(closePlayers, { player = p, dist = dist, hp = hum.Health, hrp = hrp })
                 end
             end
         end
     end
-    return best
+
+    -- 1. Prioritize attackers (people aiming at us)
+    if #attackers > 0 then
+        local best = nil
+        local bestVal = math.huge
+        for _, entry in ipairs(attackers) do
+            if S.AutoplayTargetMode == "Closest" then
+                if entry.dist < bestVal then
+                    bestVal = entry.dist
+                    best = entry.player
+                end
+            elseif S.AutoplayTargetMode == "Lowest HP" then
+                if entry.hp < bestVal then
+                    bestVal = entry.hp
+                    best = entry.player
+                end
+            end
+        end
+        return best
+    end
+
+    -- 2. Fallback to normal close targets
+    if #closePlayers > 0 then
+        local best = nil
+        local bestVal = math.huge
+        for _, entry in ipairs(closePlayers) do
+            if S.AutoplayTargetMode == "Closest" then
+                if entry.dist < bestVal then
+                    bestVal = entry.dist
+                    best = entry.player
+                end
+            elseif S.AutoplayTargetMode == "Lowest HP" then
+                if entry.hp < bestVal then
+                    bestVal = entry.hp
+                    best = entry.player
+                end
+            end
+        end
+        return best
+    end
+
+    return nil
 end
 
 local function checkLineOfSight(targetHRP)
@@ -98,44 +150,111 @@ local function simulateReload()
     end)
 end
 
-local function startAutoplay()
-    task.spawn(function()
-        while S.AutoplayBot do
-            task.wait(0.2)
+-- Slow pathfinding computation loop (runs in background)
+task.spawn(function()
+    while true do
+        task.wait(0.35)
+        if S.AutoplayBot then
             pcall(function()
-                local char = getChar()
-                local hum = getHum()
                 local myHRP = getHRP()
-                if not char or not hum or not myHRP or hum.Health <= 0 then return end
-
-                local target = getBestTarget()
-                if not target then
-                    hum:Move(Vector3.new(0, 0, 0))
+                if not myHRP then
+                    activeTarget = nil
+                    activeWaypoints = {}
                     return
                 end
 
-                local targetHRP = target.Character and (target.Character:FindFirstChild("HumanoidRootPart") or target.Character:FindFirstChild("Torso") or target.Character.PrimaryPart)
-                if not targetHRP then return end
+                local target = getBestTarget()
+                activeTarget = target
 
-                -- Auto Shoot / Aim
-                if S.AutoplayShoot then
+                if target then
+                    local targetHRP = target.Character and (target.Character:FindFirstChild("HumanoidRootPart") or target.Character:FindFirstChild("Torso") or target.Character.PrimaryPart)
+                    if targetHRP then
+                        local path = PathfindingService:CreatePath({
+                            AgentRadius = 2.0,
+                            AgentHeight = 5.0,
+                            AgentCanJump = true,
+                            AgentCanClimb = true
+                        })
+                        path:ComputeAsync(myHRP.Position, targetHRP.Position)
+                        if path.Status == Enum.PathStatus.Success then
+                            activeWaypoints = path:GetWaypoints()
+                            activeWaypointIndex = 1
+                        else
+                            activeWaypoints = {}
+                        end
+                    end
+                else
+                    activeWaypoints = {}
+                end
+            end)
+        else
+            activeTarget = nil
+            activeWaypoints = {}
+            task.wait(0.5)
+        end
+    end
+end)
+
+local function stopAutoplay()
+    if autoplayConn then
+        pcall(function() autoplayConn:Disconnect() end)
+        local idx = table.find(S.Connections, autoplayConn)
+        if idx then
+            table.remove(S.Connections, idx)
+        end
+        autoplayConn = nil
+    end
+    pcall(function()
+        local hum = getHum()
+        if hum then hum:Move(Vector3.new(0, 0, 0)) end
+    end)
+    activeTarget = nil
+    activeWaypoints = {}
+end
+
+local function startAutoplay()
+    stopAutoplay()
+
+    autoplayConn = RunService.Heartbeat:Connect(function()
+        if not S.AutoplayBot then
+            stopAutoplay()
+            return
+        end
+
+        pcall(function()
+            local char = getChar()
+            local hum = getHum()
+            local myHRP = getHRP()
+            if not char or not hum or not myHRP or hum.Health <= 0 then return end
+
+            local target = activeTarget
+            local targetHRP = target and target.Character and (target.Character:FindFirstChild("HumanoidRootPart") or target.Character:FindFirstChild("Torso") or target.Character.PrimaryPart)
+
+            -- 1. Auto Aim, Shoot, & Reload (Smooth Aimlock)
+            if target and targetHRP then
+                local dist = (targetHRP.Position - myHRP.Position).Magnitude
+                local inRange = (dist <= S.AutoplayRange)
+                local hasLOS = checkLineOfSight(targetHRP)
+
+                if S.AutoplayShoot and inRange and hasLOS then
+                    -- Aimlock camera rotation targeting Head
+                    local targetHead = target.Character:FindFirstChild("Head") or targetHRP
+                    local goalCF = CFrame.new(Camera.CFrame.Position, targetHead.Position)
+                    Camera.CFrame = Camera.CFrame:Lerp(goalCF, 0.22)
+
+                    -- Auto equip weapons from backpack
                     local tool = char:FindFirstChildOfClass("Tool")
                     if not tool then
                         local weapon = LP.Backpack:FindFirstChildOfClass("Tool")
-                        if weapon then
-                            hum:EquipTool(weapon)
-                        end
+                        if weapon then hum:EquipTool(weapon) end
                     else
-                        local dist = (targetHRP.Position - myHRP.Position).Magnitude
-                        if dist <= S.AutoplayRange and checkLineOfSight(targetHRP) then
-                            tool:Activate()
-                            pcall(function()
-                                VirtualInputManager:SendMouseButtonEvent(Mouse.X, Mouse.Y, 0, true, game, 1)
-                                task.wait(0.01)
-                                VirtualInputManager:SendMouseButtonEvent(Mouse.X, Mouse.Y, 0, false, game, 1)
-                            end)
-                            shootTimer = shootTimer + 0.2
-                        end
+                        tool:Activate()
+                        pcall(function()
+                            VirtualInputManager:SendMouseButtonEvent(Mouse.X, Mouse.Y, 0, true, game, 1)
+                            task.wait(0.01)
+                            VirtualInputManager:SendMouseButtonEvent(Mouse.X, Mouse.Y, 0, false, game, 1)
+                        end)
+                        shootTimer = shootTimer + 0.016
                     end
                 end
 
@@ -155,47 +274,70 @@ local function startAutoplay()
                         simulateReload()
                     end
                 end
+            end
 
-                -- Obstacle/Surface Raycast check (identifies front walls to force jump)
-                local lookDir = myHRP.CFrame.LookVector
-                local rayParams = RaycastParams.new()
-                rayParams.FilterType = Enum.RaycastFilterType.Exclude
-                rayParams.FilterDescendantsInstances = {char}
-                local frontRay = workspace:Raycast(myHRP.Position, lookDir * 4, rayParams)
-                if frontRay and frontRay.Instance and not frontRay.Instance:IsDescendantOf(target.Character) then
-                    hum.Jump = true
+            -- 2. Human-like Pathfinding Navigation
+            if #activeWaypoints > 0 then
+                local currentWP = activeWaypoints[activeWaypointIndex]
+                if currentWP then
+                    local wpPos = currentWP.Position
+                    local distToWP = (Vector3.new(myHRP.Position.X, wpPos.Y, myHRP.Position.Z) - wpPos).Magnitude
+                    if distToWP < 3.5 then
+                        activeWaypointIndex = activeWaypointIndex + 1
+                    end
                 end
 
-                -- Pathfinding logic
-                local targetPos = targetHRP.Position
-                local path = PathfindingService:CreatePath({
-                    AgentRadius = 2.0,
-                    AgentHeight = 5.0,
-                    AgentCanJump = true,
-                    AgentCanClimb = true
-                })
+                local targetWP = activeWaypoints[activeWaypointIndex]
+                if targetWP then
+                    if S.WalkSpeed and S.WalkSpeed > 16 then
+                        hum.WalkSpeed = S.WalkSpeed
+                    end
+                    hum:MoveTo(targetWP.Position)
 
-                path:ComputeAsync(myHRP.Position, targetPos)
-                if path.Status == Enum.PathStatus.Success then
-                    local waypoints = path:GetWaypoints()
-                    if #waypoints > 1 then
-                        local nextWaypoint = waypoints[2]
-                        if S.WalkSpeed and S.WalkSpeed > 16 then
-                            hum.WalkSpeed = S.WalkSpeed
+                    if targetWP.Action == Enum.PathWaypointAction.Jump then
+                        hum.Jump = true
+                    end
+
+                    -- Human-like camera panning towards direction of travel when not shooting
+                    local isAiming = (S.AutoplayShoot and target and targetHRP and (targetHRP.Position - myHRP.Position).Magnitude <= S.AutoplayRange and checkLineOfSight(targetHRP))
+                    if not isAiming then
+                        local moveDir = (targetWP.Position - myHRP.Position).Unit
+                        if moveDir.Magnitude > 0.1 then
+                            local goalCF = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + moveDir)
+                            Camera.CFrame = Camera.CFrame:Lerp(goalCF, 0.05)
                         end
-                        hum:MoveTo(nextWaypoint.Position)
-                        if nextWaypoint.Action == Enum.PathWaypointAction.Jump then
-                            hum.Jump = true
-                        end
-                    else
-                        hum:MoveTo(targetPos)
                     end
                 else
-                    hum:MoveTo(targetPos)
+                    if targetHRP then
+                        hum:MoveTo(targetHRP.Position)
+                    end
                 end
-            end)
-        end
+            else
+                if targetHRP then
+                    if S.WalkSpeed and S.WalkSpeed > 16 then
+                        hum.WalkSpeed = S.WalkSpeed
+                    end
+                    hum:MoveTo(targetHRP.Position)
+                else
+                    hum:Move(Vector3.new(0, 0, 0))
+                end
+            end
+
+            -- Front-facing surface obstacle detection (jump assistance)
+            local lookDir = myHRP.CFrame.LookVector
+            local rayParams = RaycastParams.new()
+            rayParams.FilterType = Enum.RaycastFilterType.Exclude
+            rayParams.FilterDescendantsInstances = {char}
+            local frontRay = workspace:Raycast(myHRP.Position, lookDir * 4.5, rayParams)
+            if frontRay and frontRay.Instance then
+                if not target or not frontRay.Instance:IsDescendantOf(target.Character) then
+                    hum.Jump = true
+                end
+            end
+        end)
     end)
+    
+    table.insert(S.Connections, autoplayConn)
 end
 
 registerModule("Combat", "Autoplay Bot", 20, 50, true, S.AutoplayBot, function(v)
@@ -203,6 +345,8 @@ registerModule("Combat", "Autoplay Bot", 20, 50, true, S.AutoplayBot, function(v
     saveConfig()
     if v then
         startAutoplay()
+    else
+        stopAutoplay()
     end
 end, function(drawer)
     addToggleOption(drawer, "Auto Shoot Target", S.AutoplayShoot, function(v) S.AutoplayShoot = v; saveConfig() end)
