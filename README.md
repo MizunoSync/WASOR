@@ -1,2 +1,94 @@
 # WASOR
 WeAreSkiddingOnRoblox is a utility full with various functions.
+If you are developing or debugging individual modules, you can use the dynamic loader:
+
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/github_loader.lua"))()
+```
+
+---
+
+## 🛠️ Feature Cheat Sheet
+
+WASOR comes packed with a shit ton of options split into 6 major panels: (Some may be broken but anyways, most of it works fine.)
+
+### ⚔️ Combat (Get Good)
+* **Aimbot & Aimlock** — Configurable lock-on with FOV circles, wall-checks, and target part selectors (dome, torso, or random) for when you literally too dumb to aim.
+* **Silent Aim** — Invisible hit registration handler.(Mostly deprecated needs fixes)
+* **Kill Aura & Touch Aura** — Kill aura uses a tool that does damage to kill any oponent / Touch aura will fire nearby touch interests as you move.
+* **Fling Player & Fling All** — Send mfs straight to orbit.
+* **Auto-Clicker & Triggerbot** — Triggerbot shoots automatically the millisecond someone crosses your crosshair, while auto-clicker goes boom(auto clicker kinda broken so yeah)
+* **God Mode & No Recoil** — Attempts to make the user immortal / No recoil is self explanatory (kinda broken)
+
+### 👤 Player Stuff (Self Hacks)
+* **Nametag Customizer & Spoof** — Change display name in ui which is pretty unstable, customizable client tags.
+* **Click Teleport & Click Delete** — Hold Ctrl to blink to mouse, or Alt to delete whatever annoyances are in your way.
+* **Instant Respawn & Auto Rejoin** — Instant respawn your plr. / Auto Rejoins games in case of disconnect.
+* **Spectate & Freecam** — Ghost around the map or spy on other players with HUD stats.
+* **BTools & Anti AFK** — F3X building tools to delete walls, and Anti-AFK so you can go touch grass without getting kicked.
+
+### 🏃 Movement (Speed Demon)
+* **Speed & Jump Hacks** — Speed/jump modifier pretty self explanatory.
+* **Fly & Fly Bypass** — Fly modules for ur needs.
+* **Bunnyhop & Auto-Walk** — Bunny hop + Auto walk for ur movement needs.(kinda broken both of them)
+* **Noclip, Air Walk & Water Walk** — Walk through walls, stand in the air, or walk on water. (Pretty self explanatory)
+* **Wall Run & Climb** — Slide up walls and scale hills like a parkour pro.(kinda broken)
+* **Gravity, Anti-Sit & Anti-Anchor** — Override gravity, stop seats from trapping you, and ignore anchor blocks.(Pretty self explanatory)
+
+### 👁️ Visuals (ESP & Wallhacks)
+* **ESP Engine** — Full 2D boxes, skeleton lines, health bars, player names, and tracers. You see everything.
+* **Chams** — Highlight character models through walls so nobody can hide.
+* **Map X-Ray & Clear Vision** — Remove annoying fog and make walls see-through.
+* **Lag Reducer & FPS Cap** — Boost your frames on potato PCs by disabling shadows and particles.
+* **Fullbright & Time Cycle** — Locked daylight or cycle time of day super fast.
+
+### 🌍 World (Map Abuse)
+* **Proximity Prompt Hacks** — Auto-trigger prompts, instant interact, and fire them all from across the map.
+* **Anti-Void Net** — Auto-saves you if you fall into the void, teleporting you back to safety.
+* **Tool Magnet** — Suck every dropped tool in the map straight to your character.(Client)
+* **Destroy Killbricks & Seats** — Vaporize laser walls and seats instantly.(Client)
+
+### ⚙️ Other Cool Stuff
+* **Chat Logger & Console Log Viewer** — Keep tabs on everything said in chat and view internal execution outputs.(can be found in your exploit workspace)
+* **Favorites Manager** — Bookmark your favorite games.
+* **UNC compliance Audits** — Test if your executor is actually good or garbage.
+* **Network Chat Hub** **—** Global chat network with other hub users using this same script.
+
+---
+
+## 📂 Project Directory
+
+```
+WASOR/
+├── Core/
+│   ├── Services.lua     # Grab Roblox services
+│   ├── State.lua        # Shared config & current toggles
+│   ├── Utils.lua        # Heavy lifting (Freecam, Aimbot, etc.)
+│   ├── Config.lua       # Auto-saving JSON files
+│   ├── Logger.lua       # Chat & Console logger hookups
+│   ├── Cleanup.lua      # GC & ESP connection disposal
+│   ├── UI.lua           # WeAreSkidding UI builder core
+│   └── Runtime.lua      # Heartbeat/Stepped main render loops
+├── Modules/             # Dynamic feature scripts
+│   ├── Combat/
+│   ├── Player/
+│   ├── Movement/
+│   ├── Render/
+│   ├── World/
+│   └── Misc/
+├── init.lua             # Entry-point loader
+├── dev_loader.lua       # Local workspace testing loader
+├── github_loader.lua    # Production raw GitHub loader
+└── README.md            # You are reading this
+```
+
+---
+
+## ⚡ Cooking Locally (Dev Setup)
+
+If you want to edit files and test this codebase locally:
+1. Throw the `WASOR` folder inside your executor's `workspace` folder.
+2. Run this block in your executor to load directly from your PC:
+   ```lua
+   loadstring(readfile("WASOR/dev_loader.lua"))()
+   ```
