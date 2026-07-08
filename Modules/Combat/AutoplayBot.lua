@@ -31,6 +31,52 @@ local autoplayConn = nil
 local activeWaypoints = {}
 local activeWaypointIndex = 1
 local activeTarget = nil
+local lastMoveToPos = nil
+
+local pathLines = {}
+VH.AutoplayPathLines = pathLines
+
+local function clearPathLines()
+    for _, line in ipairs(pathLines) do
+        pcall(function() line.Visible = false end)
+    end
+end
+
+local function drawPath(waypoints, startIndex)
+    clearPathLines()
+    if not waypoints or #waypoints == 0 then return end
+
+    local lineIndex = 1
+    for i = startIndex, #waypoints - 1 do
+        local wp1 = waypoints[i]
+        local wp2 = waypoints[i+1]
+        if wp1 and wp2 then
+            local pos1, onScreen1 = Camera:WorldToViewportPoint(wp1.Position)
+            local pos2, onScreen2 = Camera:WorldToViewportPoint(wp2.Position)
+
+            if onScreen1 or onScreen2 then
+                local line = pathLines[lineIndex]
+                if not line then
+                    line = Drawing.new("Line")
+                    line.Thickness = 2
+                    line.Transparency = 0.8
+                    pathLines[lineIndex] = line
+                end
+
+                line.Color = State.currentThemeColor or Color3.fromRGB(141, 47, 196)
+                line.From = Vector2.new(pos1.X, pos1.Y)
+                line.To = Vector2.new(pos2.X, pos2.Y)
+                line.Visible = true
+                lineIndex = lineIndex + 1
+            end
+        end
+    end
+
+    -- Hide remaining lines in the pool
+    for i = lineIndex, #pathLines do
+        pcall(function() pathLines[i].Visible = false end)
+    end
+end
 
 local function isAimingAtMe(p, myHRP)
     local char = p.Character
@@ -210,6 +256,12 @@ local function stopAutoplay()
     end)
     activeTarget = nil
     activeWaypoints = {}
+    lastMoveToPos = nil
+    clearPathLines()
+    for _, line in ipairs(pathLines) do
+        pcall(function() line:Remove() end)
+    end
+    pathLines = {}
 end
 
 local function startAutoplay()
@@ -292,7 +344,12 @@ local function startAutoplay()
                     if S.WalkSpeed and S.WalkSpeed > 16 then
                         hum.WalkSpeed = S.WalkSpeed
                     end
-                    hum:MoveTo(targetWP.Position)
+                    
+                    local wpPos = targetWP.Position
+                    if not lastMoveToPos or (lastMoveToPos - wpPos).Magnitude > 0.2 then
+                        hum:MoveTo(wpPos)
+                        lastMoveToPos = wpPos
+                    end
 
                     if targetWP.Action == Enum.PathWaypointAction.Jump then
                         hum.Jump = true
@@ -309,17 +366,30 @@ local function startAutoplay()
                     end
                 else
                     if targetHRP then
-                        hum:MoveTo(targetHRP.Position)
+                        local tPos = targetHRP.Position
+                        if not lastMoveToPos or (lastMoveToPos - tPos).Magnitude > 0.2 then
+                            hum:MoveTo(tPos)
+                            lastMoveToPos = tPos
+                        end
                     end
                 end
+                
+                -- Draw path tracking lines
+                drawPath(activeWaypoints, activeWaypointIndex)
             else
+                clearPathLines()
                 if targetHRP then
                     if S.WalkSpeed and S.WalkSpeed > 16 then
                         hum.WalkSpeed = S.WalkSpeed
                     end
-                    hum:MoveTo(targetHRP.Position)
+                    local tPos = targetHRP.Position
+                    if not lastMoveToPos or (lastMoveToPos - tPos).Magnitude > 0.2 then
+                        hum:MoveTo(tPos)
+                        lastMoveToPos = tPos
+                    end
                 else
                     hum:Move(Vector3.new(0, 0, 0))
+                    lastMoveToPos = nil
                 end
             end
 
@@ -336,7 +406,7 @@ local function startAutoplay()
             end
         end)
     end)
-    
+
     table.insert(S.Connections, autoplayConn)
 end
 
