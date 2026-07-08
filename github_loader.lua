@@ -1,4 +1,5 @@
 _G.VoidHub = {}
+--- xz
 
 local GITHUB_USERNAME = "MizunoSync"
 local GITHUB_REPO = "WASOR"
@@ -114,10 +115,73 @@ local Modules = {
     "Modules/Misc/NetworkChatHub"
 }
 
+local hasFileSystem = isfile and readfile and writefile and makefolder
+
+local function createFolders()
+    pcall(makefolder, "WASOR_cache")
+    pcall(makefolder, "WASOR_cache/Core")
+    pcall(makefolder, "WASOR_cache/Modules")
+    pcall(makefolder, "WASOR_cache/Modules/Combat")
+    pcall(makefolder, "WASOR_cache/Modules/Player")
+    pcall(makefolder, "WASOR_cache/Modules/Movement")
+    pcall(makefolder, "WASOR_cache/Modules/Render")
+    pcall(makefolder, "WASOR_cache/Modules/World")
+    pcall(makefolder, "WASOR_cache/Modules/Misc")
+end
+
+-- Get latest commit SHA from GitHub API
+local latestSHA = nil
+if hasFileSystem then
+    local success, response = pcall(game.HttpGet, game, string.format("https://api.github.com/repos/%s/%s/commits/%s", GITHUB_USERNAME, GITHUB_REPO, GITHUB_BRANCH))
+    if success and response then
+        latestSHA = response:match('"sha"%s*:%s*"([^"]+)"')
+    end
+end
+
+local useCache = false
+if hasFileSystem and latestSHA then
+    local cacheSHAPath = "WASOR_cache/commit_sha.txt"
+    if isfile(cacheSHAPath) then
+        local localSHA = readfile(cacheSHAPath)
+        if localSHA == latestSHA then
+            useCache = true
+        end
+    end
+end
+
+if useCache then
+    print("[WASOR Loader] Loading WASOR from local cache (Commit: " .. latestSHA:sub(1, 7) .. ")")
+else
+    if hasFileSystem and latestSHA then
+        print("[WASOR Loader] Changes detected or first run. Downloading WASOR from GitHub...")
+        createFolders()
+    else
+        print("[WASOR Loader] Running in fallback network mode.")
+    end
+end
+
+local downloadFailed = false
+
 local function runFile(path)
-    local url = BASE_URL .. path .. ".lua?t=" .. tostring(os.time())
-    local success, content = pcall(game.HttpGet, game, url)
-    if success and content then
+    local content = nil
+    local cachePath = "WASOR_cache/" .. path .. ".lua"
+    
+    if useCache and isfile(cachePath) then
+        content = readfile(cachePath)
+    else
+        local url = BASE_URL .. path .. ".lua?t=" .. tostring(os.time())
+        local success, result = pcall(game.HttpGet, game, url)
+        if success and result then
+            content = result
+            if hasFileSystem and latestSHA then
+                pcall(writefile, cachePath, result)
+            end
+        else
+            downloadFailed = true
+        end
+    end
+    
+    if content then
         local func, err = loadstring(content, path)
         if func then
             local runSuccess, runErr = pcall(func)
@@ -128,7 +192,7 @@ local function runFile(path)
             warn("[WASOR Loader] Parse error in " .. path .. ": " .. tostring(err))
         end
     else
-        warn("[WASOR Loader] Failed to fetch " .. url)
+        warn("[WASOR Loader] Failed to load " .. path)
     end
 end
 
@@ -144,4 +208,9 @@ end
 
 runFile("Core/Runtime")
 
-print("[WASOR] Loader: :bao: React")
+if not useCache and hasFileSystem and latestSHA and not downloadFailed then
+    pcall(writefile, "WASOR_cache/commit_sha.txt", latestSHA)
+    print("[WASOR Loader] All files downloaded. Cache updated to commit: " .. latestSHA:sub(1, 7))
+end
+
+print("[WASOR] Loaded")
