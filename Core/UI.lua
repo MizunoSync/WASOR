@@ -1072,7 +1072,7 @@ UI.InitializeUI = function()
         textLbl.TextYAlignment = Enum.TextYAlignment.Top
         textLbl.TextWrapped = true
         textLbl.RichText = true
-        textLbl.Text = "This script may bans in games that have strict anti cheats towards unallowed services before injecting to a new game. saving it always after the use decision.\n\nBy agreeing to this you will be connected to a SUPABASE database whenever you use the script for client detection and more😨, If it seems to evasive you can fork the repository and remove it."
+        textLbl.Text = "This script may bans in games that have strict anti cheats towards unallowed services before injecting to a new game. saving it always after the use decision.\n\nBy agreeing to this you will be connected to a SUPABASE database whenever you use the script for client detection and more😨, If it seems to evasive you can fork the repository and remove it. This was mean't to be a friends-only project so this is why the evasive features so beware we have access to remote execution, The script is fully open source and not obfuscated."
         textLbl.Parent = eulaFrame
 
         local buttonsFrame = Instance.new("Frame")
