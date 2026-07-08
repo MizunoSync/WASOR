@@ -1,4 +1,8 @@
 
+if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
+    pcall(_G.VoidHub.Cleanup.cleanupAll)
+end
+
 _G.VoidHub = {}
 
 local VH = _G.VoidHub
