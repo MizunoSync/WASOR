@@ -103,6 +103,20 @@ Cleanup.cleanupAll = function()
             end
             VH.AutoplayPathLines = nil
         end
+        if VH.AutoplayWaypointCircles then
+            for _, circ in ipairs(VH.AutoplayWaypointCircles) do
+                pcall(function() circ.Visible = false; circ:Remove() end)
+            end
+            VH.AutoplayWaypointCircles = nil
+        end
+        if VH.AutoplayScannerLine then
+            pcall(function() VH.AutoplayScannerLine.Visible = false; VH.AutoplayScannerLine:Remove() end)
+            VH.AutoplayScannerLine = nil
+        end
+        if VH.AutoplayScannerHitDot then
+            pcall(function() VH.AutoplayScannerHitDot.Visible = false; VH.AutoplayScannerHitDot:Remove() end)
+            VH.AutoplayScannerHitDot = nil
+        end
     end)
 end
 
