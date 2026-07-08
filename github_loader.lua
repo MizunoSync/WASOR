@@ -24,6 +24,7 @@ local CoreModules = {
 local Modules = {
     -- Combat
     "Modules/Combat/GodMode",
+    "Modules/Combat/AutoplayBot",
     "Modules/Combat/KillAura",
     "Modules/Combat/SilentAim",
     "Modules/Combat/NoRecoil",
@@ -133,6 +134,7 @@ local function createFolders()
     pcall(makefolder, "WASOR_cache/Modules/Misc")
 end
 
+-- Get latest commit SHA from GitHub API
 local latestSHA = nil
 if hasFileSystem then
     local success, response = pcall(game.HttpGet, game, string.format("https://api.github.com/repos/%s/%s/commits/%s", GITHUB_USERNAME, GITHUB_REPO, GITHUB_BRANCH))
