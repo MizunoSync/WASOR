@@ -277,7 +277,7 @@ Utils.setupAutoReinject = function()
     local S = State.S
     local code = [[ 
         repeat task.wait() until game:IsLoaded() 
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/VoidUI/refs/heads/main/Brazil.lua"))() 
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/WASOR_bundled.lua"))() 
     ]]
     
     if S.AutoReinject then
