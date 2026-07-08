@@ -5,6 +5,8 @@ local S = State.S
 local Utils = VH.Utils
 local UI = VH.UI
 
+local moduleButtons = UI.moduleButtons
+
 local flyOn = Utils.flyOn
 local flyOff = Utils.flyOff
 

@@ -5,6 +5,9 @@ local S = State.S
 local Utils = VH.Utils
 local UI = VH.UI
 
+local enableGhostMode = Utils.enableGhostMode
+local disableGhostMode = Utils.disableGhostMode
+
 local Players = Services.Players
 local LP = Services.LP
 local Mouse = Services.Mouse

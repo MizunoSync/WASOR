@@ -9,6 +9,7 @@ local Players = Services.Players
 local LP = Services.LP
 local Mouse = Services.Mouse
 local Camera = Services.Camera
+local PathfindingService = Services.PathfindingService
 
 local getChar = Utils.getChar
 local getHRP = Utils.getHRP
