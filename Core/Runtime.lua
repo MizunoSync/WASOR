@@ -279,8 +279,29 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
         ["Red"] = Color3.fromRGB(220, 40, 40), ["Green"] = Color3.fromRGB(55, 200, 80), ["Blue"] = Color3.fromRGB(40, 120, 220),
         ["Yellow"] = Color3.fromRGB(220, 175, 45), ["Cyan"] = Color3.fromRGB(45, 200, 220), ["White"] = Color3.fromRGB(255, 255, 255)
     }
-    for p, _ in pairs(S.ESPPool) do if not p or p.Parent ~= Players then destroyESP(p) end end
-    for p, bill in pairs(S.OverheadPool) do if not p or p.Parent ~= Players then pcall(function() bill:Destroy() end); S.OverheadPool[p] = nil end end
+    for p, _ in pairs(S.ESPPool) do
+        local inPlayers = false
+        pcall(function()
+            if p and p.Parent == Players then
+                inPlayers = true
+            end
+        end)
+        if not inPlayers then
+            destroyESP(p)
+        end
+    end
+    for p, bill in pairs(S.OverheadPool) do
+        local inPlayers = false
+        pcall(function()
+            if p and p.Parent == Players then
+                inPlayers = true
+            end
+        end)
+        if not inPlayers then
+            pcall(function() bill:Destroy() end)
+            S.OverheadPool[p] = nil
+        end
+    end
 
     if S.Chams then
         for _, p in ipairs(Players:GetPlayers()) do
@@ -1261,5 +1282,6 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
     end)
 
     pcall(setupAutoReinject)
+    pcall(function() Utils.setupAutoRejoin() end)
 
 print("[WeAreSkidding] Custom GUI loaded successfully!")
