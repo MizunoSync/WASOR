@@ -96,6 +96,14 @@ Cleanup.cleanupAll = function()
         if oldBlur then oldBlur:Destroy() end
     end)
     pcall(function() if getgenv().VoidFOVCircle then getgenv().VoidFOVCircle:Remove(); getgenv().VoidFOVCircle = nil end end)
+    pcall(function()
+        if VH.AutoplayPathLines then
+            for _, line in ipairs(VH.AutoplayPathLines) do
+                pcall(function() line.Visible = false; line:Remove() end)
+            end
+            VH.AutoplayPathLines = nil
+        end
+    end)
 end
 
 VH.Cleanup = Cleanup
