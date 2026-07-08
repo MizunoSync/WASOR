@@ -122,13 +122,13 @@ local function runFile(path)
         if func then
             local runSuccess, runErr = pcall(func)
             if not runSuccess then
-                warn("[VoidHub Loader] Runtime error in " .. path .. ": " .. tostring(runErr))
+                warn("[WASOR Loader] Runtime error in " .. path .. ": " .. tostring(runErr))
             end
         else
-            warn("[VoidHub Loader] Parse error in " .. path .. ": " .. tostring(err))
+            warn("[WASOR Loader] Parse error in " .. path .. ": " .. tostring(err))
         end
     else
-        warn("[VoidHub Loader] Failed to fetch " .. url)
+        warn("[WASOR Loader] Failed to fetch " .. url)
     end
 end
 
@@ -144,4 +144,4 @@ end
 
 runFile("Core/Runtime")
 
-print("Misan nessa porra.")
+print("[WASOR] Loader: :bao: React")
