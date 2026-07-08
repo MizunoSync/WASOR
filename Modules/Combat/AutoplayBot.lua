@@ -557,6 +557,28 @@ local function startAutoplay()
 
             -- 2. Human-like Pathfinding Navigation
             if #activeWaypoints > 0 then
+                -- Waypoint Skipping (Path Smoothing): skip ahead if future waypoints are in direct line-of-sight
+                local skipRayParams = RaycastParams.new()
+                skipRayParams.FilterType = Enum.RaycastFilterType.Exclude
+                skipRayParams.FilterDescendantsInstances = {char, Camera}
+                
+                local furthestVisibleIndex = activeWaypointIndex
+                for i = activeWaypointIndex + 1, math.min(activeWaypointIndex + 5, #activeWaypoints) do
+                    local wp = activeWaypoints[i]
+                    if wp then
+                        local origin = myHRP.Position
+                        local dest = wp.Position + Vector3.new(0, 1.5, 0)
+                        local dir = (dest - origin)
+                        local res = workspace:Raycast(origin, dir, skipRayParams)
+                        if not res then
+                            furthestVisibleIndex = i
+                        else
+                            break
+                        end
+                    end
+                end
+                activeWaypointIndex = furthestVisibleIndex
+
                 local currentWP = activeWaypoints[activeWaypointIndex]
                 if currentWP then
                     local wpPos = currentWP.Position
@@ -638,11 +660,11 @@ local function startAutoplay()
             
             -- Multi-ray parallel sweep (waist and knee heights for left, center, and right character bounds)
             local scanDist = 4.5
-            local offsets = { Vector3.zero, scanLeft * 1.5, scanRight * 1.5 }
+            local offsets = { Vector3.zero, scanLeft * 1.2, scanRight * 1.2 }
             local hitRay = nil
             
             for _, offset in ipairs(offsets) do
-                local originLow = myHRP.Position + offset - Vector3.new(0, 1.8, 0)
+                local originLow = myHRP.Position + offset - Vector3.new(0, 1.2, 0)
                 local originMid = myHRP.Position + offset
                 
                 local rLow = workspace:Raycast(originLow, scanDir * scanDist, rayParams)
