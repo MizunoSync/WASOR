@@ -58,6 +58,7 @@ VH.UI.InitializeUI()
 local Modules = {
     
     "Modules/Combat/GodMode",
+    "Modules/Combat/AutoplayBot",
     "Modules/Combat/KillAura",
     "Modules/Combat/SilentAim",
     "Modules/Combat/NoRecoil",
