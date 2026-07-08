@@ -8,7 +8,6 @@ local UI = VH.UI
 local Players = Services.Players
 local LP = Services.LP
 local Mouse = Services.Mouse
-local Camera = Services.Camera
 local RunService = Services.RunService
 local PathfindingService = game:GetService("PathfindingService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
@@ -51,6 +50,10 @@ local scannerHitDot = nil
 VH.AutoplayPathLines = pathLines
 VH.AutoplayWaypointCircles = waypointCircles
 
+local function getCamera()
+    return workspace.CurrentCamera or Services.Camera
+end
+
 local function clearDrawings()
     for _, line in ipairs(pathLines) do
         pcall(function() line.Visible = false end)
@@ -69,27 +72,28 @@ end
 -- Helper to draw 3D circles projected onto the viewport
 local function updateCircle3D(circle, center3D, radius)
     local points = {}
-    local steps = 8
+    local steps = 4
     local onScreenCount = 0
+    local camera = getCamera()
+    if not camera then return false end
     
     for i = 0, steps - 1 do
         local angle = (i / steps) * math.pi * 2
         local offset = Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
         local p3D = center3D + offset
-        local p2D, onScreen = Camera:WorldToViewportPoint(p3D)
+        local p2D, onScreen = camera:WorldToViewportPoint(p3D)
         if onScreen then
             onScreenCount = onScreenCount + 1
         end
         table.insert(points, Vector2.new(p2D.X, p2D.Y))
     end
     
-    if onScreenCount > 0 then
+    if onScreenCount > 0 and #points >= 4 then
         circle.Visible = true
         circle.PointA = points[1]
         circle.PointB = points[2]
         circle.PointC = points[3]
         circle.PointD = points[4]
-        -- Expand outer bounds dynamically if needed or just use standard Quad Drawing
         return true
     end
     circle.Visible = false
@@ -102,11 +106,13 @@ local function drawPath(waypoints, startIndex)
 
     local lineIndex = 1
     local circleIndex = 1
+    local camera = getCamera()
+    if not camera then return end
     
     for i = startIndex, #waypoints do
         local wp = waypoints[i]
         if wp then
-            -- Draw 3D Circle on the ground (using a Quadrilateral drawing component for visual highlights)
+            -- Draw 3D Circle on the ground
             local circ = waypointCircles[circleIndex]
             if not circ then
                 circ = Drawing.new("Quad")
@@ -128,8 +134,8 @@ local function drawPath(waypoints, startIndex)
         local wp1 = waypoints[i]
         local wp2 = waypoints[i+1]
         if wp1 and wp2 then
-            local pos1, onScreen1 = Camera:WorldToViewportPoint(wp1.Position)
-            local pos2, onScreen2 = Camera:WorldToViewportPoint(wp2.Position)
+            local pos1, onScreen1 = camera:WorldToViewportPoint(wp1.Position)
+            local pos2, onScreen2 = camera:WorldToViewportPoint(wp2.Position)
 
             if onScreen1 or onScreen2 then
                 local line = pathLines[lineIndex]
@@ -172,8 +178,11 @@ local function drawScanningLaser(startPos, hitPos, isWall)
         VH.AutoplayScannerHitDot = scannerHitDot
     end
 
-    local start2D, on1 = Camera:WorldToViewportPoint(startPos)
-    local hit2D, on2 = Camera:WorldToViewportPoint(hitPos)
+    local camera = getCamera()
+    if not camera then return end
+
+    local start2D, on1 = camera:WorldToViewportPoint(startPos)
+    local hit2D, on2 = camera:WorldToViewportPoint(hitPos)
 
     if on1 or on2 then
         scannerLine.Color = isWall and Color3.fromRGB(220, 38, 38) or Color3.fromRGB(241, 196, 15)
@@ -191,13 +200,47 @@ local function drawScanningLaser(startPos, hitPos, isWall)
     end
 end
 
+local function checkLineOfSight(targetHRP)
+    local char = getChar()
+    local camera = getCamera()
+    if not char or not camera or not targetHRP or not targetHRP.Parent then return false end
+    
+    local origin = camera.CFrame.Position
+    local direction = (targetHRP.Position - origin)
+    local rp = RaycastParams.new()
+    rp.FilterType = Enum.RaycastFilterType.Exclude
+    rp.FilterDescendantsInstances = {char, camera}
+    
+    local success, res = pcall(function()
+        return workspace:Raycast(origin, direction, rp)
+    end)
+    if not success or not res then
+        return true
+    end
+    
+    local parent = targetHRP.Parent
+    if parent and res.Instance then
+        local isDescendant = false
+        pcall(function()
+            isDescendant = res.Instance:IsDescendantOf(parent)
+        end)
+        if isDescendant then
+            return true
+        end
+    end
+    return false
+end
+
 local function isAimingAtMe(p, myHRP)
     local char = p.Character
     local head = char and (char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart)
     if head and myHRP then
         local look = head.CFrame.LookVector
-        local dir = (myHRP.Position - head.Position).Unit
-        return look:Dot(dir) > 0.75
+        local diff = (myHRP.Position - head.Position)
+        if diff.Magnitude > 0.1 then
+            local dir = diff.Unit
+            return look:Dot(dir) > 0.75
+        end
     end
     return false
 end
@@ -293,24 +336,6 @@ local function getBestTarget()
     return bestCandidate
 end
 
-local function checkLineOfSight(targetHRP)
-    local char = getChar()
-    if not char or not targetHRP then return false end
-    local origin = Camera.CFrame.Position
-    local direction = (targetHRP.Position - origin)
-    local rp = RaycastParams.new()
-    rp.FilterType = Enum.RaycastFilterType.Exclude
-    rp.FilterDescendantsInstances = {char, Camera}
-    local res = workspace:Raycast(origin, direction, rp)
-    if not res then
-        return true
-    end
-    if res.Instance:IsDescendantOf(targetHRP.Parent) then
-        return true
-    end
-    return false
-end
-
 local function checkAmmo(tool)
     for _, obj in ipairs(tool:GetDescendants()) do
         if obj:IsA("ValueBase") and (obj.Name:lower():find("ammo") or obj.Name:lower():find("clip") or obj.Name:lower():find("mag")) then
@@ -331,12 +356,16 @@ local function simulateReload()
 end
 
 local function checkAndUseHeals(char, hum)
+    if not hum or hum.MaxHealth <= 0 then return end
     if hum.Health / hum.MaxHealth > 0.5 then return end
+    
+    local backpack = LP:FindFirstChild("Backpack")
+    if not backpack then return end
     
     local healItem = nil
     local healKeywords = {"med", "heal", "health", "potion", "stim", "food", "bandage", "suture", "medkit"}
     
-    for _, item in ipairs(LP.Backpack:GetChildren()) do
+    for _, item in ipairs(backpack:GetChildren()) do
         if item:IsA("Tool") then
             local name = item.Name:lower()
             for _, kw in ipairs(healKeywords) do
@@ -482,6 +511,9 @@ local function startAutoplay()
             local myHRP = getHRP()
             if not char or not hum or not myHRP or hum.Health <= 0 then return end
 
+            local camera = getCamera()
+            if not camera then return end
+
             local target = activeTarget
             local targetHRP = target and target.Character and (target.Character:FindFirstChild("HumanoidRootPart") or target.Character:FindFirstChild("Torso") or target.Character.PrimaryPart)
 
@@ -547,13 +579,14 @@ local function startAutoplay()
                 if S.AutoplayShoot and inRange and hasLOS then
                     -- Aimlock camera rotation targeting Head
                     local targetHead = target.Character:FindFirstChild("Head") or targetHRP
-                    local goalCF = CFrame.new(Camera.CFrame.Position, targetHead.Position)
-                    Camera.CFrame = Camera.CFrame:Lerp(goalCF, 0.22)
+                    local goalCF = CFrame.new(camera.CFrame.Position, targetHead.Position)
+                    camera.CFrame = camera.CFrame:Lerp(goalCF, 0.22)
 
                     -- Auto equip weapons from backpack
                     local tool = char:FindFirstChildOfClass("Tool")
                     if not tool then
-                        local weapon = LP.Backpack:FindFirstChildOfClass("Tool")
+                        local backpack = LP:FindFirstChild("Backpack")
+                        local weapon = backpack and backpack:FindFirstChildOfClass("Tool")
                         if weapon then hum:EquipTool(weapon) end
                     else
                         tool:Activate()
@@ -602,7 +635,7 @@ local function startAutoplay()
                 checkAndUseHeals(char, hum)
 
                 -- Evasive maneuvers when low on health while rushing
-                if hum.Health / hum.MaxHealth < 0.4 then
+                if hum.MaxHealth > 0 and hum.Health / hum.MaxHealth < 0.4 then
                     local strafeDir = myHRP.CFrame.RightVector * (math.sin(tick() * 10) * 3.5)
                     targetPos = targetPos + strafeDir
                     if tick() - jumpDebounce > 0.35 then
@@ -624,7 +657,7 @@ local function startAutoplay()
                 checkAndUseHeals(char, hum)
 
                 -- Bunny hopping while moving if low health to avoid shots
-                if hum.Health / hum.MaxHealth < 0.4 then
+                if hum.MaxHealth > 0 and hum.Health / hum.MaxHealth < 0.4 then
                     if tick() - jumpDebounce > 0.5 then
                         hum.Jump = true
                         jumpDebounce = tick()
@@ -634,7 +667,7 @@ local function startAutoplay()
                 -- Waypoint Skipping (Path Smoothing): skip ahead if future waypoints are in direct line-of-sight
                 local skipRayParams = RaycastParams.new()
                 skipRayParams.FilterType = Enum.RaycastFilterType.Exclude
-                skipRayParams.FilterDescendantsInstances = {char, Camera}
+                skipRayParams.FilterDescendantsInstances = {char, camera}
                 
                 local furthestVisibleIndex = activeWaypointIndex
                 for i = activeWaypointIndex + 1, math.min(activeWaypointIndex + 5, #activeWaypoints) do
@@ -690,8 +723,8 @@ local function startAutoplay()
                         local moveDir = (targetWP.Position - myHRP.Position)
                         local horizontalDir = Vector3.new(moveDir.X, 0, moveDir.Z)
                         if horizontalDir.Magnitude > 0.1 then
-                            local goalCF = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + horizontalDir.Unit)
-                            Camera.CFrame = Camera.CFrame:Lerp(goalCF, 0.05)
+                            local goalCF = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + horizontalDir.Unit)
+                            camera.CFrame = camera.CFrame:Lerp(goalCF, 0.05)
                         end
                     end
                 else
@@ -717,7 +750,7 @@ local function startAutoplay()
                     local tPos = targetHRP.Position
                     
                     -- Evasive maneuvers when low on health
-                    if hum.Health / hum.MaxHealth < 0.4 then
+                    if hum.MaxHealth > 0 and hum.Health / hum.MaxHealth < 0.4 then
                         local strafeDir = myHRP.CFrame.RightVector * (math.sin(tick() * 10) * 3.5)
                         tPos = tPos + strafeDir
                         if tick() - jumpDebounce > 0.35 then
