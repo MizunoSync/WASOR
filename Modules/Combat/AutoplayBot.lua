@@ -330,6 +330,35 @@ local function simulateReload()
     end)
 end
 
+local function checkAndUseHeals(char, hum)
+    if hum.Health / hum.MaxHealth > 0.5 then return end
+    
+    local healItem = nil
+    local healKeywords = {"med", "heal", "health", "potion", "stim", "food", "bandage", "suture", "medkit"}
+    
+    for _, item in ipairs(LP.Backpack:GetChildren()) do
+        if item:IsA("Tool") then
+            local name = item.Name:lower()
+            for _, kw in ipairs(healKeywords) do
+                if name:find(kw) then
+                    healItem = item
+                    break
+                end
+            end
+        end
+        if healItem then break end
+    end
+    
+    if healItem then
+        hum:EquipTool(healItem)
+        task.defer(function()
+            pcall(function()
+                healItem:Activate()
+            end)
+        end)
+    end
+end
+
 -- Slow pathfinding computation loop (runs in background)
 local lastComputedTargetPos = nil
 
@@ -555,8 +584,53 @@ local function startAutoplay()
                 end
             end
 
-            -- 2. Human-like Pathfinding Navigation
-            if #activeWaypoints > 0 then
+            -- Check for Close-Quarters Combat (CQC) Rush
+            local isCQCRush = false
+            if target and targetHRP then
+                local dist = (targetHRP.Position - myHRP.Position).Magnitude
+                if dist <= 22.0 and checkLineOfSight(targetHRP) then
+                    isCQCRush = true
+                end
+            end
+
+            -- 2. Human-like Pathfinding Navigation / CQC Attack Rush
+            if isCQCRush and targetHRP then
+                -- Close target: charge straight at them bypassing waypoint calculations!
+                local targetPos = targetHRP.Position
+                
+                -- Check and auto-use healing items to survive
+                checkAndUseHeals(char, hum)
+
+                -- Evasive maneuvers when low on health while rushing
+                if hum.Health / hum.MaxHealth < 0.4 then
+                    local strafeDir = myHRP.CFrame.RightVector * (math.sin(tick() * 10) * 3.5)
+                    targetPos = targetPos + strafeDir
+                    if tick() - jumpDebounce > 0.35 then
+                        hum.Jump = true
+                        jumpDebounce = tick()
+                    end
+                end
+
+                if S.WalkSpeed and S.WalkSpeed > 16 then
+                    hum.WalkSpeed = S.WalkSpeed
+                end
+                if not lastMoveToPos or (lastMoveToPos - targetPos).Magnitude > 0.2 then
+                    hum:MoveTo(targetPos)
+                    lastMoveToPos = targetPos
+                end
+                clearDrawings()
+            elseif #activeWaypoints > 0 then
+                -- Standard Waypoint Navigation
+                checkAndUseHeals(char, hum)
+
+                -- Bunny hopping while moving if low health to avoid shots
+                if hum.Health / hum.MaxHealth < 0.4 then
+                    if tick() - jumpDebounce > 0.5 then
+                        hum.Jump = true
+                        jumpDebounce = tick()
+                    end
+                end
+
                 -- Waypoint Skipping (Path Smoothing): skip ahead if future waypoints are in direct line-of-sight
                 local skipRayParams = RaycastParams.new()
                 skipRayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -634,11 +708,24 @@ local function startAutoplay()
                 drawPath(activeWaypoints, activeWaypointIndex)
             else
                 clearDrawings()
+                checkAndUseHeals(char, hum)
+
                 if targetHRP then
                     if S.WalkSpeed and S.WalkSpeed > 16 then
                         hum.WalkSpeed = S.WalkSpeed
                     end
                     local tPos = targetHRP.Position
+                    
+                    -- Evasive maneuvers when low on health
+                    if hum.Health / hum.MaxHealth < 0.4 then
+                        local strafeDir = myHRP.CFrame.RightVector * (math.sin(tick() * 10) * 3.5)
+                        tPos = tPos + strafeDir
+                        if tick() - jumpDebounce > 0.35 then
+                            hum.Jump = true
+                            jumpDebounce = tick()
+                        end
+                    end
+
                     if not lastMoveToPos or (lastMoveToPos - tPos).Magnitude > 0.2 then
                         hum:MoveTo(tPos)
                         lastMoveToPos = tPos
