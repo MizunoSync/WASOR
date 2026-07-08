@@ -33,6 +33,12 @@ local activeWaypointIndex = 1
 local activeTarget = nil
 local lastMoveToPos = nil
 
+-- Smart navigation states
+local lastPosition = nil
+local lastPositionCheckTime = 0
+local stuckTime = 0
+local jumpDebounce = 0
+
 local pathLines = {}
 VH.AutoplayPathLines = pathLines
 
@@ -257,6 +263,8 @@ local function stopAutoplay()
     activeTarget = nil
     activeWaypoints = {}
     lastMoveToPos = nil
+    lastPosition = nil
+    stuckTime = 0
     clearPathLines()
     for _, line in ipairs(pathLines) do
         pcall(function() line:Remove() end)
@@ -266,6 +274,9 @@ end
 
 local function startAutoplay()
     stopAutoplay()
+    
+    lastPositionCheckTime = tick()
+    stuckTime = 0
 
     autoplayConn = RunService.Heartbeat:Connect(function()
         if not S.AutoplayBot then
@@ -281,6 +292,32 @@ local function startAutoplay()
 
             local target = activeTarget
             local targetHRP = target and target.Character and (target.Character:FindFirstChild("HumanoidRootPart") or target.Character:FindFirstChild("Torso") or target.Character.PrimaryPart)
+
+            -- Stuck/Wall check logic (checks movement speed over time)
+            local currentPos = myHRP.Position
+            if lastPosition then
+                local deltaCheck = tick() - lastPositionCheckTime
+                if deltaCheck >= 0.5 then
+                    local distTraveled = (Vector3.new(currentPos.X, lastPosition.Y, currentPos.Z) - lastPosition).Magnitude
+                    if distTraveled < 1.8 then
+                        stuckTime = stuckTime + deltaCheck
+                    else
+                        stuckTime = 0
+                    end
+                    lastPosition = currentPos
+                    lastPositionCheckTime = tick()
+                end
+            else
+                lastPosition = currentPos
+                lastPositionCheckTime = tick()
+            end
+
+            -- Force Jumps if stuck on objects or climbing ladders/trusses
+            if stuckTime >= 1.0 and tick() - jumpDebounce > 0.4 then
+                hum.Jump = true
+                jumpDebounce = tick()
+                stuckTime = 0
+            end
 
             -- 1. Auto Aim, Shoot, & Reload (Smooth Aimlock)
             if target and targetHRP then
@@ -351,6 +388,12 @@ local function startAutoplay()
                         lastMoveToPos = wpPos
                     end
 
+                    -- Elevational / Truss / Ladder Check:
+                    -- If the waypoint is significantly higher than our current head height, climb/jump
+                    if (wpPos.Y - myHRP.Position.Y) > 2.5 then
+                        hum.Jump = true
+                    end
+
                     if targetWP.Action == Enum.PathWaypointAction.Jump then
                         hum.Jump = true
                     end
@@ -398,9 +441,14 @@ local function startAutoplay()
             local rayParams = RaycastParams.new()
             rayParams.FilterType = Enum.RaycastFilterType.Exclude
             rayParams.FilterDescendantsInstances = {char}
-            local frontRay = workspace:Raycast(myHRP.Position, lookDir * 4.5, rayParams)
-            if frontRay and frontRay.Instance then
-                if not target or not frontRay.Instance:IsDescendantOf(target.Character) then
+            
+            -- Multi-ray assistance (checking waist-height and knee-height for walls/surfaces)
+            local lowRay = workspace:Raycast(myHRP.Position - Vector3.new(0, 2, 0), lookDir * 4.5, rayParams)
+            local midRay = workspace:Raycast(myHRP.Position, lookDir * 4.5, rayParams)
+            
+            if (lowRay and lowRay.Instance) or (midRay and midRay.Instance) then
+                local inst = (lowRay and lowRay.Instance) or midRay.Instance
+                if not target or not inst:IsDescendantOf(target.Character) then
                     hum.Jump = true
                 end
             end
