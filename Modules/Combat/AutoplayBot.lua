@@ -196,74 +196,6 @@ local function isTargetValid(p)
     return false
 end
 
-local function getBestTarget()
-    local myHRP = getHRP()
-    if not myHRP then return nil end
-
-    local scoredTargets = {}
-
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p == LP then continue end
-        if S.AutoplayTeamCheck and p.Team == LP.Team then continue end
-        if S.AutoplayFriendCheck and checkFriendship(p.UserId) then continue end
-
-        local char = p.Character
-        local hrp = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char.PrimaryPart)
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hrp and hum and hum.Health > 0 then
-            local dist = (hrp.Position - myHRP.Position).Magnitude
-            if dist <= S.AutoplayRange then
-                -- Calculate screen-space position to prioritize players in view
-                local pos2D, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                local screenWeight = 0
-                if onScreen then
-                    -- Closer to the center of the screen = higher priority
-                    local viewportSize = Camera.ViewportSize
-                    local screenCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
-                    local distToCenter = (Vector2.new(pos2D.X, pos2D.Y) - screenCenter).Magnitude
-                    -- Scale center proximity: 0 (edge) to 1 (dead center)
-                    local maxCenterDist = screenCenter.Magnitude
-                    screenWeight = 1.0 - math.clamp(distToCenter / maxCenterDist, 0, 1)
-                end
-
-                -- Attacker check (players aiming at us get a large priority boost)
-                local attackerMultiplier = isAimingAtMe(p, myHRP) and 12.0 or 1.0
-
-                -- Target score calculation:
-                -- Base score is range proximity (closer target = higher score)
-                local rangeScore = (1.0 - math.clamp(dist / S.AutoplayRange, 0, 1)) * 10.0
-                
-                -- Add screen presence bonus
-                local fovScore = screenWeight * 6.0
-                
-                -- Combined raw score scaled by attacker status
-                local totalScore = (rangeScore + fovScore) * attackerMultiplier
-
-                -- Lock Stickiness bonus (gives a small buffer to avoid target swapping unless scores differ greatly)
-                if currentLockTarget and p == currentLockTarget then
-                    totalScore = totalScore + 2.5
-                end
-
-                table.insert(scoredTargets, { player = p, score = totalScore })
-            end
-        end
-    end
-
-    -- Select target with highest calculated score
-    local bestTarget = nil
-    local bestScore = -math.huge
-
-    for _, entry in ipairs(scoredTargets) do
-        if entry.score > bestScore then
-            bestScore = entry.score
-            bestTarget = entry.player
-        end
-    end
-
-    currentLockTarget = bestTarget
-    return bestTarget
-end
-
 local function checkLineOfSight(targetHRP)
     local char = getChar()
     if not char or not targetHRP then return false end
@@ -280,6 +212,88 @@ local function checkLineOfSight(targetHRP)
         return true
     end
     return false
+end
+
+local function getBestTarget()
+    local myHRP = getHRP()
+    if not myHRP then return nil end
+
+    -- Baseline check for current target score (hysteresis threshold check)
+    local currentLockScore = -math.huge
+    if currentLockTarget and isTargetValid(currentLockTarget) then
+        local p = currentLockTarget
+        local char = p.Character
+        local hrp = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char.PrimaryPart)
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hrp and hum then
+            local dist = (hrp.Position - myHRP.Position).Magnitude
+            local pos2D, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+            local hasLOS = checkLineOfSight(hrp)
+            local isAiming = isAimingAtMe(p, myHRP)
+
+            local dangerScore = 0
+            if isAiming and hasLOS then
+                dangerScore = 200
+            elseif isAiming then
+                dangerScore = 50
+            end
+            if dist < 20 and hasLOS then
+                dangerScore = dangerScore + 80
+            end
+
+            currentLockScore = dangerScore + (hasLOS and 100 or 0) + (onScreen and 30 or 0)
+            currentLockScore = currentLockScore + (1.0 - math.clamp(dist / S.AutoplayRange, 0, 1)) * 40
+        end
+    end
+
+    local bestTarget = currentLockTarget
+    local bestScore = currentLockScore
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p == LP or p == currentLockTarget then continue end
+        if S.AutoplayTeamCheck and p.Team == LP.Team then continue end
+        if S.AutoplayFriendCheck and checkFriendship(p.UserId) then continue end
+
+        local char = p.Character
+        local hrp = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char.PrimaryPart)
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hrp and hum and hum.Health > 0 then
+            local dist = (hrp.Position - myHRP.Position).Magnitude
+            if dist <= S.AutoplayRange then
+                local pos2D, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                local hasLOS = checkLineOfSight(hrp)
+                local isAiming = isAimingAtMe(p, myHRP)
+
+                local dangerScore = 0
+                if isAiming and hasLOS then
+                    dangerScore = 200
+                elseif isAiming then
+                    dangerScore = 50
+                end
+                if dist < 20 and hasLOS then
+                    dangerScore = dangerScore + 80
+                end
+
+                local score = dangerScore + (hasLOS and 100 or 0) + (onScreen and 30 or 0)
+                score = score + (1.0 - math.clamp(dist / S.AutoplayRange, 0, 1)) * 40
+
+                -- Target Selection Mode offset
+                if S.AutoplayTargetMode == "Lowest HP" then
+                    score = score + (100 - hum.Health) * 0.4
+                end
+
+                -- ONLY switch targets if the new target has a significantly higher score (hysteresis threshold of 25.0)
+                local requiredScore = (bestScore == -math.huge) and -math.huge or (bestScore + 25.0)
+                if score > requiredScore then
+                    bestScore = score
+                    bestTarget = p
+                end
+            end
+        end
+    end
+
+    currentLockTarget = bestTarget
+    return bestTarget
 end
 
 local function checkAmmo(tool)
