@@ -610,13 +610,9 @@ local function startAutoplay()
                         else
                             pcall(function()
                                 tool:Activate()
-                                -- Use direct virtual activation calls to prevent mouse simulation click stealing
-                                local fireServer = tool:FindFirstChild("Fire") or tool:FindFirstChild("Shoot") or tool:FindFirstChild("OnFire")
-                                if fireServer and fireServer:IsA("RemoteEvent") then
-                                    fireServer:FireServer(aimPosition)
-                                elseif fireServer and fireServer:IsA("RemoteFunction") then
-                                    fireServer:InvokeServer(aimPosition)
-                                end
+                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                                task.wait(0.01)
+                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
                             end)
                             shootTimer = shootTimer + 0.016
                         end
