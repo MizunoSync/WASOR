@@ -14,6 +14,7 @@ WASOR comes packed with a shit ton of options split into 6 major panels: (Some m
 
 ### ⚔️ Combat (Get Good)
 * **Aimbot & Aimlock** — Configurable lock-on with FOV circles, wall-checks, and target part selectors (dome, torso, or random) for when you literally too dumb to aim.
+* **AutoPlayBot** - Pretty self explanatory
 * **Silent Aim** — Invisible hit registration handler.(Mostly deprecated needs fixes)
 * **Kill Aura & Touch Aura** — Kill aura uses a tool that does damage to kill any oponent / Touch aura will fire nearby touch interests as you move.
 * **Fling Player & Fling All** — Send mfs straight to orbit.
