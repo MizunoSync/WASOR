@@ -43,6 +43,7 @@ local currentLockTarget = nil
 local lastVisibleTargetTime = 0
 local randomTargetPart = "Head"
 local randomizerTimer = 0
+local clickFrame = 0
 
 local pathLines = {}
 local waypointCircles = {}
@@ -141,7 +142,7 @@ local function drawPath(waypoints, startIndex)
         local wp = waypoints[i]
         if wp then
             local groundPos = wp.Position
-            local ceilingPos = groundPos + Vector3.new(0, 10, 0)
+            local ceilingPos = groundPos + Vector3.new(0, 8, 0)
             local pos1, onScreen1 = Camera:WorldToViewportPoint(groundPos)
             local pos2, onScreen2 = Camera:WorldToViewportPoint(ceilingPos)
 
@@ -258,17 +259,32 @@ end
 local function checkLineOfSight(targetHRP)
     local char = getChar()
     if not char or not targetHRP then return false end
+    
     local origin = Camera.CFrame.Position
-    local direction = (targetHRP.Position - origin)
+    local destination = targetHRP.Position
+    local direction = (destination - origin)
+    
+    local filterList = {char, Camera}
     local rp = RaycastParams.new()
     rp.FilterType = Enum.RaycastFilterType.Exclude
-    rp.FilterDescendantsInstances = {char, Camera}
-    local res = workspace:Raycast(origin, direction, rp)
-    if not res then
-        return true
-    end
-    if res.Instance:IsDescendantOf(targetHRP.Parent) then
-        return true
+    
+    for i = 1, 5 do
+        rp.FilterDescendantsInstances = filterList
+        local res = workspace:Raycast(origin, direction, rp)
+        if not res then
+            return true
+        end
+        
+        local hitPart = res.Instance
+        if hitPart:IsDescendantOf(targetHRP.Parent) then
+            return true
+        end
+        
+        if hitPart.CanCollide == false or hitPart.Transparency >= 0.7 or hitPart.Name:lower():find("glass") or hitPart.Name:lower():find("clip") or hitPart.Name:lower():find("water") or hitPart.Name:lower():find("trigger") or hitPart.Name:lower():find("effect") then
+            table.insert(filterList, hitPart)
+        else
+            return false
+        end
     end
     return false
 end
@@ -573,10 +589,11 @@ local function startAutoplay()
             end
 
             local isAiming = false
+            local hasLOS = false
             if target and targetHRP then
                 local dist = (targetHRP.Position - myHRP.Position).Magnitude
                 local inRange = (dist <= S.AutoplayRange)
-                local hasLOS = checkLineOfSight(targetHRP)
+                hasLOS = checkLineOfSight(targetHRP)
                 
                 if hasLOS then
                     lastVisibleTargetTime = tick()
@@ -608,11 +625,15 @@ local function startAutoplay()
                             local weapon = LP.Backpack:FindFirstChildOfClass("Tool") or char:FindFirstChildOfClass("Tool")
                             if weapon then hum:EquipTool(weapon) end
                         else
+                            tool:Activate()
+                            local viewport = Camera.ViewportSize
+                            local clickX = viewport.X - 50
+                            local clickY = viewport.Y - 50
+                            
+                            clickFrame = clickFrame + 1
+                            local isPress = (clickFrame % 2 == 1)
                             pcall(function()
-                                tool:Activate()
-                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-                                task.wait(0.01)
-                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                                VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, isPress, game, 1)
                             end)
                             shootTimer = shootTimer + 0.016
                         end
@@ -640,8 +661,16 @@ local function startAutoplay()
                 if targetTracer then targetTracer.Visible = false end
             end
 
-            -- Minimized Execution Check: Ensure hum:MoveTo runs even when UI is minimized or window not active
-            -- Pathfinding continues moving client physically even if screen is unfocused.
+            if not isAiming or not hasLOS then
+                if clickFrame > 0 then
+                    pcall(function()
+                        local viewport = Camera.ViewportSize
+                        VirtualInputManager:SendMouseButtonEvent(viewport.X - 50, viewport.Y - 50, 0, false, game, 1)
+                    end)
+                    clickFrame = 0
+                end
+            end
+
             if #activeWaypoints > 0 then
                 local currentWP = activeWaypoints[activeWaypointIndex]
                 if currentWP then
