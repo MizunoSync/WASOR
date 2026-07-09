@@ -109,6 +109,16 @@ Cleanup.cleanupAll = function()
             end
             VH.AutoplayWaypointCircles = nil
         end
+        if VH.AutoplayPillarLines then
+            for _, line in ipairs(VH.AutoplayPillarLines) do
+                pcall(function() line.Visible = false; line:Remove() end)
+            end
+            VH.AutoplayPillarLines = nil
+        end
+        if VH.AutoplayTargetTracer then
+            pcall(function() VH.AutoplayTargetTracer.Visible = false; VH.AutoplayTargetTracer:Remove() end)
+            VH.AutoplayTargetTracer = nil
+        end
         if VH.AutoplayScannerLine then
             pcall(function() VH.AutoplayScannerLine.Visible = false; VH.AutoplayScannerLine:Remove() end)
             VH.AutoplayScannerLine = nil
