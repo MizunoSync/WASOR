@@ -33,25 +33,28 @@ local activeWaypointIndex = 1
 local activeTarget = nil
 local lastMoveToPos = nil
 
--- Smart navigation states
 local lastPosition = nil
 local lastPositionCheckTime = 0
 local stuckTime = 0
 local jumpDebounce = 0
 local lastPathRecalcTime = 0
 
--- Target Lock Hysteresis
 local currentLockTarget = nil
 local lastVisibleTargetTime = 0
+local randomTargetPart = "Head"
+local randomizerTimer = 0
 
--- Drawing pool
 local pathLines = {}
 local waypointCircles = {}
+local pillarLines = {}
+local targetTracer = nil
 local scannerLine = nil
 local scannerHitDot = nil
 
 VH.AutoplayPathLines = pathLines
 VH.AutoplayWaypointCircles = waypointCircles
+VH.AutoplayPillarLines = pillarLines
+VH.AutoplayTargetTracer = targetTracer
 
 local function clearDrawings()
     for _, line in ipairs(pathLines) do
@@ -59,6 +62,12 @@ local function clearDrawings()
     end
     for _, circ in ipairs(waypointCircles) do
         pcall(function() circ.Visible = false end)
+    end
+    for _, line in ipairs(pillarLines) do
+        pcall(function() line.Visible = false end)
+    end
+    if targetTracer then
+        pcall(function() targetTracer.Visible = false end)
     end
     if scannerLine then
         pcall(function() scannerLine.Visible = false end)
@@ -74,6 +83,7 @@ local function drawPath(waypoints, startIndex)
 
     local lineIndex = 1
     local circleIndex = 1
+    local pillarIndex = 1
     
     for i = startIndex, #waypoints do
         local wp = waypoints[i]
@@ -127,12 +137,61 @@ local function drawPath(waypoints, startIndex)
         end
     end
 
-    -- Hide remaining lines/circles in pool
+    for i = startIndex, #waypoints do
+        local wp = waypoints[i]
+        if wp then
+            local groundPos = wp.Position
+            local ceilingPos = groundPos + Vector3.new(0, 10, 0)
+            local pos1, onScreen1 = Camera:WorldToViewportPoint(groundPos)
+            local pos2, onScreen2 = Camera:WorldToViewportPoint(ceilingPos)
+
+            if onScreen1 or onScreen2 then
+                local line = pillarLines[pillarIndex]
+                if not line then
+                    line = Drawing.new("Line")
+                    line.Thickness = 1.0
+                    line.Transparency = 0.4
+                    pillarLines[pillarIndex] = line
+                end
+
+                line.Color = (i == startIndex) and Color3.fromRGB(50, 205, 50) or (State.currentThemeColor or Color3.fromRGB(141, 47, 196))
+                line.From = Vector2.new(pos1.X, pos1.Y)
+                line.To = Vector2.new(pos2.X, pos2.Y)
+                line.Visible = true
+                pillarIndex = pillarIndex + 1
+            end
+        end
+    end
+
     for i = lineIndex, #pathLines do
         pcall(function() pathLines[i].Visible = false end)
     end
     for i = circleIndex, #waypointCircles do
         pcall(function() waypointCircles[i].Visible = false end)
+    end
+    for i = pillarIndex, #pillarLines do
+        pcall(function() pillarLines[i].Visible = false end)
+    end
+end
+
+local function drawTargetTracerLine(startPos, endPos)
+    if not targetTracer then
+        targetTracer = Drawing.new("Line")
+        targetTracer.Thickness = 1.5
+        targetTracer.Transparency = 0.8
+        targetTracer.Color = Color3.fromRGB(220, 38, 38)
+        VH.AutoplayTargetTracer = targetTracer
+    end
+
+    local start2D, on1 = Camera:WorldToViewportPoint(startPos)
+    local end2D, on2 = Camera:WorldToViewportPoint(endPos)
+
+    if on1 or on2 then
+        targetTracer.From = Vector2.new(start2D.X, start2D.Y)
+        targetTracer.To = Vector2.new(end2D.X, end2D.Y)
+        targetTracer.Visible = true
+    else
+        targetTracer.Visible = false
     end
 end
 
@@ -218,7 +277,6 @@ local function getBestTarget()
     local myHRP = getHRP()
     if not myHRP then return nil end
 
-    -- Baseline check for current target score (hysteresis threshold check)
     local currentLockScore = -math.huge
     if currentLockTarget and isTargetValid(currentLockTarget) then
         local p = currentLockTarget
@@ -277,12 +335,10 @@ local function getBestTarget()
                 local score = dangerScore + (hasLOS and 100 or 0) + (onScreen and 30 or 0)
                 score = score + (1.0 - math.clamp(dist / S.AutoplayRange, 0, 1)) * 40
 
-                -- Target Selection Mode offset
                 if S.AutoplayTargetMode == "Lowest HP" then
                     score = score + (100 - hum.Health) * 0.4
                 end
 
-                -- ONLY switch targets if the new target has a significantly higher score (hysteresis threshold of 25.0)
                 local requiredScore = (bestScore == -math.huge) and -math.huge or (bestScore + 25.0)
                 if score > requiredScore then
                     bestScore = score
@@ -315,7 +371,6 @@ local function simulateReload()
     end)
 end
 
--- Slow pathfinding computation loop (runs in background)
 local lastComputedTargetPos = nil
 local lastTargetVelocity = Vector3.zero
 
@@ -341,7 +396,6 @@ task.spawn(function()
                         local targetVel = targetHRP.AssemblyLinearVelocity
                         local shouldRecalculate = false
                         
-                        -- Track target velocity changes (sudden changes, jumps, or stops require recalculation)
                         local velChange = (targetVel - lastTargetVelocity).Magnitude
                         lastTargetVelocity = targetVel
 
@@ -354,7 +408,6 @@ task.spawn(function()
                             end
                         end
                         
-                        -- Standard refresh interval
                         if not shouldRecalculate and (not lastPathRecalcTime or (tick() - lastPathRecalcTime) > 0.6) then
                             shouldRecalculate = true
                         end
@@ -420,10 +473,16 @@ local function stopAutoplay()
     for _, circ in ipairs(waypointCircles) do
         pcall(function() circ:Remove() end)
     end
+    for _, line in ipairs(pillarLines) do
+        pcall(function() line:Remove() end)
+    end
+    if targetTracer then pcall(function() targetTracer:Remove() end) end
     if scannerLine then pcall(function() scannerLine:Remove() end) end
     if scannerHitDot then pcall(function() scannerHitDot:Remove() end) end
     pathLines = {}
     waypointCircles = {}
+    pillarLines = {}
+    targetTracer = nil
     scannerLine = nil
     scannerHitDot = nil
 end
@@ -450,8 +509,6 @@ local function startAutoplay()
             local target = activeTarget
             local targetHRP = target and target.Character and (target.Character:FindFirstChild("HumanoidRootPart") or target.Character:FindFirstChild("Torso") or target.Character.PrimaryPart)
 
-            -- Stuck/Wall check logic (checks movement speed over time)
-            -- Determine movement scan direction for raycast detection rather than camera look direction
             local scanDir = myHRP.CFrame.LookVector
             local targetWP = (#activeWaypoints > 0) and activeWaypoints[activeWaypointIndex]
             if targetWP then
@@ -473,7 +530,6 @@ local function startAutoplay()
                 yDiff = targetWP.Position.Y - myHRP.Position.Y
             end
 
-            -- Stuck/Wall check logic (checks movement speed over time, only when moving)
             local isMoving = (targetWP ~= nil) or (targetHRP ~= nil)
             local currentPos = myHRP.Position
             if isMoving then
@@ -498,12 +554,10 @@ local function startAutoplay()
                 stuckTime = 0
             end
 
-            -- Force Jumps if stuck on objects or climbing ladders/trusses, or trying to drop into a hole
             if stuckTime >= 1.0 and tick() - jumpDebounce > 0.4 then
                 hum.Jump = true
                 jumpDebounce = tick()
                 
-                -- Teleport nudge sideways if stuck for > 2.0s to bypass geometry corner clips
                 if stuckTime >= 2.0 then
                     local rightVec = myHRP.CFrame.RightVector
                     local nudgeDir = (math.random() > 0.5) and rightVec or -rightVec
@@ -513,13 +567,11 @@ local function startAutoplay()
                     stuckTime = 0
                 end
             elseif yDiff < -3.5 and stuckTime >= 0.5 and tick() - jumpDebounce > 0.4 then
-                -- Waypoint is down a hole and we are stuck at the lip. Jump forward to drop in!
                 hum.Jump = true
                 jumpDebounce = tick()
                 stuckTime = 0
             end
 
-            -- 1. Auto Aim, Shoot, & Reload (Smooth Aimlock)
             local isAiming = false
             if target and targetHRP then
                 local dist = (targetHRP.Position - myHRP.Position).Magnitude
@@ -534,30 +586,43 @@ local function startAutoplay()
 
                 if S.AutoplayShoot and inRange and (hasLOS or targetIsRecent) then
                     isAiming = true
-                    -- Aimlock camera rotation targeting Head smoothly
-                    local targetHead = target.Character:FindFirstChild("Head") or targetHRP
-                    local goalCF = CFrame.new(Camera.CFrame.Position, targetHead.Position)
+                    
+                    if tick() - randomizerTimer > 0.5 then
+                        randomizerTimer = tick()
+                        if S.AutoplayPartRandomizer == "Random" then
+                            randomTargetPart = (math.random() > 0.5) and "Head" or "HumanoidRootPart"
+                        else
+                            randomTargetPart = S.AutoplayPartRandomizer or "Head"
+                        end
+                    end
+
+                    local targetPartObj = target.Character:FindFirstChild(randomTargetPart) or targetHRP
+                    local aimPosition = targetPartObj.Position
+
+                    local goalCF = CFrame.new(Camera.CFrame.Position, aimPosition)
                     Camera.CFrame = Camera.CFrame:Lerp(goalCF, 0.22)
 
-                    -- Auto equip weapons from backpack and fire only if we have direct LOS
                     if hasLOS then
                         local tool = char:FindFirstChildOfClass("Tool")
                         if not tool then
                             local weapon = LP.Backpack:FindFirstChildOfClass("Tool") or char:FindFirstChildOfClass("Tool")
                             if weapon then hum:EquipTool(weapon) end
                         else
-                            tool:Activate()
                             pcall(function()
-                                VirtualInputManager:SendMouseButtonEvent(Mouse.X, Mouse.Y, 0, true, game, 1)
-                                task.wait(0.01)
-                                VirtualInputManager:SendMouseButtonEvent(Mouse.X, Mouse.Y, 0, false, game, 1)
+                                tool:Activate()
+                                -- Use direct virtual activation calls to prevent mouse simulation click stealing
+                                local fireServer = tool:FindFirstChild("Fire") or tool:FindFirstChild("Shoot") or tool:FindFirstChild("OnFire")
+                                if fireServer and fireServer:IsA("RemoteEvent") then
+                                    fireServer:FireServer(aimPosition)
+                                elseif fireServer and fireServer:IsA("RemoteFunction") then
+                                    fireServer:InvokeServer(aimPosition)
+                                end
                             end)
                             shootTimer = shootTimer + 0.016
                         end
                     end
                 end
 
-                -- Auto Reload
                 if S.AutoplayReload then
                     local tool = char:FindFirstChildOfClass("Tool")
                     local needsReload = false
@@ -573,43 +638,27 @@ local function startAutoplay()
                         simulateReload()
                     end
                 end
+                
+                drawTargetTracerLine(myHRP.Position, targetHRP.Position)
+            else
+                if targetTracer then targetTracer.Visible = false end
             end
 
-            -- 2. Smart Pathfinding Navigation
-            -- Shortcut directly to target if we have clear line-of-sight and are within 30 studs
-            local directShortcut = false
-            if targetHRP then
-                local distToTarget = (targetHRP.Position - myHRP.Position).Magnitude
-                if distToTarget < 30.0 and checkLineOfSight(targetHRP) then
-                    directShortcut = true
-                end
-            end
-
-            if directShortcut and targetHRP then
-                clearDrawings()
-                if S.WalkSpeed and S.WalkSpeed > 16 then
-                    hum.WalkSpeed = S.WalkSpeed
-                end
-                local tPos = targetHRP.Position
-                if not lastMoveToPos or (lastMoveToPos - tPos).Magnitude > 0.2 then
-                    hum:MoveTo(tPos)
-                    lastMoveToPos = tPos
-                end
-            elseif #activeWaypoints > 0 then
-                -- Verify waypoint line of sight to make sure the path wasn't blocked since last recalculation
+            -- Minimized Execution Check: Ensure hum:MoveTo runs even when UI is minimized or window not active
+            -- Pathfinding continues moving client physically even if screen is unfocused.
+            if #activeWaypoints > 0 then
                 local currentWP = activeWaypoints[activeWaypointIndex]
                 if currentWP then
                     local wpPos = currentWP.Position
                     local distToWP = (Vector3.new(myHRP.Position.X, wpPos.Y, myHRP.Position.Z) - wpPos).Magnitude
                     
-                    -- Check if a wall appeared between player and waypoint. If blocked, force path recalculation.
                     local wallParams = RaycastParams.new()
                     wallParams.FilterType = Enum.RaycastFilterType.Exclude
                     wallParams.FilterDescendantsInstances = {char}
                     local wpDir = (wpPos - myHRP.Position)
                     local wpRay = workspace:Raycast(myHRP.Position, wpDir, wallParams)
                     if wpRay and wpRay.Instance and not wpRay.Instance:IsDescendantOf(target.Character) then
-                        lastComputedTargetPos = nil -- Forces recalculation immediately
+                        lastComputedTargetPos = nil
                     end
 
                     if distToWP < 2.2 then
@@ -629,7 +678,6 @@ local function startAutoplay()
                         lastMoveToPos = wpPos
                     end
 
-                    -- Elevational / Truss / Ladder Check:
                     if (wpPos.Y - myHRP.Position.Y) > 2.5 then
                         hum.Jump = true
                     end
@@ -638,7 +686,6 @@ local function startAutoplay()
                         hum.Jump = true
                     end
 
-                    -- Human-like camera panning towards direction of travel when not shooting
                     if not isAiming then
                         local moveDir = (targetWP.Position - myHRP.Position)
                         local horizontalDir = Vector3.new(moveDir.X, 0, moveDir.Z)
@@ -657,7 +704,6 @@ local function startAutoplay()
                     end
                 end
                 
-                -- Draw path tracking lines & ground waypoint circles
                 drawPath(activeWaypoints, activeWaypointIndex)
             else
                 clearDrawings()
@@ -676,16 +722,13 @@ local function startAutoplay()
                 end
             end
 
-            -- Obstacle detection and scanning laser line (along scanDir)
             local rayParams = RaycastParams.new()
             rayParams.FilterType = Enum.RaycastFilterType.Exclude
             rayParams.FilterDescendantsInstances = {char}
             
-            -- Perpendicular vectors for left/right sweep offsets
             local scanRight = Vector3.new(-scanDir.Z, 0, scanDir.X).Unit
             local scanLeft = -scanRight
             
-            -- Multi-ray parallel sweep (waist, knee, and head heights for left, center, and right character bounds)
             local scanDist = 4.5
             local offsets = { Vector3.zero, scanLeft * 1.2, scanRight * 1.2 }
             local hitRay = nil
@@ -712,17 +755,14 @@ local function startAutoplay()
             if hitRay and hitRay.Instance then
                 local inst = hitRay.Instance
                 
-                -- Check if the hit part is a Truss/climbable/ladder structure
                 local isClimbable = inst:IsA("TrussPart") or inst.Name:lower():find("ladder") or inst.Name:lower():find("truss") or inst.Name:lower():find("climb")
                 
-                -- Jump only if it is climbable OR a low obstacle (not hitting head-height)
                 if isClimbable then
                     if tick() - jumpDebounce > 0.4 then
                         hum.Jump = true
                         jumpDebounce = tick()
                     end
                 elseif not hitHigh then
-                    -- Low ledge detected! Jump over it.
                     if not target or not inst:IsDescendantOf(target.Character) then
                         if tick() - jumpDebounce > 0.8 then
                             hum.Jump = true
@@ -737,7 +777,6 @@ local function startAutoplay()
                     drawScanningLaser(myHRP.Position, hitRay.Position, false)
                 end
             else
-                -- Trace ground line directly in front of the local character along scanDir
                 local groundRay = workspace:Raycast(myHRP.Position, (scanDir * scanDist) - Vector3.new(0, 5, 0), rayParams)
                 if groundRay and groundRay.Instance then
                     drawScanningLaser(myHRP.Position, groundRay.Position, false)
@@ -769,6 +808,7 @@ end, function(drawer)
     addToggleOption(drawer, "Auto Reload Gun", S.AutoplayReload, function(v) S.AutoplayReload = v; saveConfig() end)
     addToggleOption(drawer, "Ignore Team Targets", S.AutoplayTeamCheck, function(v) S.AutoplayTeamCheck = v; saveConfig() end)
     addToggleOption(drawer, "Ignore Friend Targets", S.AutoplayFriendCheck, function(v) S.AutoplayFriendCheck = v; saveConfig() end)
+    addDropdownOption(drawer, "Target Hitbox Part", {"Head", "HumanoidRootPart", "Random"}, table.find({"Head", "HumanoidRootPart", "Random"}, S.AutoplayPartRandomizer) or 1, function(_, opt) S.AutoplayPartRandomizer = opt; saveConfig() end)
     addDropdownOption(drawer, "Target Select Mode", {"Closest", "Lowest HP"}, table.find({"Closest", "Lowest HP"}, S.AutoplayTargetMode) or 1, function(_, opt) S.AutoplayTargetMode = opt; saveConfig() end)
     addSliderOption(drawer, "Target Max Range", 10, 500, S.AutoplayRange, function(v) S.AutoplayRange = v; saveConfig() end)
     addSliderOption(drawer, "Auto Reload Interval", 3, 30, S.AutoplayReloadInterval, function(v) S.AutoplayReloadInterval = v; saveConfig() end)
