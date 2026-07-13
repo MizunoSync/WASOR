@@ -68,7 +68,7 @@ local consoleLogsMap = State.consoleLogsMap
 
 
 registerModule("Misc", "External Scripts Hub", 720, 50, false, false, nil, function(drawer)
-    addButtonOption(drawer, "Load Rotector Anti-Cheat", function() runExternalScript("Rotector", "https://raw.githubusercontent.com/VenezzaX/RobloxRotector/refs/heads/main/Rotector.lua") end)
+    addButtonOption(drawer, "Load Rotector", function() runExternalScript("Rotector", "https://raw.githubusercontent.com/VenezzaX/RobloxRotector/refs/heads/main/Rotector.lua") end)
     addButtonOption(drawer, "Load FE Emotes Script", function() runExternalScript("FE Emotes", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/FeEmotes.lua") end)
     addButtonOption(drawer, "Load Gamepass Bypass", function() runExternalScript("Gamepass Bypass", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/gamepassbypass.lua") end)
     addButtonOption(drawer, "Load Coordinate UI", function() runExternalScript("Coordinate UI", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/CoordinateUI.lua") end)
