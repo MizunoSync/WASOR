@@ -67,4 +67,9 @@ local consoleLogs = State.consoleLogs
 local consoleLogsMap = State.consoleLogsMap
 
 
-registerModule("Combat", "Silent Aim", 20, 50, true, S.SilentAim, function(v) S.SilentAim = v; saveConfig() end, function(drawer) addToggleOption(drawer, "Silent Aim Team Check", S.AimbotTeamCheck, function(v) S.AimbotTeamCheck = v; saveConfig() end); addSliderOption(drawer, "Silent Aim FOV", 20, 600, S.AimbotFOV, function(v) S.AimbotFOV = v; saveConfig() end) end, false)
+registerModule("Combat", "Silent Aim", 20, 50, true, S.SilentAim, function(v) S.SilentAim = v; saveConfig() end, function(drawer)
+    local warning = addInfoRowOption(drawer, "Status", "BROKEN / CAM GLITCH")
+    warning:SetColor(Color3.fromRGB(255, 50, 50))
+    addToggleOption(drawer, "Silent Aim Team Check", S.AimbotTeamCheck, function(v) S.AimbotTeamCheck = v; saveConfig() end)
+    addSliderOption(drawer, "Silent Aim FOV", 20, 600, S.AimbotFOV, function(v) S.AimbotFOV = v; saveConfig() end)
+end, false)
