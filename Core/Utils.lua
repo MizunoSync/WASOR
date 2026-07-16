@@ -516,6 +516,7 @@ end
 Utils.enableGhostMode = function()
     local S = State.S
     local myChar = Services.LP.Character; local myHRP = myChar and (myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso") or myChar.PrimaryPart)
+    local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
     if not myHRP then return end
     S.GhostCFrame = myHRP.CFrame
     pcall(function()
@@ -528,20 +529,60 @@ Utils.enableGhostMode = function()
         end
         clone.Parent = Services.Workspace; S.GhostDummy = clone
     end)
-    for _, part in ipairs(myChar:GetDescendants()) do if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then part.Transparency = 0.5 end end
+    
+    State.ghostOriginalTransparencies = {}
+    for _, part in ipairs(myChar:GetDescendants()) do
+        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+            State.ghostOriginalTransparencies[part] = part.Transparency
+            part.Transparency = 1
+        elseif part:IsA("Decal") then
+            State.ghostOriginalTransparencies[part] = part.Transparency
+            part.Transparency = 1
+        end
+    end
+    if myHum then
+        State.ghostOriginalDisplayNameType = myHum.DisplayDistanceType
+        myHum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+    end
+    
     S.Fly = true; Utils.flyOn(); S.NoClip = true; Utils.notify("Ghost state active: body parked", Color3.fromRGB(218, 170, 42))
 end
 
 Utils.disableGhostMode = function()
     local S = State.S
     local myChar = Services.LP.Character; local myHRP = myChar and (myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso") or myChar.PrimaryPart)
+    local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
     if S.GhostDummy then pcall(function() S.GhostDummy:Destroy() end); S.GhostDummy = nil end
     if myHRP and S.GhostCFrame then
-        if not S.GhostTeleportToEnd then myHRP.CFrame = S.GhostCFrame; Utils.notify("Ghost returned to body origin", Color3.fromRGB(50, 195, 75))
-        else Utils.notify("Teleported body to ghost position!", Color3.fromRGB(50, 195, 75)) end
+        Utils.notify("Ghost mode disabled: body updated to current position!", Color3.fromRGB(50, 195, 75))
         S.GhostCFrame = nil
     end
-    if myChar then for _, part in ipairs(myChar:GetDescendants()) do if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then part.Transparency = 0 end end end
+    if myChar then
+        for _, part in ipairs(myChar:GetDescendants()) do
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                if State.ghostOriginalTransparencies and State.ghostOriginalTransparencies[part] then
+                    part.Transparency = State.ghostOriginalTransparencies[part]
+                else
+                    part.Transparency = 0
+                end
+            elseif part:IsA("Decal") then
+                if State.ghostOriginalTransparencies and State.ghostOriginalTransparencies[part] then
+                    part.Transparency = State.ghostOriginalTransparencies[part]
+                else
+                    part.Transparency = 0
+                end
+            end
+        end
+        State.ghostOriginalTransparencies = nil
+    end
+    if myHum then
+        if State.ghostOriginalDisplayNameType then
+            myHum.DisplayDistanceType = State.ghostOriginalDisplayNameType
+        else
+            myHum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Viewer
+        end
+        State.ghostOriginalDisplayNameType = nil
+    end
     S.Fly = false; Utils.flyOff(); S.NoClip = false
 end
 
