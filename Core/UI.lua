@@ -140,7 +140,7 @@ local function makeDraggable(frame, handle)
         end
     end)
     handle.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
-    Services.UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then update(input) end end)
+    table.insert(State.S.Connections, Services.UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then update(input) end end))
 end
 
 local function formatVal(val)
@@ -166,7 +166,7 @@ local function makeResizable(frame, handle)
             input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
         end
     end)
-    Services.UserInputService.InputChanged:Connect(function(input) if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then update(input) end end)
+    table.insert(State.S.Connections, Services.UserInputService.InputChanged:Connect(function(input) if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then update(input) end end))
 end
 
 local function findWindowFrame(obj)
@@ -219,6 +219,7 @@ local function autoScaleContent(winFrame, scale)
 end
 
 local function adjustWindowSizeToContent(winFrame, contentFrame)
+    if winFrame == settingsPanel then return end
     local totalContentHeight, count = 0, 0
     for _, child in ipairs(contentFrame:GetChildren()) do
         if child:IsA("Frame") and child.Name ~= "resizeHandle" then
@@ -765,15 +766,15 @@ UI.InitializeUI = function()
             end)
         end
     end)
-    Services.UserInputService.InputChanged:Connect(function(input)
+    table.insert(S.Connections, Services.UserInputService.InputChanged:Connect(function(input)
         if arrayDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - arrayDragStart
             hudArrayListFrame.Position = UDim2.new(arrayStartPos.X.Scale, arrayStartPos.X.Offset + delta.X, arrayStartPos.Y.Scale, arrayStartPos.Y.Offset + delta.Y)
         end
-    end)
+    end))
     
     
-    task.spawn(function() while true do task.wait(0.2); pcall(UI.updateHUDArrayList) end end)
+    task.spawn(function() while State.uiRunning do task.wait(0.2); pcall(UI.updateHUDArrayList) end end)
     
     topBar = Instance.new("Frame")
     topBar.Size = UDim2.new(1, 0, 0, 24); topBar.BackgroundColor3 = Color3.fromRGB(15, 15, 15); topBar.BorderSizePixel = 0; topBar.Parent = mainUIContainer
@@ -815,7 +816,7 @@ UI.InitializeUI = function()
     networkUsersHUD.Active = true
     networkUsersHUD.ZIndex = 10
     networkUsersHUD.AutomaticSize = Enum.AutomaticSize.Y
-    networkUsersHUD.Visible = false
+    networkUsersHUD.Visible = S.NetworkTags and S.ShowNetworkUsersHUD
     networkUsersHUD.Parent = screenGui
     
     local netCorner = Instance.new("UICorner")
@@ -868,10 +869,125 @@ UI.InitializeUI = function()
     hudServerAge.TextXAlignment = Enum.TextXAlignment.Left; hudServerAge.Text = "Server Age: 0h 0m 0s"; hudServerAge.Visible = S.ServerAgeHUD; hudServerAge.Parent = screenGui
     
     
-    settingsPanel, settingsContent = createPanel("Client Settings", 280, 350)
+    settingsPanel, settingsContent = createPanel("Client Settings", 460, 320)
+    settingsContent.Visible = false
     
-    UI.addSectionHeader(settingsContent, "Configuration Profiles")
-    UI.addButtonOption(settingsContent, "Apply legit closet profile", function()
+    local sidebar = Instance.new("Frame")
+    sidebar.Size = UDim2.new(0, 130, 1, -22)
+    sidebar.Position = UDim2.new(0, 0, 0, 22)
+    sidebar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    sidebar.BorderSizePixel = 0
+    sidebar.Parent = settingsPanel
+    
+    local sidebarLayout = Instance.new("UIListLayout")
+    sidebarLayout.Padding = UDim.new(0, 4)
+    sidebarLayout.Parent = sidebar
+    
+    local sidebarPadding = Instance.new("UIPadding")
+    sidebarPadding.PaddingTop = UDim.new(0, 8)
+    sidebarPadding.PaddingLeft = UDim.new(0, 8)
+    sidebarPadding.PaddingRight = UDim.new(0, 8)
+    sidebarPadding.Parent = sidebar
+    
+    local mainContent = Instance.new("Frame")
+    mainContent.Size = UDim2.new(1, -130, 1, -22)
+    mainContent.Position = UDim2.new(0, 130, 0, 22)
+    mainContent.BackgroundTransparency = 1
+    mainContent.Parent = settingsPanel
+    
+    local function createTabPage()
+        local page = Instance.new("ScrollingFrame")
+        page.Size = UDim2.new(1, 0, 1, 0)
+        page.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        page.BackgroundTransparency = 0.15
+        page.BorderSizePixel = 0
+        page.ScrollBarThickness = 2
+        page.CanvasSize = UDim2.new(0, 0, 0, 0)
+        page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        page.Visible = false
+        page.Parent = mainContent
+        
+        local listLayout = Instance.new("UIListLayout")
+        listLayout.Padding = UDim.new(0, 4)
+        listLayout.Parent = page
+        
+        local padding = Instance.new("UIPadding")
+        padding.PaddingTop = UDim.new(0, 8)
+        padding.PaddingBottom = UDim.new(0, 8)
+        padding.PaddingLeft = UDim.new(0, 8)
+        padding.PaddingRight = UDim.new(0, 8)
+        padding.Parent = page
+        
+        return page
+    end
+    
+    local pageProfiles = createTabPage()
+    local pageUI = createTabPage()
+    local pageInput = createTabPage()
+    local pageConfig = createTabPage()
+    
+    local currentSelectedSettingsTabName = "Profiles"
+    local tabPages = {
+        ["Profiles"] = pageProfiles,
+        ["UI & HUD"] = pageUI,
+        ["Input & Macros"] = pageInput,
+        ["System & Config"] = pageConfig
+    }
+    
+    local function selectSettingsTab(tabName)
+        currentSelectedSettingsTabName = tabName
+        for name, page in pairs(tabPages) do
+            page.Visible = (name == tabName)
+        end
+        for _, btn in ipairs(sidebar:GetChildren()) do
+            if btn:IsA("TextButton") then
+                if btn.Text == tabName then
+                    btn.BackgroundColor3 = State.currentThemeColor
+                    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                else
+                    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+                    btn.TextColor3 = Color3.fromRGB(160, 160, 160)
+                end
+            end
+        end
+    end
+    
+    local function createSidebarButton(tabName)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, 0, 0, 24)
+        btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+        btn.BorderSizePixel = 0
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 10
+        btn.TextColor3 = Color3.fromRGB(160, 160, 160)
+        btn.Text = tabName
+        btn.Parent = sidebar
+        
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 4)
+        corner.Parent = btn
+        
+        btn.MouseButton1Click:Connect(function()
+            selectSettingsTab(tabName)
+        end)
+        
+        return btn
+    end
+    
+    createSidebarButton("Profiles")
+    createSidebarButton("UI & HUD")
+    createSidebarButton("Input & Macros")
+    createSidebarButton("System & Config")
+    
+    table.insert(themeToggles, function()
+        selectSettingsTab(currentSelectedSettingsTabName)
+    end)
+    
+    selectSettingsTab("Profiles")
+    
+    -- PAGE: PROFILES
+    UI.addSectionHeader(pageProfiles, "Configuration Profiles")
+    UI.addButtonOption(pageProfiles, "Apply legit closet profile", function()
         UI:ResetAllToggles()
         S.WalkSpeed = 22; S.JumpPower = 55; S.ForceWalkSpeed = true; S.ESPBoxes = true; S.ESPTransparency = 0.9; S.AimbotActive = true; S.AimbotFOV = 40; S.AimbotSmooth = 15; S.ESPNames = true
         if UI.moduleButtons["Speed Modification"] then UI.moduleButtons["Speed Modification"].SetActive(true) end
@@ -880,7 +996,7 @@ UI.InitializeUI = function()
         if UI.moduleButtons["Show Player Names"] then UI.moduleButtons["Show Player Names"].SetActive(true) end
         VH.Config.saveConfig(); VH.Utils.notify("Closet Legit profile applied!", Color3.fromRGB(46, 204, 113))
     end)
-    UI.addButtonOption(settingsContent, "Apply blatant flight profile", function()
+    UI.addButtonOption(pageProfiles, "Apply blatant flight profile", function()
         UI:ResetAllToggles()
         S.Fly = true; S.NoClip = true; S.InfJump = true; S.WalkSpeed = 65; S.JumpPower = 80; S.ForceWalkSpeed = true; S.ForceJumpPower = true; S.ESPBoxes = true; S.ESPHealth = true; S.ESPNames = true; S.ESPDistances = true
         if UI.moduleButtons["Fly Mode"] then UI.moduleButtons["Fly Mode"].SetActive(true) end
@@ -893,7 +1009,7 @@ UI.InitializeUI = function()
         if UI.moduleButtons["Show Health Text"] then UI.moduleButtons["Show Health Text"].SetActive(true) end
         VH.Config.saveConfig(); VH.Utils.notify("Blatant profile applied!", Color3.fromRGB(241, 196, 15))
     end)
-    UI.addButtonOption(settingsContent, "Apply rage combat profile", function()
+    UI.addButtonOption(pageProfiles, "Apply rage combat profile", function()
         UI:ResetAllToggles()
         S.Fly = true; S.NoClip = true; S.KillAura = true; S.GodMode = true; S.AimbotActive = true; S.AimbotFOV = 600; S.AimbotSmooth = 1; S.InstantPrompts = true; S.AntiVoid = true
         if UI.moduleButtons["Fly Mode"] then UI.moduleButtons["Fly Mode"].SetActive(true) end
@@ -906,25 +1022,32 @@ UI.InitializeUI = function()
         VH.Config.saveConfig(); VH.Utils.notify("Rage profile applied!", Color3.fromRGB(218, 38, 38))
     end)
     
-    UI.addSectionHeader(settingsContent, "UI & HUD Customization")
-    UI.addDropdownOption(settingsContent, "Interface Theme Color", {"Purple", "Red", "Green", "Blue", "Yellow", "Cyan", "Pink", "Orange"}, table.find({"Purple", "Red", "Green", "Blue", "Yellow", "Cyan", "Pink", "Orange"}, S.ThemeColor) or 1, function(_, opt) UI.applyThemeColor(opt); VH.Config.saveConfig() end)
-    UI.addKeybindOption(settingsContent, "Menu Toggle Keybind", S.UIToggleKey or Enum.KeyCode.RightControl, function(k) S.UIToggleKey = k; VH.Config.saveConfig(); VH.Utils.notify("UI Toggle Keybind set to: " .. k.Name, Color3.fromRGB(50, 195, 75)) end)
-    UI.addToggleOption(settingsContent, "Show Toasts Enabled", S.ToastEnabled, function(v) S.ToastEnabled = v; VH.Config.saveConfig() end)
-    UI.addToggleOption(settingsContent, "Display Client Watermark", S.HUDWatermark, function(v) S.HUDWatermark = v; hudWatermark.Visible = v; VH.Config.saveConfig() end)
-    UI.addToggleOption(settingsContent, "Display Player Coordinates", S.HUDCoords, function(v) S.HUDCoords = v; hudCoords.Visible = v; VH.Config.saveConfig() end)
-    UI.addToggleOption(settingsContent, "Display Server Age HUD", S.ServerAgeHUD, function(v) S.ServerAgeHUD = v; hudServerAge.Visible = v; VH.Config.saveConfig() end)
-    UI.addToggleOption(settingsContent, "Display Active ArrayList", S.HUDArrayList, function(v) S.HUDArrayList = v; UI.updateHUDArrayList(); VH.Config.saveConfig() end)
-    UI.addToggleOption(settingsContent, "Display active mods when outside of the main UI", S.HUDArrayListOutside, function(v) S.HUDArrayListOutside = v; UI.updateHUDArrayList(); VH.Config.saveConfig() end)
+    -- PAGE: UI & HUD
+    UI.addSectionHeader(pageUI, "Visual Theme")
+    UI.addDropdownOption(pageUI, "Interface Theme Color", {"Purple", "Red", "Green", "Blue", "Yellow", "Cyan", "Pink", "Orange"}, table.find({"Purple", "Red", "Green", "Blue", "Yellow", "Cyan", "Pink", "Orange"}, S.ThemeColor) or 1, function(_, opt) UI.applyThemeColor(opt); VH.Config.saveConfig() end)
+    UI.addKeybindOption(pageUI, "Menu Toggle Keybind", S.UIToggleKey or Enum.KeyCode.RightControl, function(k) S.UIToggleKey = k; VH.Config.saveConfig(); VH.Utils.notify("UI Toggle Keybind set to: " .. k.Name, Color3.fromRGB(50, 195, 75)) end)
+    UI.addToggleOption(pageUI, "Show Toasts Enabled", S.ToastEnabled, function(v) S.ToastEnabled = v; VH.Config.saveConfig() end)
     
-    UI.addSectionHeader(settingsContent, "Targets & Input Settings")
-    UI.addTextboxOption(settingsContent, "Specify Target / Friend", "Username", function(txt) if txt == "" then return end; VH.Utils.notify("Target lock set to: " .. txt, Color3.fromRGB(50, 195, 75)) end)
-    UI.addButtonOption(settingsContent, "Clear Current Friends Lists", function() VH.Utils.notify("Friends lists reset", Color3.fromRGB(218, 38, 38)) end)
-    UI.addTextboxOption(settingsContent, "Configure Macro Text", "Say something...", function(txt) S.MacroText = txt; VH.Config.saveConfig(); VH.Utils.notify("Macro text configured!", Color3.fromRGB(50, 195, 75)) end)
-    UI.addKeybindOption(settingsContent, "Trigger Macro Key", S.MacroKey or Enum.KeyCode.H, function(k) S.MacroKey = k; VH.Config.saveConfig(); VH.Utils.notify("Macro trigger set to: " .. k.Name, Color3.fromRGB(50, 195, 75)) end)
-    UI.addKeybindOption(settingsContent, "Panic Button (Disable All)", S.PanicKey or Enum.KeyCode.End, function(k) S.PanicKey = k; VH.Config.saveConfig(); VH.Utils.notify("Panic Key set to: " .. k.Name, Color3.fromRGB(218, 38, 38)) end)
-    UI.addKeybindOption(settingsContent, "Grab User ID (Hover Player)", S.UserIDGrabKey or Enum.KeyCode.K, function(k) S.UserIDGrabKey = k; VH.Config.saveConfig(); VH.Utils.notify("UserID Grab set to: " .. k.Name, Color3.fromRGB(50, 195, 75)) end)
+    UI.addSectionHeader(pageUI, "Heads Up Display (HUD)")
+    UI.addToggleOption(pageUI, "Display Client Watermark", S.HUDWatermark, function(v) S.HUDWatermark = v; hudWatermark.Visible = v; VH.Config.saveConfig() end)
+    UI.addToggleOption(pageUI, "Display Player Coordinates", S.HUDCoords, function(v) S.HUDCoords = v; hudCoords.Visible = v; VH.Config.saveConfig() end)
+    UI.addToggleOption(pageUI, "Display Server Age HUD", S.ServerAgeHUD, function(v) S.ServerAgeHUD = v; hudServerAge.Visible = v; VH.Config.saveConfig() end)
+    UI.addToggleOption(pageUI, "Display Active ArrayList", S.HUDArrayList, function(v) S.HUDArrayList = v; UI.updateHUDArrayList(); VH.Config.saveConfig() end)
+    UI.addToggleOption(pageUI, "Display active mods when outside of the main UI", S.HUDArrayListOutside, function(v) S.HUDArrayListOutside = v; UI.updateHUDArrayList(); VH.Config.saveConfig() end)
     
-    UI.addSectionHeader(settingsContent, "Executor Capabilities")
+    -- PAGE: INPUT & MACROS
+    UI.addSectionHeader(pageInput, "Target Locker & Friends")
+    UI.addTextboxOption(pageInput, "Specify Target / Friend", "Username", function(txt) if txt == "" then return end; VH.Utils.notify("Target lock set to: " .. txt, Color3.fromRGB(50, 195, 75)) end)
+    UI.addButtonOption(pageInput, "Clear Current Friends Lists", function() VH.Utils.notify("Friends lists reset", Color3.fromRGB(218, 38, 38)) end)
+    
+    UI.addSectionHeader(pageInput, "Macros & Bindings")
+    UI.addTextboxOption(pageInput, "Configure Macro Text", "Say something...", function(txt) S.MacroText = txt; VH.Config.saveConfig(); VH.Utils.notify("Macro text configured!", Color3.fromRGB(50, 195, 75)) end)
+    UI.addKeybindOption(pageInput, "Trigger Macro Key", S.MacroKey or Enum.KeyCode.H, function(k) S.MacroKey = k; VH.Config.saveConfig(); VH.Utils.notify("Macro trigger set to: " .. k.Name, Color3.fromRGB(50, 195, 75)) end)
+    UI.addKeybindOption(pageInput, "Panic Button (Disable All)", S.PanicKey or Enum.KeyCode.End, function(k) S.PanicKey = k; VH.Config.saveConfig(); VH.Utils.notify("Panic Key set to: " .. k.Name, Color3.fromRGB(218, 38, 38)) end)
+    UI.addKeybindOption(pageInput, "Grab User ID (Hover Player)", S.UserIDGrabKey or Enum.KeyCode.K, function(k) S.UserIDGrabKey = k; VH.Config.saveConfig(); VH.Utils.notify("UserID Grab set to: " .. k.Name, Color3.fromRGB(50, 195, 75)) end)
+    
+    -- PAGE: SYSTEM & CONFIG
+    UI.addSectionHeader(pageConfig, "Executor Capabilities")
     local supportedFuncs = 0; local totalFuncs = 0
     local capsList = {
         {"setclipboard", setclipboard}, {"getgenv", getgenv}, {"Drawing.new", Drawing and Drawing.new},
@@ -932,22 +1055,21 @@ UI.InitializeUI = function()
         {"mouse1press", mouse1press}, {"getcustomasset", getcustomasset}, {"queue_on_teleport", queue_on_teleport or queueteleport}
     }
     for _, cap in ipairs(capsList) do totalFuncs = totalFuncs + 1; if cap[2] then supportedFuncs = supportedFuncs + 1 end end
-    UI.addInfoRowOption(settingsContent, "Supported Functions", supportedFuncs .. " / " .. totalFuncs)
-    UI.addInfoRowOption(settingsContent, "Executor Name", executorName)
+    UI.addInfoRowOption(pageConfig, "Supported Functions", supportedFuncs .. " / " .. totalFuncs)
+    UI.addInfoRowOption(pageConfig, "Executor Name", executorName)
     
-    UI.addSectionHeader(settingsContent, "Config & Client Controls")
-    UI.addTextboxOption(settingsContent, "Configuration Name", "utility_hub_config", function(txt) end)
-    UI.addButtonOption(settingsContent, "Save Current Settings", function() VH.Config.saveConfig(); VH.Utils.notify("Configuration saved successfully!", Color3.fromRGB(50, 195, 75)) end)
-    UI.addButtonOption(settingsContent, "Load Stored Settings", function() VH.Config.loadConfig(); VH.Utils.notify("Configuration loaded successfully!", Color3.fromRGB(50, 195, 75)) end)
-    UI.addButtonOption(settingsContent, "Reset Settings to Default", function()
+    UI.addSectionHeader(pageConfig, "Saves & Client Controls")
+    UI.addTextboxOption(pageConfig, "Configuration Name", "utility_hub_config", function(txt) end)
+    UI.addButtonOption(pageConfig, "Save Current Settings", function() VH.Config.saveConfig(); VH.Utils.notify("Configuration saved successfully!", Color3.fromRGB(50, 195, 75)) end)
+    UI.addButtonOption(pageConfig, "Load Stored Settings", function() VH.Config.loadConfig(); VH.Utils.notify("Configuration loaded successfully!", Color3.fromRGB(50, 195, 75)) end)
+    UI.addButtonOption(pageConfig, "Reset Settings to Default", function()
         UI:ResetAllToggles()
         S.WalkSpeed = 16; S.JumpPower = 50; S.InfJump = false; S.BHop = false; S.AirWalk = false; S.NoClip = false; S.Fly = false; S.FlySpeed = 60; S.ESPBoxes = false; S.ESPTracers = false; S.ESPNames = false; S.ESPHealth = false; S.ESPDistances = false; S.ESPTeamCheck = false; S.ESPIgnoreFriends = false; S.AimbotActive = false; S.AimbotIgnoreFriends = false; S.TriggerbotIgnoreFriends = false; S.AntiAFK = false; S.AutoRejoin = false; S.NetworkChat = true; S.NetworkTags = true; S.GravityEnabled = false; S.CustomGravity = 196.2; S.ThemeColor = "Purple"
         if UI.moduleButtons["Network Chat Hub"] then UI.moduleButtons["Network Chat Hub"].SetActive(true) end
         if UI.moduleButtons["Network User Tags"] then UI.moduleButtons["Network User Tags"].SetActive(true) end
         UI.applyThemeColor("Purple"); VH.Config.saveConfig(); VH.Utils.notify("All settings reset to default!", Color3.fromRGB(218, 38, 38))
     end)
-    UI.addButtonOption(settingsContent, "Destruct Client GUI Completely", function() VH.Cleanup.cleanupAll() end)
-    adjustWindowSizeToContent(settingsPanel, settingsContent)
+    UI.addButtonOption(pageConfig, "Destruct Client GUI Completely", function() VH.Cleanup.cleanupAll() end)
     
     
     navBar = Instance.new("Frame")
