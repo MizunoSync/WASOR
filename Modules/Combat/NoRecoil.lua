@@ -67,4 +67,7 @@ local consoleLogs = State.consoleLogs
 local consoleLogsMap = State.consoleLogsMap
 
 
-registerModule("Combat", "No Recoil", 20, 50, true, S.NoRecoil, function(v) S.NoRecoil = v; saveConfig() end)
+registerModule("Combat", "No Recoil", 20, 50, true, S.NoRecoil, function(v) S.NoRecoil = v; saveConfig() end, function(drawer)
+    local warning = addInfoRowOption(drawer, "Status", "BROKEN / DOESN'T WORK")
+    warning:SetColor(Color3.fromRGB(255, 50, 50))
+end, false)
