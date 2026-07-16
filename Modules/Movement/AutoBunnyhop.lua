@@ -67,4 +67,15 @@ local consoleLogs = State.consoleLogs
 local consoleLogsMap = State.consoleLogsMap
 
 
-registerModule("Movement", "Auto Bunnyhop", 300, 50, true, S.BHop, function(v) S.BHop = v; saveConfig() end, function(drawer) addToggleOption(drawer, "Auto-Strafe (Momentum)", S.BHopAutoStrafe, function(v) S.BHopAutoStrafe = v; saveConfig() end) end, false)
+registerModule("Movement", "Auto Bunnyhop", 300, 50, true, S.BHop, function(v)
+    S.BHop = v
+    if not v then
+        local hum = getHum()
+        if hum then hum.WalkSpeed = State.gameDefaultSpeed or 16 end
+        local hrp = getHRP()
+        if hrp then hrp.CustomPhysicalProperties = nil end
+    end
+    saveConfig()
+end, function(drawer)
+    addToggleOption(drawer, "Auto-Strafe (Momentum)", S.BHopAutoStrafe, function(v) S.BHopAutoStrafe = v; saveConfig() end)
+end, false)
