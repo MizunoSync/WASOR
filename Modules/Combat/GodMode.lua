@@ -70,4 +70,7 @@ local consoleLogs = State.consoleLogs
 local consoleLogsMap = State.consoleLogsMap
 
 
-registerModule("Combat", "God Mode", 20, 50, true, S.GodMode, function(v) S.GodMode = v; if v then if LP.Character then applyGodMode(LP.Character) end else disableGodMode() end; saveConfig() end)
+registerModule("Combat", "God Mode", 20, 50, true, S.GodMode, function(v) S.GodMode = v; if v then if LP.Character then applyGodMode(LP.Character) end else disableGodMode() end; saveConfig() end, function(drawer)
+    local warning = addInfoRowOption(drawer, "Status", "SEMI WORKING")
+    warning:SetColor(Color3.fromRGB(255, 50, 50))
+end, false)
