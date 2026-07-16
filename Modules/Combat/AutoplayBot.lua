@@ -391,7 +391,7 @@ local lastComputedTargetPos = nil
 local lastTargetVelocity = Vector3.zero
 
 task.spawn(function()
-    while true do
+    while State.uiRunning do
         task.wait(0.1)
         if S.AutoplayBot then
             pcall(function()
