@@ -67,4 +67,28 @@ local consoleLogs = State.consoleLogs
 local consoleLogsMap = State.consoleLogsMap
 
 
-registerModule("Combat", "Auto Clicker", 20, 50, true, S.AutoClicker, function(v) S.AutoClicker = v; saveConfig() end)
+registerModule("Combat", "Auto Clicker", 20, 50, true, S.AutoClicker, function(v)
+    S.AutoClicker = v
+    if v then
+        task.spawn(function()
+            while S.AutoClicker and State.uiRunning do
+                if mouse1press and mouse1release then
+                    mouse1press()
+                    task.wait(0.05)
+                    mouse1release()
+                    task.wait(0.05)
+                elseif mouse1click then
+                    mouse1click()
+                    task.wait(0.1)
+                else
+                    pcall(function()
+                        Services.VirtualUser:CaptureController()
+                        Services.VirtualUser:ClickButton1(Vector2.new(Mouse.X, Mouse.Y))
+                    end)
+                    task.wait(0.1)
+                end
+            end
+        end)
+    end
+    saveConfig()
+end)
