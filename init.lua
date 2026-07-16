@@ -62,7 +62,6 @@ local Modules = {
     "Modules/Combat/KillAura",
     "Modules/Combat/SilentAim",
     "Modules/Combat/NoRecoil",
-    "Modules/Combat/TouchAura",
     "Modules/Combat/AutoClicker",
     "Modules/Combat/Aimbot",
     "Modules/Combat/Aimlock",
@@ -141,6 +140,7 @@ local Modules = {
     "Modules/World/DestroyKillbricks",
     "Modules/World/DestroySeats",
     "Modules/World/AntiVoidNet",
+    "Modules/World/FireTouchinterests",
 
     
     "Modules/Misc/ServerControls",
