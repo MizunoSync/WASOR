@@ -71,4 +71,6 @@ registerModule("Render", "Chams", 440, 50, true, S.Chams, function(v)
     S.Chams = v
     if not v then for _, p in ipairs(Players:GetPlayers()) do if p ~= LP and p.Character then local hl = p.Character:FindFirstChild("VoidChams"); if hl then hl:Destroy() end end end end
     saveConfig()
-end)
+end, function(drawer)
+    addDropdownOption(drawer, "Chams Color", {"Team Color", "Red", "Green", "Blue", "Yellow", "Cyan", "White"}, table.find({"Team Color", "Red", "Green", "Blue", "Yellow", "Cyan", "White"}, S.ChamsColor) or 1, function(_, opt) S.ChamsColor = opt; saveConfig() end)
+end, false)
