@@ -17,6 +17,11 @@ State.freecamBasePos = nil
 
 State.originalAmbient = VH.Services.Lighting.Ambient
 State.originalOutdoor = VH.Services.Lighting.OutdoorAmbient
+State.originalClockTime = VH.Services.Lighting.ClockTime
+State.uiRunning = true
+State.networkTagsLoopActive = false
+State.wasClimbing = false
+State.wasWallRunning = false
 
 State.gameDefaultSpeed = 16
 State.gameDefaultJumpPower = 50
@@ -41,7 +46,7 @@ State.S = {
     BlinkDirection = "Camera Look", BlinkKey = Enum.KeyCode.Unknown,
     GhostMode = false, GhostCFrame = nil, GhostDummy = nil,
     ESPBoxes = false, ESPTracers = false, ESPNames = false, ESPHealth = false, ESPDistances = false,
-    ESPTeamCheck = false, ESPIgnoreFriends = false, ESPTransparency = 0.8, ESPDistanceColor = false, SkeletonESP = false, Chams = false,
+    ESPTeamCheck = false, ESPIgnoreFriends = false, ESPTransparency = 0.8, ESPDistanceColor = false, SkeletonESP = false, Chams = false, ChamsColor = "Team Color", ESPBoxStyle = "Full",
     OverheadInfo = false,
     AimbotActive = false, AimbotTeamCheck = false, AimbotIgnoreFriends = false, AimbotFOV = 120, AimbotSmooth = 5, AimbotPart = "Head",
     AimbotVisibility = false, AimbotShowFOV = false, SilentAim = false, NoRecoil = false, TouchAura = false,
