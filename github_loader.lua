@@ -28,7 +28,6 @@ local Modules = {
     "Modules/Combat/KillAura",
     "Modules/Combat/SilentAim",
     "Modules/Combat/NoRecoil",
-    "Modules/Combat/TouchAura",
     "Modules/Combat/AutoClicker",
     "Modules/Combat/Aimbot",
     "Modules/Combat/Aimlock",
@@ -107,6 +106,7 @@ local Modules = {
     "Modules/World/DestroyKillbricks",
     "Modules/World/DestroySeats",
     "Modules/World/AntiVoidNet",
+    "Modules/World/FireTouchinterests",
 
     -- Misc
     "Modules/Misc/ServerControls",
@@ -217,5 +217,3 @@ if not useCache and hasFileSystem and latestSHA and not downloadFailed then
     pcall(writefile, "WASOR_cache/commit_sha.txt", latestSHA)
     print("[WASOR Loader] All files downloaded. Cache updated to commit: " .. latestSHA:sub(1, 7))
 end
-
-print("[WASOR] Loaded")
