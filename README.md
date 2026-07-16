@@ -12,28 +12,28 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main
 
 WASOR comes packed with a shit ton of options split into 6 major panels: (Some may be broken but anyways, most of it works fine.)
 
-### ⚔️ Combat (Get Good)
+### ⚔️ Combat
 * **Aimbot & Aimlock** — Configurable lock-on with FOV circles, wall-checks, and target part selectors (dome, torso, or random) for when you literally too dumb to aim.
-* **AutoPlayBot** - Pretty self explanatory
-* **Silent Aim** — Invisible hit registration handler.(Mostly deprecated needs fixes)
-* **Kill Aura & Touch Aura** — Kill aura uses a tool that does damage to kill any oponent / Touch aura will fire nearby touch interests as you move.
+* **AutoPlayBot** - Pretty self explanatory.
+* **Silent Aim** — Hooks standard mouse `__index` (`Mouse.Hit` / `Mouse.Target`). Warning: currently it is not working as metatable raycast namecalls are disabled to prevent camera scripts from glitching.
+* **Kill Aura** — Uses a tool that does damage to kill any opponent.
 * **Fling Player & Fling All** — Send mfs straight to orbit.
-* **Auto-Clicker & Triggerbot** — Triggerbot shoots automatically the millisecond someone crosses your crosshair, while auto-clicker goes boom(auto clicker kinda broken so yeah)
-* **God Mode & No Recoil** — Attempts to make the user immortal / No recoil is self explanatory (kinda broken)
+* **Auto-Clicker & Triggerbot** — Triggerbot shoots automatically the millisecond someone crosses your crosshair, while auto-clicker uses basic click loops (`mouse1press` / `mouse1release`).
+* **God Mode & No Recoil** — Attempts to make the user immortal. No Recoil is currently non-functional.
 
-### 👤 Player Stuff (Self Hacks)
+### 👤 Player Stuff
 * **Nametag Customizer & Spoof** — Change display name in ui which is pretty unstable, customizable client tags.
 * **Click Teleport & Click Delete** — Hold Ctrl to blink to mouse, or Alt to delete whatever annoyances are in your way.
 * **Instant Respawn & Auto Rejoin** — Instant respawn your plr. / Auto Rejoins games in case of disconnect.
 * **Spectate & Freecam** — Ghost around the map or spy on other players with HUD stats.
 * **BTools & Anti AFK** — F3X building tools to delete walls, and Anti-AFK so you can go touch grass without getting kicked.
 
-### 🏃 Movement (Speed Demon)
+### 🏃 Movement
 * **Speed & Jump Hacks** — Speed/jump modifier pretty self explanatory.
 * **Fly & Fly Bypass** — Fly modules for ur needs.
-* **Bunnyhop & Auto-Walk** — Bunny hop + Auto walk for ur movement needs.(kinda broken both of them)
+* **Bunnyhop & Auto-Walk** — Bunny hop is fully fixed using CS 1.6 GoldSrc air acceleration, speed building, auto-strafe, and slip-sliding physics. Auto-walk pathfinds to the cursor location only when MouseButton1 (M1) is clicked.
 * **Noclip, Air Walk & Water Walk** — Walk through walls, stand in the air, or walk on water. (Pretty self explanatory)
-* **Wall Run & Climb** — Slide up walls and scale hills like a parkour pro.(kinda broken)
+* **Wall Run & Climb** — Scale and slide on walls with smooth velocity changes and automatic ledge jumping/vaulting over the top.
 * **Gravity, Anti-Sit & Anti-Anchor** — Override gravity, stop seats from trapping you, and ignore anchor blocks.(Pretty self explanatory)
 
 ### 👁️ Visuals (ESP & Wallhacks)
@@ -44,6 +44,7 @@ WASOR comes packed with a shit ton of options split into 6 major panels: (Some m
 * **Fullbright & Time Cycle** — Locked daylight or cycle time of day super fast.
 
 ### 🌍 World (Map Abuse)
+* **Fire touchinterests** — Relocated from Combat. Fires nearby touch interests as you move.
 * **Proximity Prompt Hacks** — Auto-trigger prompts, instant interact, and fire them all from across the map.
 * **Anti-Void Net** — Auto-saves you if you fall into the void, teleporting you back to safety.
 * **Tool Magnet** — Suck every dropped tool in the map straight to your character.(Client)
