@@ -1079,7 +1079,7 @@ pcall(function() applyThemeColor(S.ThemeColor or "Purple"); updateHUDArrayList()
 local toggleKeyName = S.UIToggleKey and S.UIToggleKey.Name or "RCtrl"
 logMessage("System", "WeAreSkidding loaded successfully. Keybind: [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
 notify("WeAreSkidding loaded! [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
-print("[WeAreSkidding] Custom GUI loaded successfully!")
+print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내리는 것 또한 그중 하나입니다). 그리고 인내심이야말로 우리 삶의 핵심이라는 사실을 기억하십시오.")
 
     
     
