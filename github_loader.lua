@@ -215,5 +215,5 @@ runFile("Core/Runtime")
 
 if not useCache and hasFileSystem and latestSHA and not downloadFailed then
     pcall(writefile, "WASOR_cache/commit_sha.txt", latestSHA)
-    print("[WASOR Loader] All files downloaded. Cache updated to commit: " .. latestSHA:sub(1, 7))
+    print("[WASOR] 모든 파일이 다운로드되었습니다. 해당 커밋에 대한 캐시가 업데이트되었습니다.: " .. latestSHA:sub(1, 7))
 end
