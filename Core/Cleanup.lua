@@ -19,6 +19,9 @@ Cleanup.destroyESP = function(p)
         if pool.skeleton then
             for _, line in ipairs(pool.skeleton) do pcall(function() line.Visible = false; line:Remove() end) end
         end
+        if pool.corners then
+            for _, line in ipairs(pool.corners) do pcall(function() line.Visible = false; line:Remove() end) end
+        end
         S.ESPPool[p] = nil
     end
 end
@@ -37,6 +40,8 @@ Cleanup.cleanupAll = function()
         end
         if State.clearNetworkTags then pcall(State.clearNetworkTags) end
         State.networkTagsRunning = false
+        State.networkTagsLoopActive = false
+        State.uiRunning = false
     end)
     
     for _, c in ipairs(S.Connections) do pcall(function() c:Disconnect() end) end
@@ -86,6 +91,17 @@ Cleanup.cleanupAll = function()
         if Services.LP.Character then
             VH.Utils.revertTallAnimations(Services.LP.Character)
             VH.Utils.disableGodMode()
+            local hum = Services.LP.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.WalkSpeed = State.gameDefaultSpeed or 16
+                hum.JumpPower = State.gameDefaultJumpPower or 50
+                hum.UseJumpPower = (State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or true
+            end
+            for _, part in ipairs(Services.LP.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
         end
     end)
     
