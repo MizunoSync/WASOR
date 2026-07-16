@@ -132,6 +132,29 @@ local flingAllTime = State.flingAllTime
 local lastCameraYaw = State.lastCameraYaw
 local lastAirVelocity = State.lastAirVelocity
 
+local bhopBaseSpeed = 16
+local bhopSpeedCap = 100
+local bhopDecelRate = 50
+local bhopLowFriction = 0.01
+local bhopCurrSpeed = bhopBaseSpeed
+local bhopLastHzSpeed = 0
+local bhopLastDir = Vector3.new(0, 0, 0)
+local bhopSliding = false
+
+local bhopJumpBoostWeights = {
+    [2.3] = 30, [2.4] = 30, [2.5] = 30,
+    [2.6] = 5, [2.7] = 5
+}
+local bhopWeightedJumpBoosts = {}
+for boost, weight in pairs(bhopJumpBoostWeights) do
+    for i = 1, weight do
+        table.insert(bhopWeightedJumpBoosts, boost)
+    end
+end
+
+local bhopOrigProps = PhysicalProperties.new(0.7, 0.3, 0.5, 1, 1)
+local bhopSlipProps = PhysicalProperties.new(bhopOrigProps.Density, bhopLowFriction, bhopOrigProps.Elasticity, 100, bhopOrigProps.ElasticityWeight)
+
 
 local function getNextFlingAllTarget(currentTarget)
     local candidates = {}
@@ -307,10 +330,24 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LP and p.Character then
                 local char = p.Character
-                if not char:FindFirstChild("VoidChams") then
-                    local hl = Instance.new("Highlight"); hl.Name = "VoidChams"; hl.FillColor = p.Team and p.Team.TeamColor.Color or Color3.fromRGB(218, 38, 38)
-                    hl.FillTransparency = 0.5; hl.OutlineColor = Color3.new(1, 1, 1); hl.Parent = char
+                local hl = char:FindFirstChild("VoidChams")
+                local color = p.Team and p.Team.TeamColor.Color or Color3.fromRGB(218, 38, 38)
+                local opt = S.ChamsColor
+                if opt == "Red" then color = Color3.fromRGB(218, 38, 38)
+                elseif opt == "Green" then color = Color3.fromRGB(38, 218, 38)
+                elseif opt == "Blue" then color = Color3.fromRGB(38, 38, 218)
+                elseif opt == "Yellow" then color = Color3.fromRGB(218, 218, 38)
+                elseif opt == "Cyan" then color = Color3.fromRGB(38, 218, 218)
+                elseif opt == "White" then color = Color3.fromRGB(255, 255, 255)
                 end
+                if not hl then
+                    hl = Instance.new("Highlight")
+                    hl.Name = "VoidChams"
+                    hl.FillTransparency = 0.5
+                    hl.OutlineColor = Color3.new(1, 1, 1)
+                    hl.Parent = char
+                end
+                hl.FillColor = color
             end
         end
     else
@@ -347,18 +384,54 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
                     S.ESPPool[p] = {
                         boxOutline = Drawing.new("Square"), boxFill = Drawing.new("Square"), tracer = Drawing.new("Line"),
                         nameTag = Drawing.new("Text"), healthText = Drawing.new("Text"), distText = Drawing.new("Text"),
-                        healthBarOutline = Drawing.new("Square"), healthBarFill = Drawing.new("Square"), skeleton = {}
+                        healthBarOutline = Drawing.new("Square"), healthBarFill = Drawing.new("Square"), skeleton = {},
+                        corners = {}
                     }
                     for i=1, 15 do table.insert(S.ESPPool[p].skeleton, Drawing.new("Line")) end
+                    for i=1, 8 do table.insert(S.ESPPool[p].corners, Drawing.new("Line")) end
                 end
                 local pool = S.ESPPool[p]; local box = getBoundingBox(char); local sp, onScreen = Camera:WorldToViewportPoint(hrp.Position)
 
                 if box and sp.Z > 0 then
                     local topLeft, bottomRight = box[1], box[2]; local width, height = bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y
-                    local outline = pool.boxOutline; outline.Visible = S.ESPBoxes; outline.Position = topLeft; outline.Size = Vector2.new(width, height)
+                    
+                    local showFull = S.ESPBoxes and S.ESPBoxStyle == "Full"
+                    local showCorners = S.ESPBoxes and S.ESPBoxStyle == "Corners"
+                    
+                    local outline = pool.boxOutline; outline.Visible = showFull; outline.Position = topLeft; outline.Size = Vector2.new(width, height)
                     outline.Color = espDrawCol; outline.Thickness = 1.5; outline.Transparency = 1; outline.Filled = false
+                    
                     local fill = pool.boxFill; fill.Visible = S.ESPBoxes; fill.Position = topLeft; fill.Size = Vector2.new(width, height)
                     fill.Color = espDrawCol; fill.Transparency = 1 - S.ESPTransparency; fill.Filled = true
+                    
+                    if showCorners then
+                        local len = math.clamp(math.min(width, height) * 0.25, 4, 15)
+                        local c = pool.corners
+                        c[1].From = topLeft; c[1].To = topLeft + Vector2.new(len, 0)
+                        c[2].From = topLeft; c[2].To = topLeft + Vector2.new(0, len)
+                        
+                        local tr = Vector2.new(bottomRight.X, topLeft.Y)
+                        c[3].From = tr; c[3].To = tr + Vector2.new(-len, 0)
+                        c[4].From = tr; c[4].To = tr + Vector2.new(0, len)
+                        
+                        local bl = Vector2.new(topLeft.X, bottomRight.Y)
+                        c[5].From = bl; c[5].To = bl + Vector2.new(len, 0)
+                        c[6].From = bl; c[6].To = bl + Vector2.new(0, -len)
+                        
+                        c[7].From = bottomRight; c[7].To = bottomRight + Vector2.new(-len, 0)
+                        c[8].From = bottomRight; c[8].To = bottomRight + Vector2.new(0, -len)
+                        
+                        for _, line in ipairs(c) do
+                            line.Color = espDrawCol
+                            line.Thickness = 1.5
+                            line.Transparency = 1
+                            line.Visible = true
+                        end
+                    else
+                        for _, line in ipairs(pool.corners) do
+                            line.Visible = false
+                        end
+                    end
                     local tracer = pool.tracer; tracer.Visible = S.ESPTracers
                     local vp = Camera.ViewportSize; local originY = vp.Y
                     if S.TracerOrigin == "Center" then originY = vp.Y / 2 elseif S.TracerOrigin == "Top" then originY = 0 end
@@ -393,6 +466,7 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
                     pool.boxOutline.Visible = false; pool.boxFill.Visible = false; pool.tracer.Visible = false; pool.nameTag.Visible = false
                     pool.healthText.Visible = false; pool.distText.Visible = false; pool.healthBarOutline.Visible = false; pool.healthBarFill.Visible = false
                     for _, line in ipairs(pool.skeleton) do line.Visible = false end
+                    for _, line in ipairs(pool.corners) do line.Visible = false end
                 end
             else destroyESP(p) end
         end
@@ -498,9 +572,24 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
             if UserInputService:IsKeyDown(Enum.KeyCode.W) then
                 local rayParams = RaycastParams.new(); rayParams.FilterType = Enum.RaycastFilterType.Exclude; rayParams.FilterDescendantsInstances = {myChar}
                 local result = Workspace:Raycast(myHRP.Position, myHRP.CFrame.LookVector * 3, rayParams)
-                if result and result.Instance then myHum.PlatformStand = true; myHRP.CFrame = myHRP.CFrame + Vector3.new(0, S.ClimbSpeed * dt, 0); myHRP.AssemblyLinearVelocity = Vector3.zero
-                else myHum.PlatformStand = false end
-            else myHum.PlatformStand = false end
+                if result and result.Instance then
+                    myHum.PlatformStand = true
+                    myHRP.AssemblyLinearVelocity = (myHRP.CFrame.LookVector * 3) + Vector3.new(0, S.ClimbSpeed, 0)
+                    State.wasClimbing = true
+                else
+                    if State.wasClimbing then
+                        State.wasClimbing = false
+                        myHum.PlatformStand = false
+                        myHRP.AssemblyLinearVelocity = (myHRP.CFrame.LookVector * 15) + Vector3.new(0, 45, 0)
+                        myHum:ChangeState(Enum.HumanoidStateType.Jumping)
+                    else
+                        myHum.PlatformStand = false
+                    end
+                end
+            else
+                State.wasClimbing = false
+                myHum.PlatformStand = false
+            end
         end
     end)
 
@@ -510,7 +599,25 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
                 local rayParams = RaycastParams.new(); rayParams.FilterType = Enum.RaycastFilterType.Exclude; rayParams.FilterDescendantsInstances = {myChar}
                 local rightRay = Workspace:Raycast(myHRP.Position, myHRP.CFrame.RightVector * 3, rayParams)
                 local leftRay = Workspace:Raycast(myHRP.Position, -myHRP.CFrame.RightVector * 3, rayParams)
-                if rightRay or leftRay then local upVel = Vector3.new(0, 10, 0); local fwdVel = myHRP.CFrame.LookVector * 20; myHRP.AssemblyLinearVelocity = Vector3.new(fwdVel.X, upVel.Y, fwdVel.Z) end
+                if rightRay or leftRay then
+                    myHum.PlatformStand = true
+                    local upVel = Vector3.new(0, 5, 0)
+                    local fwdVel = myHRP.CFrame.LookVector * 25
+                    myHRP.AssemblyLinearVelocity = Vector3.new(fwdVel.X, upVel.Y, fwdVel.Z)
+                    State.wasWallRunning = true
+                else
+                    if State.wasWallRunning then
+                        State.wasWallRunning = false
+                        myHum.PlatformStand = false
+                        myHRP.AssemblyLinearVelocity = (myHRP.CFrame.LookVector * 15) + Vector3.new(0, 40, 0)
+                        myHum:ChangeState(Enum.HumanoidStateType.Jumping)
+                    else
+                        myHum.PlatformStand = false
+                    end
+                end
+            else
+                State.wasWallRunning = false
+                myHum.PlatformStand = false
             end
         end
     end)
@@ -525,67 +632,61 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
     
     pcall(function()
         if S.BHop and myHRP and myHum then
-            local moveDir = myHum.MoveDirection
-            local currentVel = myHRP.AssemblyLinearVelocity
-            local horizontalVel = Vector3.new(currentVel.X, 0, currentVel.Z)
-            local speed = horizontalVel.Magnitude
+            local horizVel = myHRP.Velocity * Vector3.new(1, 0, 1)
+            local hzSpeedNow = horizVel.Magnitude
 
-            if myHum.FloorMaterial ~= Enum.Material.Air then
-                myHum:ChangeState(Enum.HumanoidStateType.Jumping)
-                local targetVel = lastAirVelocity or horizontalVel
-                if moveDir.Magnitude > 0.1 then
-                    -- Build speed on landing/jump transition (like CS 1.6)
-                    local newSpeed = math.clamp(speed * 1.05 + 1.5, 16, 140)
-                    targetVel = moveDir.Unit * newSpeed
-                else
-                    targetVel = targetVel.Unit * math.clamp(speed, 16, 140)
+            if hzSpeedNow < bhopLastHzSpeed * 0.5 and bhopLastHzSpeed > bhopBaseSpeed * 1.5 then
+                bhopCurrSpeed = bhopBaseSpeed
+                myHum.WalkSpeed = bhopBaseSpeed
+                bhopSliding = false
+                myHRP.CustomPhysicalProperties = bhopOrigProps
+            end
+            bhopLastHzSpeed = hzSpeedNow
+
+            if myHum.FloorMaterial == Enum.Material.Air and myHum.MoveDirection.Magnitude > 0 then
+                local airAccel = 20
+                local wishDir = myHum.MoveDirection.Unit
+                local projSpeed = horizVel:Dot(wishDir)
+                local addSpeed = airAccel - projSpeed
+                if addSpeed > 0 then
+                    local accelSpeed = math.min(addSpeed, airAccel * dt)
+                    horizVel = horizVel + wishDir * accelSpeed
                 end
-                
-                myHRP.AssemblyLinearVelocity = Vector3.new(targetVel.X, currentVel.Y, targetVel.Z)
-                lastAirVelocity = nil
+                myHRP.Velocity = Vector3.new(horizVel.X, myHRP.Velocity.Y, horizVel.Z)
+            end
+
+            if myHum.MoveDirection.Magnitude > 0 then
+                bhopLastDir = myHum.MoveDirection.Unit
+                bhopSliding = false
+                myHRP.CustomPhysicalProperties = bhopOrigProps
+            elseif myHum.MoveDirection.Magnitude == 0 and bhopCurrSpeed > bhopBaseSpeed then
+                if not bhopSliding then
+                    bhopSliding = true
+                    myHRP.CustomPhysicalProperties = bhopSlipProps
+                    myHRP.Velocity = Vector3.new(bhopLastDir.X * bhopCurrSpeed, myHRP.Velocity.Y, bhopLastDir.Z * bhopCurrSpeed)
+                end
+
+                bhopCurrSpeed = math.max(bhopBaseSpeed, bhopCurrSpeed - bhopDecelRate * dt)
+                myHum.WalkSpeed = bhopCurrSpeed
+
+                local velHz = myHRP.Velocity * Vector3.new(1, 0, 1)
+                if velHz.Magnitude > bhopBaseSpeed then
+                    myHRP.Velocity = Vector3.new(bhopLastDir.X * bhopCurrSpeed, myHRP.Velocity.Y, bhopLastDir.Z * bhopCurrSpeed)
+                else
+                    bhopSliding = false
+                    myHRP.CustomPhysicalProperties = bhopOrigProps
+                    myHum.WalkSpeed = bhopBaseSpeed
+                    bhopCurrSpeed = bhopBaseSpeed
+                end
             else
-                if S.BHopAutoStrafe then
-                    local strafeDir = nil
-                    if deltaYaw > 0.001 then 
-                        strafeDir = Camera.CFrame.RightVector
-                    elseif deltaYaw < -0.001 then 
-                        strafeDir = -Camera.CFrame.RightVector
-                    end
-
-                    if strafeDir then
-                        local strafeDirH = Vector3.new(strafeDir.X, 0, strafeDir.Z)
-                        if strafeDirH.Magnitude > 0.1 then
-                            strafeDirH = strafeDirH.Unit
-                            local accel = 1.0
-                            local newSpeed = math.clamp(speed + accel, 16, 140)
-                            local blendFactor = 0.18
-                            local newHorizontal = (horizontalVel.Unit * (1 - blendFactor) + strafeDirH * blendFactor).Unit * newSpeed
-                            myHRP.AssemblyLinearVelocity = Vector3.new(newHorizontal.X, currentVel.Y, newHorizontal.Z)
-                            lastAirVelocity = newHorizontal
-                        else
-                            lastAirVelocity = horizontalVel
-                        end
-                    else
-                        if moveDir.Magnitude > 0.1 then
-                            local newHorizontal = (horizontalVel + moveDir.Unit * 0.5).Unit * math.clamp(speed, 16, 140)
-                            myHRP.AssemblyLinearVelocity = Vector3.new(newHorizontal.X, currentVel.Y, newHorizontal.Z)
-                            lastAirVelocity = newHorizontal
-                        else
-                            lastAirVelocity = horizontalVel
-                        end
-                    end
-                else
-                    if moveDir.Magnitude > 0.1 then
-                        local newHorizontal = (horizontalVel + moveDir.Unit * 0.5).Unit * math.clamp(speed, 16, 140)
-                        myHRP.AssemblyLinearVelocity = Vector3.new(newHorizontal.X, currentVel.Y, newHorizontal.Z)
-                        lastAirVelocity = newHorizontal
-                    else
-                        lastAirVelocity = horizontalVel
-                    end
-                end
+                myHum.WalkSpeed = bhopCurrSpeed
             end
         else
-            lastAirVelocity = nil
+            if bhopSliding then
+                bhopSliding = false
+                if myHRP then myHRP.CustomPhysicalProperties = bhopOrigProps end
+            end
+            bhopCurrSpeed = bhopBaseSpeed
         end
     end)
     
@@ -657,8 +758,14 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
     pcall(function() if S.GravityEnabled then Workspace.Gravity = S.CustomGravity end end)
     
     pcall(function()
-        if S.TimeCycle then S.TimeOfDay = ((S.TimeOfDay or Lighting.ClockTime) + dt * S.TimeCycleSpeed * 0.1) % 24; Lighting.ClockTime = S.TimeOfDay
-        else Lighting.ClockTime = S.TimeOfDay or Lighting.ClockTime end
+        if S.FullBright then
+            Lighting.Ambient = Color3.new(1, 1, 1)
+            Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+            Lighting.ClockTime = 14
+        elseif S.TimeCycle then
+            S.TimeOfDay = ((S.TimeOfDay or Lighting.ClockTime) + dt * S.TimeCycleSpeed * 0.1) % 24
+            Lighting.ClockTime = S.TimeOfDay
+        end
     end)
     
     pcall(function() if S.Spin and myHRP then myHRP.CFrame = myHRP.CFrame * CFrame.Angles(0, math.rad(S.SpinSpeed), 0) end end)
@@ -722,7 +829,7 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
         end
     end)
     
-    pcall(function() if S.AutoClicker and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then VirtualUser:ClickButton1(Vector2.new()) end end)
+
     
     pcall(function()
         if not State.isFreecam and Camera.CameraType == Enum.CameraType.Watch then
@@ -894,11 +1001,42 @@ end))
 local function onCharSpawn(char)
     task.wait(0.5)
     local hum = char:WaitForChild("Humanoid", 5)
+    local hrp = char:WaitForChild("HumanoidRootPart", 5)
+    if hrp then
+        bhopOrigProps = hrp.CustomPhysicalProperties or PhysicalProperties.new(0.7, 0.3, 0.5, 1, 1)
+        bhopSlipProps = PhysicalProperties.new(bhopOrigProps.Density, bhopLowFriction, bhopOrigProps.Elasticity, 100, bhopOrigProps.ElasticityWeight)
+    end
     if hum then
         if not S.ForceWalkSpeed then gameDefaultSpeed = hum.WalkSpeed end
         if not S.ForceJumpPower then gameDefaultJumpPower = hum.JumpPower; gameDefaultUseJumpPower = hum.UseJumpPower end
         hum.UseJumpPower = S.ForceJumpPower and true or gameDefaultUseJumpPower; hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or gameDefaultSpeed
         hum.JumpPower = (S.ForceJumpPower and S.JumpPower) or gameDefaultJumpPower
+        
+        local bhopJumpConn
+        bhopJumpConn = hum.Jumping:Connect(function()
+            if not S.BHop then return end
+            local chosenBoost = bhopWeightedJumpBoosts[math.random(1, #bhopWeightedJumpBoosts)]
+            bhopCurrSpeed = math.min(bhopCurrSpeed + chosenBoost, bhopSpeedCap)
+            hum.WalkSpeed = bhopCurrSpeed
+            bhopSliding = false
+            local curHrp = getHRP()
+            if curHrp then
+                curHrp.CustomPhysicalProperties = bhopOrigProps
+                local airAccel = 25
+                local horizVel = curHrp.Velocity * Vector3.new(1, 0, 1)
+                if hum.MoveDirection.Magnitude > 0 then
+                    local wishDir = hum.MoveDirection.Unit
+                    local projSpeed = horizVel:Dot(wishDir)
+                    local addSpeed = airAccel - projSpeed
+                    if addSpeed > 0 then
+                        local accelSpeed = math.min(addSpeed, airAccel)
+                        horizVel = horizVel + wishDir * accelSpeed
+                    end
+                    curHrp.Velocity = Vector3.new(horizVel.X, curHrp.Velocity.Y, horizVel.Z)
+                end
+            end
+        end)
+        table.insert(S.Connections, bhopJumpConn)
     end
     if S.Fly then task.wait(0.1); flyOn() end
     if S.Float then task.wait(0.1); toggleFloat(true) end
@@ -1003,7 +1141,7 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
                     corner.Parent = frame
                     
                     local stroke = Instance.new("UIStroke")
-                    stroke.Color = userData.is_admin and Color3.fromRGB(255, 235, 59) or currentThemeColor
+                    stroke.Color = userData.is_admin and Color3.fromRGB(255, 235, 59) or State.currentThemeColor
                     stroke.Thickness = 1
                     stroke.Parent = frame
                     
@@ -1028,6 +1166,8 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
     runNetworkTagsSync = function()
         if not S.EulaAccepted then return end
         if not request then return end
+        if State.networkTagsLoopActive then return end
+        State.networkTagsLoopActive = true
         
         local SUPABASE_URL = "https://nlavwcbdqcmoqmojraeu.supabase.co"
         local SUPABASE_KEY = "sb_publishable__HC4Z5_wV2Daf8o-mgt89Q_z_JH2cif"
@@ -1181,11 +1321,12 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
         end
 
         task.spawn(function()
-            while true do
+            while State.networkTagsRunning and State.networkTagsLoopActive do
                 pcall(syncPresence)
                 pcall(fetchUsers)
                 task.wait(4)
             end
+            State.networkTagsLoopActive = false
         end)
     end
     VH.runNetworkTagsSync = runNetworkTagsSync
@@ -1197,7 +1338,7 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
                 local frame = bill:FindFirstChildOfClass("Frame")
                 local stroke = frame and frame:FindFirstChildOfClass("UIStroke")
                 if stroke and stroke.Color ~= Color3.fromRGB(255, 235, 59) then
-                    stroke.Color = currentThemeColor
+                    stroke.Color = State.currentThemeColor
                 end
             end)
         end
@@ -1224,11 +1365,11 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
         end
     end
 
-    cg.ChildAdded:Connect(onChildAdded)
-    if pg then pg.ChildAdded:Connect(onChildAdded) end
+    table.insert(S.Connections, cg.ChildAdded:Connect(onChildAdded))
+    if pg then table.insert(S.Connections, pg.ChildAdded:Connect(onChildAdded)) end
 
     
-    networkTagsRunning = true
+    State.networkTagsRunning = true
     if S.EulaAccepted then
         runNetworkTagsSync()
     end
@@ -1248,33 +1389,23 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
         setreadonly(mt, false)
         
         mt.__index = newcclosure(function(self, idx)
-            if idx == "Hit" and S.SilentAim and self == Mouse then
-                local targetPart = Utils.getAimbotTarget()
-                if targetPart then
-                    return targetPart.CFrame
-                end
-            end
-            if idx == "Target" and S.SilentAim and self == Mouse then
-                local targetPart = Utils.getAimbotTarget()
-                if targetPart then
-                    return targetPart
+            if S.SilentAim and typeof(self) == "Instance" and self:IsA("Mouse") then
+                if idx == "Hit" then
+                    local targetPart = Utils.getAimbotTarget()
+                    if targetPart then
+                        return targetPart.CFrame
+                    end
+                elseif idx == "Target" then
+                    local targetPart = Utils.getAimbotTarget()
+                    if targetPart then
+                        return targetPart
+                    end
                 end
             end
             return oldIndex(self, idx)
         end)
         
         mt.__namecall = newcclosure(function(self, ...)
-            local method = getnamecallmethod()
-            local args = {...}
-            if method == "Raycast" and S.SilentAim and self.ClassName == "Workspace" then
-                local targetPart = Utils.getAimbotTarget()
-                if targetPart then
-                    local origin = args[1]
-                    local newDir = (targetPart.Position - origin).Unit * 1000
-                    args[2] = newDir
-                    return oldNamecall(self, table.unpack(args))
-                end
-            end
             return oldNamecall(self, ...)
         end)
         
@@ -1283,5 +1414,3 @@ print("[WeAreSkidding] Custom GUI loaded successfully!")
 
     pcall(setupAutoReinject)
     pcall(function() Utils.setupAutoRejoin() end)
-
-print("[WeAreSkidding] Custom GUI loaded successfully!")
