@@ -27,6 +27,7 @@ local saveConfig = VH.Config.saveConfig
 
 local lastReloadTime = 0
 local shootTimer = 0
+local lastAutoplayShootTime = 0
 local autoplayConn = nil
 local activeWaypoints = {}
 local activeWaypointIndex = 1
@@ -626,24 +627,25 @@ local function startAutoplay()
                             if weapon then hum:EquipTool(weapon) end
                         else
                             tool:Activate()
-                            pcall(function()
-                                if mouse1press and mouse1release then
-                                    task.spawn(function()
-                                        mouse1press()
-                                        task.wait(0.01)
-                                        mouse1release()
-                                    end)
-                                elseif mouse1click then
-                                    mouse1click()
-                                else
-                                    local viewport = Camera.ViewportSize
-                                    local clickX = viewport.X / 2
-                                    local clickY = viewport.Y / 2
-                                    clickFrame = clickFrame + 1
-                                    local isPress = (clickFrame % 2 == 1)
-                                    VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, isPress, game, 1)
-                                end
-                            end)
+                            local now = tick()
+                            if not lastAutoplayShootTime or (now - lastAutoplayShootTime) >= 0.07 then
+                                lastAutoplayShootTime = now
+                                pcall(function()
+                                    if mouse1press and mouse1release then
+                                        task.spawn(function()
+                                            mouse1press()
+                                            task.wait(0.01)
+                                            mouse1release()
+                                        end)
+                                    elseif mouse1click then
+                                        mouse1click()
+                                    else
+                                        local VirtualUser = game:GetService("VirtualUser")
+                                        VirtualUser:CaptureController()
+                                        VirtualUser:ClickButton1(Vector2.new(Mouse.X, Mouse.Y))
+                                    end
+                                end)
+                            end
                             shootTimer = shootTimer + 0.016
                         end
                     end
