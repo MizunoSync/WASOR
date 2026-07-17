@@ -620,11 +620,7 @@ local function startAutoplay()
                     local goalCF = CFrame.new(Camera.CFrame.Position, aimPosition)
                     Camera.CFrame = Camera.CFrame:Lerp(goalCF, 0.22)
 
-                    -- Check if crosshair is actually on the target before firing
-                    local pos2D, onScreen = Camera:WorldToViewportPoint(aimPosition)
-                    local isCloseToCenter = onScreen and (Vector2.new(pos2D.X, pos2D.Y) - (Camera.ViewportSize / 2)).Magnitude <= 40
-
-                    if hasLOS and isCloseToCenter then
+                    if hasLOS then
                         local tool = char:FindFirstChildOfClass("Tool")
                         if not tool then
                             local weapon = LP.Backpack:FindFirstChildOfClass("Tool") or char:FindFirstChildOfClass("Tool")
