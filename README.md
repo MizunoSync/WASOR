@@ -38,9 +38,11 @@ WASOR comes packed with a shit ton of options split into 6 major panels: (Some m
 * **Noclip, Air Walk & Water Walk** — Walk through walls, stand in the air, or walk on water. (Pretty self explanatory)
 * **Wall Run & Climb** — Scale and slide on walls with smooth velocity changes and automatic ledge jumping/vaulting over the top.
 * **Gravity, Anti-Sit & Anti-Anchor** — Override gravity, stop seats from trapping you, and ignore anchor blocks.(Pretty self explanatory)
+* **Ultra Instinct** — Draws a customizable neon-red circle under the player's feet, performing automated teleports to dodge opponents when they enter the radius.
 
 ### 👁️ Visuals (ESP & Wallhacks)
 * **ESP Engine** — Full 2D boxes, skeleton lines, health bars, player names, and tracers. You see everything.
+* **Line of Sight ESP** — Renders aiming lines showing where opponents are aiming, with team check, friend check, and length filters.
 * **Chams** — Highlight character models through walls so nobody can hide.
 * **Map X-Ray & Clear Vision** — Remove annoying fog and make walls see-through.
 * **Lag Reducer & FPS Cap** — Boost your frames on potato PCs by disabling shadows and particles.
@@ -58,6 +60,7 @@ WASOR comes packed with a shit ton of options split into 6 major panels: (Some m
 * **Favorites Manager** — Bookmark your favorite games.
 * **UNC compliance Audits** — Test if your executor is actually good or garbage.
 * **Network Chat Hub** **—** Global chat network with other hub users using this same script.
+* **Rainbow Theme & Refresh UI** — Cycle through RGB colors dynamically and refresh the user interface on-the-fly to clear visual bugs.
 
 ---
 
