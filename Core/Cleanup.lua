@@ -51,6 +51,15 @@ Cleanup.cleanupAll = function()
     if S.GodModeConn then pcall(function() S.GodModeConn:Disconnect() end) S.GodModeConn = nil end
     if S.TallRunningConn then pcall(function() S.TallRunningConn:Disconnect() end) S.TallRunningConn = nil end
     if S.SpoofConn then pcall(function() S.SpoofConn:Disconnect() end) S.SpoofConn = nil end
+    if S.UISpoofObjects then
+        for obj, data in pairs(S.UISpoofObjects) do
+            pcall(function()
+                if data.Conn then data.Conn:Disconnect() end
+                if data.DestConn then data.DestConn:Disconnect() end
+            end)
+        end
+        S.UISpoofObjects = {}
+    end
     
     for p, conn in pairs(S.ChatConnections) do pcall(function() conn:Disconnect() end) end
     S.ChatConnections = {}
