@@ -63,6 +63,7 @@ Cleanup.cleanupAll = function()
     if S.GhostDummy then pcall(function() S.GhostDummy:Destroy() end) S.GhostDummy = nil end
     if S.FloatBody then pcall(function() S.FloatBody:Destroy() end) S.FloatBody = nil end
     if S.WaterPlat then pcall(function() S.WaterPlat:Destroy() end) S.WaterPlat = nil end
+    if State.UI_CirclePart then pcall(function() State.UI_CirclePart:Destroy() end) State.UI_CirclePart = nil end
     
     if State.playerCards then
         for p, item in pairs(State.playerCards) do
