@@ -12,7 +12,8 @@ UI.themeColors = {
     ["Purple"] = Color3.fromRGB(141, 47, 196), ["Red"] = Color3.fromRGB(218, 38, 38),
     ["Green"] = Color3.fromRGB(46, 204, 113), ["Blue"] = Color3.fromRGB(41, 128, 185),
     ["Yellow"] = Color3.fromRGB(241, 196, 15), ["Cyan"] = Color3.fromRGB(26, 188, 156),
-    ["Pink"] = Color3.fromRGB(232, 44, 154), ["Orange"] = Color3.fromRGB(230, 126, 34)
+    ["Pink"] = Color3.fromRGB(232, 44, 154), ["Orange"] = Color3.fromRGB(230, 126, 34),
+    ["Rainbow"] = Color3.fromRGB(141, 47, 196)
 }
 
 local themeHeaders, themeTexts, themeFills, themeToggles = {}, {}, {}, {}
@@ -231,10 +232,38 @@ UI.updateMenuBlur = function()
     end
 end
 
+local rainbowActive = false
+local function startRainbowCycle()
+    if rainbowActive then return end
+    rainbowActive = true
+    task.spawn(function()
+        local hue = 0
+        while State.S.ThemeColor == "Rainbow" and State.uiRunning do
+            task.wait(0.03)
+            hue = (hue + 1) % 360
+            local col = Color3.fromHSV(hue / 360, 0.8, 0.9)
+            State.currentThemeColor = col
+            for _, obj in ipairs(themeHeaders) do pcall(function() obj.BackgroundColor3 = col end) end
+            for _, obj in ipairs(themeTexts) do pcall(function() obj.TextColor3 = col end) end
+            for _, obj in ipairs(themeFills) do pcall(function() obj.BackgroundColor3 = col end) end
+            for _, updateFunc in ipairs(themeToggles) do pcall(updateFunc) end
+            for name, btn in pairs(UI.tabButtons) do if name == activeTab then btn.TextColor3 = col end end
+            if hudWatermark then hudWatermark.TextColor3 = col end
+        end
+        rainbowActive = false
+    end)
+end
+
 UI.applyThemeColor = function(colorName)
     local S = State.S
+    S.ThemeColor = colorName
+    if colorName == "Rainbow" then
+        startRainbowCycle()
+        return
+    end
+    
     local col = UI.themeColors[colorName] or UI.themeColors["Purple"]
-    State.currentThemeColor = col; S.ThemeColor = colorName
+    State.currentThemeColor = col
     for _, obj in ipairs(themeHeaders) do pcall(function() obj.BackgroundColor3 = col end) end
     for _, obj in ipairs(themeTexts) do pcall(function() obj.TextColor3 = col end) end
     for _, obj in ipairs(themeFills) do pcall(function() obj.BackgroundColor3 = col end) end
@@ -815,29 +844,7 @@ local function createPanel(title, width, height)
     local padding = Instance.new("UIPadding"); padding.PaddingTop = UDim.new(0, 6); padding.PaddingBottom = UDim.new(0, 6)
     padding.PaddingLeft = UDim.new(0, 6); padding.PaddingRight = UDim.new(0, 6); padding.Parent = content
     local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(40, 40, 40); stroke.Thickness = 1.2; stroke.Parent = win
-    local resizeHandle = Instance.new("Frame"); resizeHandle.Name = "resizeHandle"; resizeHandle.Size = UDim2.new(0, 6, 0, 6)
-    resizeHandle.Position = UDim2.new(1, -6, 1, -6); resizeHandle.BackgroundColor3 = State.currentThemeColor; resizeHandle.BackgroundTransparency = 0.3
-    resizeHandle.BorderSizePixel = 0; resizeHandle.ZIndex = 10; resizeHandle.Parent = win; table.insert(themeFills, resizeHandle)
-    makeResizable(win, resizeHandle); makeDraggable(win, header)
-    win:SetAttribute("BaseWidth", width); win:SetAttribute("BaseHeight", height); local isScaling = false
-    win:GetPropertyChangedSignal("Size"):Connect(function()
-        if isScaling then return end; isScaling = true
-        local currentWidth = win.Size.X.Offset; local baseWidth = win:GetAttribute("BaseWidth") or width
-        if baseWidth > 0 then
-            local scale = currentWidth / baseWidth; autoScaleContent(win, scale)
-            local totalContentHeight, count = 0, 0
-            for _, child in ipairs(content:GetChildren()) do
-                if child:IsA("Frame") and child.Name ~= "resizeHandle" then totalContentHeight = totalContentHeight + child.Size.Y.Offset; count = count + 1 end
-            end
-            local lL = content:FindFirstChildOfClass("UIListLayout"); local pV = lL and lL.Padding.Offset or (4 * scale)
-            local uP = content:FindFirstChildOfClass("UIPadding"); local pT = uP and uP.PaddingTop.Offset or (6 * scale)
-            local pB = uP and uP.PaddingBottom.Offset or (6 * scale)
-            local contentHeight = pT + pB + totalContentHeight + math.max(0, count - 1) * pV + 2 * scale
-            local finalHeight = math.clamp((22 * scale) + contentHeight, 50 * scale, 400 * scale)
-            win.Size = UDim2.new(0, currentWidth, 0, finalHeight)
-        end
-        isScaling = false
-    end)
+    makeDraggable(win, header)
     return win, content
 end
 
@@ -855,6 +862,9 @@ UI.InitializeUI = function()
     mainUIContainer.Visible = true; mainUIContainer.Parent = screenGui
     
     State.currentThemeColor = UI.themeColors[S.ThemeColor or "Purple"] or UI.themeColors["Purple"]
+    if S.ThemeColor == "Rainbow" then
+        task.spawn(startRainbowCycle)
+    end
     
     menuBlur = Services.Lighting:FindFirstChild("WeAreSkiddingBlur")
     if not menuBlur then menuBlur = Instance.new("BlurEffect"); menuBlur.Name = "WeAreSkiddingBlur"; menuBlur.Size = 0; menuBlur.Enabled = false; menuBlur.Parent = Services.Lighting end
@@ -916,6 +926,44 @@ UI.InitializeUI = function()
     hudTextLabel.Font = Enum.Font.Code; hudTextLabel.TextSize = 10; hudTextLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
     hudTextLabel.TextXAlignment = Enum.TextXAlignment.Right; hudTextLabel.Text = "FPS: -- | PING: --"; hudTextLabel.Parent = topBar
     UI.HUDLabel = hudTextLabel
+    
+    local refreshBtn = Instance.new("ImageButton")
+    refreshBtn.Size = UDim2.new(0, 12, 0, 12)
+    refreshBtn.Position = UDim2.new(1, -330, 0.5, -6)
+    refreshBtn.BackgroundTransparency = 1
+    refreshBtn.Image = "rbxassetid://114496992333593"
+    refreshBtn.ImageColor3 = Color3.fromRGB(180, 180, 180)
+    refreshBtn.Parent = topBar
+    
+    refreshBtn.MouseEnter:Connect(function()
+        refreshBtn.ImageColor3 = State.currentThemeColor
+    end)
+    refreshBtn.MouseLeave:Connect(function()
+        refreshBtn.ImageColor3 = Color3.fromRGB(180, 180, 180)
+    end)
+    
+    refreshBtn.MouseButton1Click:Connect(function()
+        pcall(function()
+            UI.showToast("Refreshing UI...", State.currentThemeColor)
+            task.wait(0.2)
+            VH.Cleanup.cleanupAll()
+            task.wait(0.1)
+            
+            local success = false
+            pcall(function()
+                if readfile and isfile and isfile("init.lua") then
+                    loadstring(readfile("init.lua"))()
+                    success = true
+                end
+            end)
+            
+            if not success then
+                pcall(function()
+                    loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/init.lua"))()
+                end)
+            end
+        end)
+    end)
     
     toastContainer = Instance.new("Frame")
     toastContainer.Size = UDim2.new(0, 260, 0, 300); toastContainer.Position = UDim2.new(1, -270, 1, -325)
@@ -1141,7 +1189,7 @@ UI.InitializeUI = function()
     
     -- PAGE: UI & HUD
     UI.addSectionHeader(pageUI, "Visual Theme")
-    UI.addDropdownOption(pageUI, "Interface Theme Color", {"Purple", "Red", "Green", "Blue", "Yellow", "Cyan", "Pink", "Orange"}, table.find({"Purple", "Red", "Green", "Blue", "Yellow", "Cyan", "Pink", "Orange"}, S.ThemeColor) or 1, function(_, opt) UI.applyThemeColor(opt); VH.Config.saveConfig() end)
+    UI.addDropdownOption(pageUI, "Interface Theme Color", {"Purple", "Red", "Green", "Blue", "Yellow", "Cyan", "Pink", "Orange", "Rainbow"}, table.find({"Purple", "Red", "Green", "Blue", "Yellow", "Cyan", "Pink", "Orange", "Rainbow"}, S.ThemeColor) or 1, function(_, opt) UI.applyThemeColor(opt); VH.Config.saveConfig() end)
     UI.addKeybindOption(pageUI, "Menu Toggle Keybind", S.UIToggleKey or Enum.KeyCode.RightControl, function(k) S.UIToggleKey = k; VH.Config.saveConfig(); VH.Utils.notify("UI Toggle Keybind set to: " .. k.Name, Color3.fromRGB(50, 195, 75)) end)
     UI.addToggleOption(pageUI, "Show Toasts Enabled", S.ToastEnabled, function(v) S.ToastEnabled = v; VH.Config.saveConfig() end)
     
