@@ -40,6 +40,7 @@ UI.showToast = function(message, color)
     if not S.ToastEnabled then return end
     if not toastContainer then return end
     
+    -- Check if message already exists in activeToasts
     local existing = nil
     for _, t in ipairs(activeToasts) do
         if t.message == message then
@@ -52,6 +53,7 @@ UI.showToast = function(message, color)
         existing.count = existing.count + 1
         existing.label.Text = message .. " (x" .. existing.count .. ")"
         
+        -- Reset progress bar animation
         if existing.tween then
             existing.tween:Cancel()
         end
@@ -61,6 +63,7 @@ UI.showToast = function(message, color)
         existing.tween = Services.TweenService:Create(existing.progressBar, tweenInfo, {Size = UDim2.new(0, 0, 0, 2)})
         existing.tween:Play()
         
+        -- Cancel existing destroy timer and set a new one
         if existing.destroyThread then
             task.cancel(existing.destroyThread)
         end
@@ -90,12 +93,14 @@ UI.showToast = function(message, color)
         return
     end
     
+    -- Create new toast
     local toast = Instance.new("Frame")
     toast.Size = UDim2.new(1, 0, 0, 38)
     toast.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     toast.BorderSizePixel = 0
     toast.Parent = toastContainer
     
+    -- Rounded corners
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 4)
     corner.Parent = toast
@@ -117,6 +122,7 @@ UI.showToast = function(message, color)
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = toast
     
+    -- Progress Line at the bottom
     local progressBar = Instance.new("Frame")
     progressBar.Size = UDim2.new(1, 0, 0, 2)
     progressBar.Position = UDim2.new(0, 0, 1, -2)
@@ -128,6 +134,7 @@ UI.showToast = function(message, color)
     barCorner.CornerRadius = UDim.new(0, 2)
     barCorner.Parent = progressBar
     
+    -- Start animation
     toast.Size = UDim2.new(1, 0, 0, 0)
     lbl.TextTransparency = 1
     stroke.Transparency = 1
@@ -940,6 +947,7 @@ UI.InitializeUI = function()
             UI.showToast("Refreshing UI...", State.currentThemeColor)
             task.wait(0.2)
             
+            -- Clear local cache files to force re-download of new GitHub files
             pcall(function()
                 if delfile then
                     delfile("WASOR_cache/commit_sha.txt")
@@ -950,42 +958,15 @@ UI.InitializeUI = function()
             VH.Cleanup.cleanupAll()
             task.wait(0.1)
             
-            local loadedPath = nil
-            local errLog = ""
+            -- Fetch and execute direct from GitHub (No local fallback)
+            local success, err = pcall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/refs/heads/main/github_loader.lua"))()
+            end)
             
-            if readfile and isfile then
-                local ok, err = pcall(function()
-                    if isfile("WASOR/init.lua") then
-                        loadstring(readfile("WASOR/init.lua"))()
-                        loadedPath = "local WASOR/init.lua"
-                    elseif isfile("init.lua") then
-                        loadstring(readfile("init.lua"))()
-                        loadedPath = "local init.lua"
-                    end
-                end)
-                if not ok then errLog = errLog .. "\nLocal file execution failed: " .. tostring(err) end
-            end
-            
-            if not loadedPath then
-                local ok, err = pcall(function()
-                    loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/refs/heads/main/github_loader.lua"))()
-                    loadedPath = "remote github_loader.lua"
-                end)
-                if not ok then errLog = errLog .. "\nRemote github_loader.lua failed: " .. tostring(err) end
-            end
-            
-            if not loadedPath then
-                local ok, err = pcall(function()
-                    loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/init.lua"))()
-                    loadedPath = "remote init.lua"
-                end)
-                if not ok then errLog = errLog .. "\nRemote init.lua failed: " .. tostring(err) end
-            end
-            
-            if loadedPath then
-                print("[WASOR Reload]: Successfully reloaded from " .. loadedPath)
+            if success then
+                print("[WASOR Reload]: Successfully reloaded from GitHub")
             else
-                warn("[WASOR Reload]: Failed to reload from any source!" .. errLog)
+                warn("[WASOR Reload]: Failed to reload from GitHub: " .. tostring(err))
             end
         end)
     end)
@@ -1175,6 +1156,7 @@ UI.InitializeUI = function()
     
     selectSettingsTab("Profiles")
     
+    -- PAGE: PROFILES
     UI.addSectionHeader(pageProfiles, "Configuration Profiles")
     UI.addButtonOption(pageProfiles, "Apply legit closet profile", function()
         UI:ResetAllToggles()
@@ -1211,6 +1193,7 @@ UI.InitializeUI = function()
         VH.Config.saveConfig(); VH.Utils.notify("Rage profile applied!", Color3.fromRGB(218, 38, 38))
     end)
     
+    -- PAGE: UI & HUD
     UI.addSectionHeader(pageUI, "Visual Theme")
     UI.addDropdownOption(pageUI, "Interface Theme Color", {"Purple", "Red", "Green", "Blue", "Yellow", "Cyan", "Pink", "Orange", "Rainbow"}, table.find({"Purple", "Red", "Green", "Blue", "Yellow", "Cyan", "Pink", "Orange", "Rainbow"}, S.ThemeColor) or 1, function(_, opt) UI.applyThemeColor(opt); VH.Config.saveConfig() end)
     UI.addKeybindOption(pageUI, "Menu Toggle Keybind", S.UIToggleKey or Enum.KeyCode.RightControl, function(k) S.UIToggleKey = k; VH.Config.saveConfig(); VH.Utils.notify("UI Toggle Keybind set to: " .. k.Name, Color3.fromRGB(50, 195, 75)) end)
@@ -1223,6 +1206,7 @@ UI.InitializeUI = function()
     UI.addToggleOption(pageUI, "Display Active ArrayList", S.HUDArrayList, function(v) S.HUDArrayList = v; UI.updateHUDArrayList(); VH.Config.saveConfig() end)
     UI.addToggleOption(pageUI, "Display active mods when outside of the main UI", S.HUDArrayListOutside, function(v) S.HUDArrayListOutside = v; UI.updateHUDArrayList(); VH.Config.saveConfig() end)
     
+    -- PAGE: INPUT & MACROS
     UI.addSectionHeader(pageInput, "Target Locker & Friends")
     UI.addTextboxOption(pageInput, "Specify Target / Friend", "Username", function(txt) if txt == "" then return end; VH.Utils.notify("Target lock set to: " .. txt, Color3.fromRGB(50, 195, 75)) end)
     UI.addButtonOption(pageInput, "Clear Current Friends Lists", function() VH.Utils.notify("Friends lists reset", Color3.fromRGB(218, 38, 38)) end)
@@ -1233,6 +1217,7 @@ UI.InitializeUI = function()
     UI.addKeybindOption(pageInput, "Panic Button (Disable All)", S.PanicKey or Enum.KeyCode.End, function(k) S.PanicKey = k; VH.Config.saveConfig(); VH.Utils.notify("Panic Key set to: " .. k.Name, Color3.fromRGB(218, 38, 38)) end)
     UI.addKeybindOption(pageInput, "Grab User ID (Hover Player)", S.UserIDGrabKey or Enum.KeyCode.K, function(k) S.UserIDGrabKey = k; VH.Config.saveConfig(); VH.Utils.notify("UserID Grab set to: " .. k.Name, Color3.fromRGB(50, 195, 75)) end)
     
+    -- PAGE: SYSTEM & CONFIG
     UI.addSectionHeader(pageConfig, "Executor Capabilities")
     local supportedFuncs = 0; local totalFuncs = 0
     local capsList = {
