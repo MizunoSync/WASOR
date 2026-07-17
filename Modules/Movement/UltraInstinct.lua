@@ -1,0 +1,198 @@
+local VH = _G.VoidHub
+local Services = VH.Services
+local State = VH.State
+local S = State.S
+local Utils = VH.Utils
+local UI = VH.UI
+
+local Players = Services.Players
+local LP = Services.LP
+local Mouse = Services.Mouse
+local Camera = Services.Camera
+local Workspace = Services.Workspace
+
+local getChar = Utils.getChar
+local getHRP = Utils.getHRP
+local getHum = Utils.getHum
+local notify = Utils.notify
+local showToast = UI.showToast
+local updateHUDArrayList = UI.updateHUDArrayList
+local registerModule = UI.registerModule
+
+local addToggleOption = UI.addToggleOption
+local addSliderOption = UI.addSliderOption
+local addDropdownOption = UI.addDropdownOption
+local addKeybindOption = UI.addKeybindOption
+local addTextboxOption = UI.addTextboxOption
+local addButtonOption = UI.addButtonOption
+local addSectionHeader = UI.addSectionHeader
+local addInfoRowOption = UI.addInfoRowOption
+local addCustomFrameOption = UI.addCustomFrameOption
+local addScrollFeedOption = UI.addScrollFeedOption
+local getOrCreateWindow = UI.getOrCreateWindow
+local createFloatingWindow = UI.createFloatingWindow
+
+local saveConfig = VH.Config.saveConfig
+local loadConfig = VH.Config.loadConfig
+local saveFavorites = VH.Config.saveFavorites
+local loadFavorites = VH.Config.loadFavorites
+local logMessage = VH.Logger.logMessage
+
+local checkFriendship = Utils.checkFriendship
+local teleportToHRP = Utils.teleportToHRP
+local spectatePlayer = Utils.spectatePlayer
+local resetCameraToSelf = Utils.resetCameraToSelf
+local enableFreecam = Utils.enableFreecam
+local disableFreecam = Utils.disableFreecam
+local teleportToRandom = Utils.teleportToRandom
+local teleportToLowestPop = Utils.teleportToLowestPop
+local teleportToHighestPop = Utils.teleportToHighestPop
+local runExternalScript = Utils.runExternalScript
+local teleportToPlace = Utils.teleportToPlace
+
+local serverStatsLabels = State.serverStatsLabels
+local rowRegion = State.rowRegion
+local rowPing = State.rowPing
+local rowPlayers = State.rowPlayers
+local rowAge = State.rowAge
+
+local spectateStatsLabels = State.spectateStatsLabels
+local specNameRow = State.specNameRow
+local specHpRow = State.specHpRow
+local specTeamRow = State.specTeamRow
+
+local activeChatFeed = State.activeChatFeed
+local activeConsoleFeed = State.activeConsoleFeed
+
+local consoleLogs = State.consoleLogs
+local consoleLogsMap = State.consoleLogsMap
+
+
+local ultraInstinctConn = nil
+local lastDodge = 0
+
+local function startUltraInstinct()
+    if ultraInstinctConn then return end
+    
+    ultraInstinctConn = Services.RunService.Heartbeat:Connect(function()
+        if not S.UltraInstinct or not State.uiRunning then
+            if ultraInstinctConn then
+                ultraInstinctConn:Disconnect()
+                ultraInstinctConn = nil
+            end
+            if State.UI_CirclePart then
+                pcall(function() State.UI_CirclePart:Destroy() end)
+                State.UI_CirclePart = nil
+            end
+            return
+        end
+        
+        local myChar = getChar()
+        local myHRP = getHRP()
+        if not myChar or not myHRP then
+            if State.UI_CirclePart then
+                State.UI_CirclePart.Transparency = 1
+            end
+            return
+        end
+        
+        -- Create/Update Circle Visual
+        local radius = S.UltraInstinctRadius or 12
+        if not State.UI_CirclePart or not State.UI_CirclePart.Parent then
+            pcall(function()
+                local p = Instance.new("Part")
+                p.Name = "UltraInstinctCircle"
+                p.Shape = Enum.PartType.Cylinder
+                p.Material = Enum.Material.Neon
+                p.Color = Color3.fromRGB(255, 0, 0)
+                p.Transparency = 0.85
+                p.CanCollide = false
+                p.Anchored = true
+                p.Parent = Workspace
+                State.UI_CirclePart = p
+            end)
+        end
+        
+        if State.UI_CirclePart then
+            local groundY = myHRP.Position.Y - 3.2
+            pcall(function()
+                local rayParams = RaycastParams.new()
+                rayParams.FilterType = Enum.RaycastFilterType.Exclude
+                rayParams.FilterDescendantsInstances = {myChar, State.UI_CirclePart}
+                local rayResult = Workspace:Raycast(myHRP.Position, Vector3.new(0, -15, 0), rayParams)
+                if rayResult then
+                    groundY = rayResult.Position.Y
+                end
+            end)
+            pcall(function()
+                State.UI_CirclePart.Size = Vector3.new(0.05, radius * 2, radius * 2)
+                State.UI_CirclePart.CFrame = CFrame.new(myHRP.Position.X, groundY + 0.05, myHRP.Position.Z) * CFrame.Angles(0, 0, math.rad(90))
+                State.UI_CirclePart.Transparency = 0.85
+            end)
+        end
+        
+        -- Dodge Check
+        local now = tick()
+        if now - lastDodge > 0.15 then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LP and p.Character then
+                    local hrp = p.Character:FindFirstChild("HumanoidRootPart") or p.Character:FindFirstChild("Torso") or p.Character.PrimaryPart
+                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                    if hrp and hum and hum.Health > 0 then
+                        local dist = (hrp.Position - myHRP.Position).Magnitude
+                        if dist <= radius then
+                            lastDodge = now
+                            local dir = (myHRP.Position - hrp.Position)
+                            local dirH = Vector3.new(dir.X, 0, dir.Z)
+                            local dodgeDir = dirH.Magnitude > 0.01 and dirH.Unit or myHRP.CFrame.LookVector
+                            
+                            pcall(function()
+                                -- Dodge target: push back/away slightly further than radius
+                                local targetCF = myHRP.CFrame + (dodgeDir * (radius + 5))
+                                myHRP.CFrame = targetCF
+                                myHRP.AssemblyLinearVelocity = Vector3.zero
+                                
+                                -- Visual flash indicator
+                                if State.UI_CirclePart then
+                                    State.UI_CirclePart.Color = Color3.fromRGB(0, 255, 0)
+                                    task.delay(0.15, function()
+                                        if State.UI_CirclePart and S.UltraInstinct then
+                                            State.UI_CirclePart.Color = Color3.fromRGB(255, 0, 0)
+                                        end
+                                    end)
+                                end
+                                
+                                notify("Ultra Instinct Dodged: " .. p.DisplayName, Color3.fromRGB(50, 195, 75))
+                            end)
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    end)
+    table.insert(S.Connections, ultraInstinctConn)
+end
+
+
+registerModule("Movement", "Ultra Instinct", 300, 50, true, S.UltraInstinct, function(v)
+    S.UltraInstinct = v
+    if v then
+        startUltraInstinct()
+    else
+        if State.UI_CirclePart then
+            pcall(function() State.UI_CirclePart:Destroy() end)
+            State.UI_CirclePart = nil
+        end
+    end
+    saveConfig()
+end, function(drawer)
+    addSliderOption(drawer, "Dodge Radius", 5, 30, S.UltraInstinctRadius or 12, function(v)
+        S.UltraInstinctRadius = v
+        saveConfig()
+    end)
+end, false)
+
+if S.UltraInstinct then
+    startUltraInstinct()
+end
