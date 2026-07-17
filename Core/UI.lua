@@ -922,14 +922,14 @@ UI.InitializeUI = function()
     topTitle.RichText = true; topTitle.Parent = topBar; table.insert(themeTexts, topTitle)
     
     local hudTextLabel = Instance.new("TextLabel")
-    hudTextLabel.Size = UDim2.new(0, 300, 1, 0); hudTextLabel.Position = UDim2.new(1, -310, 0, 0); hudTextLabel.BackgroundTransparency = 1
+    hudTextLabel.Size = UDim2.new(0, 300, 1, 0); hudTextLabel.Position = UDim2.new(1, -330, 0, 0); hudTextLabel.BackgroundTransparency = 1
     hudTextLabel.Font = Enum.Font.Code; hudTextLabel.TextSize = 10; hudTextLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
     hudTextLabel.TextXAlignment = Enum.TextXAlignment.Right; hudTextLabel.Text = "FPS: -- | PING: --"; hudTextLabel.Parent = topBar
     UI.HUDLabel = hudTextLabel
     
     local refreshBtn = Instance.new("ImageButton")
     refreshBtn.Size = UDim2.new(0, 12, 0, 12)
-    refreshBtn.Position = UDim2.new(1, -330, 0.5, -6)
+    refreshBtn.Position = UDim2.new(1, -22, 0.5, -6)
     refreshBtn.BackgroundTransparency = 1
     refreshBtn.Image = "rbxassetid://114496992333593"
     refreshBtn.ImageColor3 = Color3.fromRGB(180, 180, 180)
@@ -951,11 +951,23 @@ UI.InitializeUI = function()
             
             local success = false
             pcall(function()
-                if readfile and isfile and isfile("init.lua") then
-                    loadstring(readfile("init.lua"))()
-                    success = true
+                if readfile and isfile then
+                    if isfile("WASOR/init.lua") then
+                        loadstring(readfile("WASOR/init.lua"))()
+                        success = true
+                    elseif isfile("init.lua") then
+                        loadstring(readfile("init.lua"))()
+                        success = true
+                    end
                 end
             end)
+            
+            if not success then
+                pcall(function()
+                    loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/refs/heads/main/github_loader.lua"))()
+                    success = true
+                end)
+            end
             
             if not success then
                 pcall(function()
