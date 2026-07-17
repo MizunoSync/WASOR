@@ -846,3 +846,7 @@ end, function(drawer)
     addSliderOption(drawer, "Target Max Range", 10, 500, S.AutoplayRange, function(v) S.AutoplayRange = v; saveConfig() end)
     addSliderOption(drawer, "Auto Reload Interval", 3, 30, S.AutoplayReloadInterval, function(v) S.AutoplayReloadInterval = v; saveConfig() end)
 end, false)
+
+if S.AutoplayBot then
+    startAutoplay()
+end
