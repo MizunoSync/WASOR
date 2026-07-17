@@ -68,6 +68,11 @@ local consoleLogsMap = State.consoleLogsMap
 
 
 registerModule("Player", "Reset Character", 160, 50, false, false, function()
+    if game.PlaceId == 286090429 then
+        notify("Use the normal reset feature because of Arsenal CR we can't reset using our methods", Color3.fromRGB(218, 38, 38))
+        return
+    end
+
     local char = getChar()
     local hum = getHum()
     
