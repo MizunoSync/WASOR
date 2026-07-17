@@ -47,6 +47,7 @@ State.S = {
     GhostMode = false, GhostCFrame = nil, GhostDummy = nil,
     ESPBoxes = false, ESPTracers = false, ESPNames = false, ESPHealth = false, ESPDistances = false,
     ESPTeamCheck = false, ESPIgnoreFriends = false, ESPTransparency = 0.8, ESPDistanceColor = false, SkeletonESP = false, Chams = false, ChamsColor = "Team Color", ESPBoxStyle = "Full",
+    LineOfSight = false, LineOfSightTeamCheck = false, LineOfSightFriendCheck = false, LineOfSightLength = 30,
     OverheadInfo = false,
     AimbotActive = false, AimbotTeamCheck = false, AimbotIgnoreFriends = false, AimbotFOV = 120, AimbotSmooth = 5, AimbotPart = "Head",
     AimbotVisibility = false, AimbotShowFOV = false, SilentAim = false, NoRecoil = false, TouchAura = false,
