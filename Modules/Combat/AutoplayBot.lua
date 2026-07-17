@@ -621,42 +621,33 @@ local function startAutoplay()
                     Camera.CFrame = Camera.CFrame:Lerp(goalCF, 0.22)
 
                     if hasLOS then
-                        local tool = char:FindFirstChildOfClass("Tool")
-                        if not tool then
-                            local weapon = LP.Backpack:FindFirstChildOfClass("Tool") or char:FindFirstChildOfClass("Tool")
-                            if weapon then hum:EquipTool(weapon) end
-                        else
-                            tool:Activate()
-                            local now = tick()
-                            if not lastAutoplayShootTime or (now - lastAutoplayShootTime) >= 0.05 then
-                                lastAutoplayShootTime = now
-                                pcall(function()
-                                    if mouse1press and mouse1release then
-                                        task.spawn(function()
-                                            mouse1press()
-                                            task.wait(0.01)
-                                            mouse1release()
-                                        end)
-                                    elseif mouse1click then
-                                        mouse1click()
-                                    else
-                                        local VirtualUser = game:GetService("VirtualUser")
-                                        VirtualUser:CaptureController()
-                                        VirtualUser:ClickButton1(Vector2.new(Mouse.X, Mouse.Y))
-                                    end
-                                end)
-                            end
-                            shootTimer = shootTimer + 0.016
+                        -- Fire mouse simulation directly (same as Triggerbot)
+                        local now = tick()
+                        if not lastAutoplayShootTime or (now - lastAutoplayShootTime) >= 0.05 then
+                            lastAutoplayShootTime = now
+                            pcall(function()
+                                if mouse1press and mouse1release then
+                                    task.spawn(function()
+                                        mouse1press()
+                                        task.wait(0.01)
+                                        mouse1release()
+                                    end)
+                                elseif mouse1click then
+                                    mouse1click()
+                                else
+                                    local VirtualUser = game:GetService("VirtualUser")
+                                    VirtualUser:CaptureController()
+                                    VirtualUser:ClickButton1(Vector2.new(Mouse.X, Mouse.Y))
+                                end
+                            end)
                         end
+                        shootTimer = shootTimer + 0.016
                     end
                 end
 
                 if S.AutoplayReload then
-                    local tool = char:FindFirstChildOfClass("Tool")
                     local needsReload = false
-                    if tool and checkAmmo(tool) then
-                        needsReload = true
-                    elseif shootTimer >= (S.AutoplayReloadInterval or 10) then
+                    if shootTimer >= (S.AutoplayReloadInterval or 10) then
                         needsReload = true
                         shootTimer = 0
                     end
