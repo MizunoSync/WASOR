@@ -1,4 +1,7 @@
 
+if _G.VoidHubLoading then return end
+_G.VoidHubLoading = true
+
 if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
     pcall(_G.VoidHub.Cleanup.cleanupAll)
 end
@@ -165,3 +168,5 @@ end
 runFile("Core/Runtime")
 
 print("[WASOR] Loader: FileBuild")
+
+_G.VoidHubLoading = nil
