@@ -68,9 +68,7 @@ local consoleLogsMap = State.consoleLogsMap
 
 
 registerModule("Player", "Reset Character", 160, 50, false, false, function()
-    local char = getChar()
     local hum = getHum()
-    local hrp = getHRP()
     
     if S.GodMode then
         pcall(function() Utils.disableGodMode() end)
@@ -81,25 +79,6 @@ registerModule("Player", "Reset Character", 160, 50, false, false, function()
             hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
             hum.Health = 0 
         end)
-    end
-    
-    if char then
-        pcall(function()
-            local neck = char:FindFirstChild("Neck", true)
-            if neck then
-                neck:Destroy()
-            else
-                local head = char:FindFirstChild("Head")
-                if head then
-                    head:Destroy()
-                end
-            end
-        end)
-    end
-    
-    -- Fallback:
-    if hrp then
-        pcall(function() hrp.CFrame = hrp.CFrame * CFrame.new(0, -1000, 0) end)
     end
     
     notify("Character reset!", Color3.fromRGB(218, 38, 38))
