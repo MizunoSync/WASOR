@@ -30,14 +30,18 @@ end
 Cleanup.cleanupAll = function()
     local S = State.S
     pcall(function()
-        local old = Services.CoreGui:FindFirstChild("MeteorRobloxGUI")
-        if old then old:Destroy() end
-        local oldChat = Services.CoreGui:FindFirstChild("DiscordNetworkHub")
-        if oldChat then oldChat:Destroy() end
+        for _, child in ipairs(Services.CoreGui:GetChildren()) do
+            if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" then
+                pcall(function() child:Destroy() end)
+            end
+        end
         local pg = Services.LP:FindFirstChild("PlayerGui")
         if pg then 
-            local oldPg = pg:FindFirstChild("MeteorRobloxGUI"); if oldPg then oldPg:Destroy() end
-            local oldChatPg = pg:FindFirstChild("DiscordNetworkHub"); if oldChatPg then oldChatPg:Destroy() end
+            for _, child in ipairs(pg:GetChildren()) do
+                if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" then
+                    pcall(function() child:Destroy() end)
+                end
+            end
         end
         if State.clearNetworkTags then pcall(State.clearNetworkTags) end
         State.networkTagsRunning = false
