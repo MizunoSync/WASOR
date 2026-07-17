@@ -70,14 +70,15 @@ local consoleLogsMap = State.consoleLogsMap
 registerModule("Player", "Reset Character", 160, 50, false, false, function()
     local hum = getHum()
     
-    if S.GodMode then
+    local hasGodMode = S.GodMode or S.GodModeConn or (hum and hum.MaxHealth > 99999)
+    if hasGodMode then
         pcall(function() Utils.disableGodMode() end)
     end
     
+    -- Destroy the humanoid to force Roblox respawn
     if hum then
         pcall(function() 
-            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
-            hum.Health = 0 
+            hum:Destroy()
         end)
     end
     
