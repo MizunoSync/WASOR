@@ -71,24 +71,31 @@ registerModule("Combat", "Auto Clicker", 20, 50, true, S.AutoClicker, function(v
     S.AutoClicker = v
     if v then
         task.spawn(function()
+            if S.AutoClickerDelay and S.AutoClickerDelay > 0 then
+                task.wait(S.AutoClickerDelay)
+            end
             while S.AutoClicker and State.uiRunning do
                 if mouse1press and mouse1release then
                     mouse1press()
-                    task.wait(0.05)
+                    task.wait(0.01)
                     mouse1release()
-                    task.wait(0.05)
+                    task.wait(S.AutoClickerInterval or 0.1)
                 elseif mouse1click then
                     mouse1click()
-                    task.wait(0.1)
+                    task.wait(S.AutoClickerInterval or 0.1)
                 else
                     pcall(function()
                         Services.VirtualUser:CaptureController()
                         Services.VirtualUser:ClickButton1(Vector2.new(Mouse.X, Mouse.Y))
                     end)
-                    task.wait(0.1)
+                    task.wait(S.AutoClickerInterval or 0.1)
                 end
             end
         end)
     end
     saveConfig()
-end)
+end, function(drawer)
+    addKeybindOption(drawer, "Auto Clicker Bind", S.AutoClickerKey or Enum.KeyCode.Unknown, function(k) S.AutoClickerKey = k; saveConfig() end)
+    addSliderOption(drawer, "Start Delay (sec)", 0, 5, S.AutoClickerDelay or 1, function(v) S.AutoClickerDelay = v; saveConfig() end)
+    addSliderOption(drawer, "Click Interval (sec)", 1, 100, math.round((S.AutoClickerInterval or 0.1) * 100), function(v) S.AutoClickerInterval = v / 100; saveConfig() end)
+end, false)
