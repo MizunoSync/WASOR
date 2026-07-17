@@ -3,7 +3,10 @@ WeAreSkiddingOnRoblox is a utility full with various functions.
 If you are developing or debugging individual modules, you can use the dynamic loader:
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/github_loader.lua"))()
+if identifyexecutor then
+game:GetService("GuiService"):SetGameplayPausedNotificationEnabled(false)
+loadstring(game:HttpGet(('https://raw.githubusercontent.com/MizunoSync/WASOR/refs/heads/main/github_loader.lua'),true))()
+end
 ```
 
 ---
