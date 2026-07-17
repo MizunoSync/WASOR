@@ -1,3 +1,6 @@
+if _G.VoidHubLoading then return end
+_G.VoidHubLoading = true
+
 if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
     pcall(_G.VoidHub.Cleanup.cleanupAll)
 end
@@ -219,3 +222,5 @@ if not useCache and hasFileSystem and latestSHA and not downloadFailed then
     pcall(writefile, "WASOR_cache/commit_sha.txt", latestSHA)
     print("[WASOR] 모든 파일이 다운로드되었습니다. 해당 커밋에 대한 캐시가 업데이트되었습니다.: " .. latestSHA:sub(1, 7))
 end
+
+_G.VoidHubLoading = nil
