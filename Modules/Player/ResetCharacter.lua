@@ -75,38 +75,14 @@ registerModule("Player", "Reset Character", 160, 50, false, false, function()
     if hum then
         pcall(function() hum.Health = 0 end)
     end
+    if char then
+        pcall(function() char:BreakJoints() end)
+    end
     
-    task.delay(0.1, function()
-        if char and hum and hum.Parent and hum.Health > 0 then
-            pcall(function() char:BreakJoints() end)
-        end
-    end)
-    
-    task.delay(0.2, function()
-        if char and hum and hum.Parent and hum.Health > 0 then
-            if hrp then
-                pcall(function() hrp.CFrame = CFrame.new(0, -99999, 0) end)
-            end
-        end
-    end)
-    
-    task.delay(0.3, function()
-        if char and hum and hum.Parent and hum.Health > 0 then
-            local head = char:FindFirstChild("Head")
-            local neck = head and (head:FindFirstChild("Neck") or char:FindFirstChild("Neck", true))
-            if neck then
-                pcall(function() neck:Destroy() end)
-            elseif head then
-                pcall(function() head:Destroy() end)
-            end
-        end
-    end)
-    
-    task.delay(0.4, function()
-        if char and hum and hum.Parent and hum.Health > 0 then
-            pcall(function() hum:Destroy() end)
-        end
-    end)
+    -- Fallback: Teleport into the void if health or joints are locked (anti-kill/godmode)
+    if hrp then
+        pcall(function() hrp.CFrame = hrp.CFrame * CFrame.new(0, -1000, 0) end)
+    end
     
     notify("Character reset!", Color3.fromRGB(218, 38, 38))
 end)
