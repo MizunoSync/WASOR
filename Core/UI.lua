@@ -26,6 +26,7 @@ local hudCoords = nil
 local hudServerAge = nil
 local hudArrayListFrame = nil
 local toastContainer = nil
+local activeToasts = {}
 local navBar = nil
 
 
@@ -38,27 +39,143 @@ UI.showToast = function(message, color)
     if not S.ToastEnabled then return end
     if not toastContainer then return end
     
-    local toast = Instance.new("Frame"); toast.Size = UDim2.new(1, 0, 0, 38)
-    toast.BackgroundColor3 = Color3.fromRGB(20, 20, 20); toast.BorderSizePixel = 0; toast.Parent = toastContainer
-    local stroke = Instance.new("UIStroke"); stroke.Color = color or State.currentThemeColor; stroke.Thickness = 1.2; stroke.Parent = toast
-    local lbl = Instance.new("TextLabel"); lbl.Size = UDim2.new(1, -16, 1, 0); lbl.Position = UDim2.new(0, 8, 0, 0)
-    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamMedium; lbl.TextSize = 10
-    lbl.TextColor3 = Color3.fromRGB(245, 245, 245); lbl.Text = message; lbl.TextWrapped = true
-    lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.Parent = toast
-    toast.Size = UDim2.new(1, 0, 0, 0); lbl.TextTransparency = 1; stroke.Transparency = 1
+    -- Check if message already exists in activeToasts
+    local existing = nil
+    for _, t in ipairs(activeToasts) do
+        if t.message == message then
+            existing = t
+            break
+        end
+    end
+    
+    if existing then
+        existing.count = existing.count + 1
+        existing.label.Text = message .. " (x" .. existing.count .. ")"
+        
+        -- Reset progress bar animation
+        if existing.tween then
+            existing.tween:Cancel()
+        end
+        existing.progressBar.Size = UDim2.new(1, 0, 0, 2)
+        
+        local tweenInfo = TweenInfo.new(3.5, Enum.EasingStyle.Linear)
+        existing.tween = Services.TweenService:Create(existing.progressBar, tweenInfo, {Size = UDim2.new(0, 0, 0, 2)})
+        existing.tween:Play()
+        
+        -- Cancel existing destroy timer and set a new one
+        if existing.destroyThread then
+            task.cancel(existing.destroyThread)
+        end
+        
+        existing.destroyThread = task.delay(3.5, function()
+            for i, t in ipairs(activeToasts) do
+                if t == existing then
+                    table.remove(activeToasts, i)
+                    break
+                end
+            end
+            
+            local t1 = Services.TweenService:Create(existing.frame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 0)})
+            local t2 = Services.TweenService:Create(existing.label, TweenInfo.new(0.2), {TextTransparency = 1})
+            local stroke = existing.frame:FindFirstChildOfClass("UIStroke")
+            local t3 = stroke and Services.TweenService:Create(stroke, TweenInfo.new(0.2), {Transparency = 1})
+            local t4 = Services.TweenService:Create(existing.progressBar, TweenInfo.new(0.2), {BackgroundTransparency = 1})
+            
+            t1:Play(); t2:Play(); t4:Play()
+            if t3 then t3:Play() end
+            
+            t1.Completed:Connect(function()
+                existing.frame:Destroy()
+            end)
+        end)
+        
+        return
+    end
+    
+    -- Create new toast
+    local toast = Instance.new("Frame")
+    toast.Size = UDim2.new(1, 0, 0, 38)
+    toast.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    toast.BorderSizePixel = 0
+    toast.Parent = toastContainer
+    
+    -- Rounded corners
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 4)
+    corner.Parent = toast
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = color or State.currentThemeColor
+    stroke.Thickness = 1.2
+    stroke.Parent = toast
+    
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -16, 1, -4)
+    lbl.Position = UDim2.new(0, 8, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.GothamMedium
+    lbl.TextSize = 10
+    lbl.TextColor3 = Color3.fromRGB(245, 245, 245)
+    lbl.Text = message
+    lbl.TextWrapped = true
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = toast
+    
+    -- Progress Line at the bottom
+    local progressBar = Instance.new("Frame")
+    progressBar.Size = UDim2.new(1, 0, 0, 2)
+    progressBar.Position = UDim2.new(0, 0, 1, -2)
+    progressBar.BackgroundColor3 = color or State.currentThemeColor
+    progressBar.BorderSizePixel = 0
+    progressBar.Parent = toast
+    
+    local barCorner = Instance.new("UICorner")
+    barCorner.CornerRadius = UDim.new(0, 2)
+    barCorner.Parent = progressBar
+    
+    -- Start animation
+    toast.Size = UDim2.new(1, 0, 0, 0)
+    lbl.TextTransparency = 1
+    stroke.Transparency = 1
+    progressBar.BackgroundTransparency = 1
     
     Services.TweenService:Create(toast, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 38)}):Play()
     Services.TweenService:Create(lbl, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
     Services.TweenService:Create(stroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
+    Services.TweenService:Create(progressBar, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
     
-    task.delay(3.5, function()
-        if toast and toast.Parent then
-            local t1 = Services.TweenService:Create(toast, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 0)})
-            local t2 = Services.TweenService:Create(lbl, TweenInfo.new(0.2), {TextTransparency = 1})
-            local t3 = Services.TweenService:Create(stroke, TweenInfo.new(0.2), {Transparency = 1})
-            t1:Play(); t2:Play(); t3:Play()
-            t1.Completed:Connect(function() toast:Destroy() end)
+    local tweenInfo = TweenInfo.new(3.5, Enum.EasingStyle.Linear)
+    local pTween = Services.TweenService:Create(progressBar, tweenInfo, {Size = UDim2.new(0, 0, 0, 2)})
+    pTween:Play()
+    
+    local toastData = {
+        message = message,
+        count = 1,
+        frame = toast,
+        label = lbl,
+        progressBar = progressBar,
+        tween = pTween,
+        color = color
+    }
+    table.insert(activeToasts, toastData)
+    
+    toastData.destroyThread = task.delay(3.5, function()
+        for i, t in ipairs(activeToasts) do
+            if t == toastData then
+                table.remove(activeToasts, i)
+                break
+            end
         end
+        
+        local t1 = Services.TweenService:Create(toast, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 0)})
+        local t2 = Services.TweenService:Create(lbl, TweenInfo.new(0.2), {TextTransparency = 1})
+        local t3 = Services.TweenService:Create(stroke, TweenInfo.new(0.2), {Transparency = 1})
+        local t4 = Services.TweenService:Create(progressBar, TweenInfo.new(0.2), {BackgroundTransparency = 1})
+        
+        t1:Play(); t2:Play(); t3:Play(); t4:Play()
+        t1.Completed:Connect(function()
+            toast:Destroy()
+        end)
     end)
 end
 
@@ -1064,7 +1181,7 @@ UI.InitializeUI = function()
     UI.addButtonOption(pageConfig, "Load Stored Settings", function() VH.Config.loadConfig(); VH.Utils.notify("Configuration loaded successfully!", Color3.fromRGB(50, 195, 75)) end)
     UI.addButtonOption(pageConfig, "Reset Settings to Default", function()
         UI:ResetAllToggles()
-        S.WalkSpeed = 16; S.JumpPower = 50; S.InfJump = false; S.BHop = false; S.AirWalk = false; S.NoClip = false; S.Fly = false; S.FlySpeed = 60; S.ESPBoxes = false; S.ESPTracers = false; S.ESPNames = false; S.ESPHealth = false; S.ESPDistances = false; S.ESPTeamCheck = false; S.ESPIgnoreFriends = false; S.LineOfSight = false; S.LineOfSightTeamCheck = false; S.LineOfSightFriendCheck = false; S.LineOfSightLength = 30; S.AimbotActive = false; S.AimbotIgnoreFriends = false; S.TriggerbotIgnoreFriends = false; S.AntiAFK = false; S.AutoRejoin = false; S.NetworkChat = true; S.NetworkTags = true; S.GravityEnabled = false; S.CustomGravity = 196.2; S.ThemeColor = "Purple"
+        S.WalkSpeed = 16; S.JumpPower = 50; S.InfJump = false; S.BHop = false; S.AirWalk = false; S.NoClip = false; S.Fly = false; S.FlySpeed = 60; S.ESPBoxes = false; S.ESPTracers = false; S.ESPNames = false; S.ESPHealth = false; S.ESPDistances = false; S.ESPTeamCheck = false; S.ESPIgnoreFriends = false; S.LineOfSight = false; S.LineOfSightTeamCheck = false; S.LineOfSightFriendCheck = false; S.LineOfSightLength = 30; S.UltraInstinct = false; S.UltraInstinctRadius = 12; S.AimbotActive = false; S.AimbotIgnoreFriends = false; S.TriggerbotIgnoreFriends = false; S.AntiAFK = false; S.AutoRejoin = false; S.NetworkChat = true; S.NetworkTags = true; S.GravityEnabled = false; S.CustomGravity = 196.2; S.ThemeColor = "Purple"
         if UI.moduleButtons["Network Chat Hub"] then UI.moduleButtons["Network Chat Hub"].SetActive(true) end
         if UI.moduleButtons["Network User Tags"] then UI.moduleButtons["Network User Tags"].SetActive(true) end
         UI.applyThemeColor("Purple"); VH.Config.saveConfig(); VH.Utils.notify("All settings reset to default!", Color3.fromRGB(218, 38, 38))
