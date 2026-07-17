@@ -626,14 +626,23 @@ local function startAutoplay()
                             if weapon then hum:EquipTool(weapon) end
                         else
                             tool:Activate()
-                            local viewport = Camera.ViewportSize
-                            local clickX = viewport.X - 50
-                            local clickY = viewport.Y - 50
-                            
-                            clickFrame = clickFrame + 1
-                            local isPress = (clickFrame % 2 == 1)
                             pcall(function()
-                                VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, isPress, game, 1)
+                                if mouse1press and mouse1release then
+                                    task.spawn(function()
+                                        mouse1press()
+                                        task.wait(0.01)
+                                        mouse1release()
+                                    end)
+                                elseif mouse1click then
+                                    mouse1click()
+                                else
+                                    local viewport = Camera.ViewportSize
+                                    local clickX = viewport.X / 2
+                                    local clickY = viewport.Y / 2
+                                    clickFrame = clickFrame + 1
+                                    local isPress = (clickFrame % 2 == 1)
+                                    VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, isPress, game, 1)
+                                end
                             end)
                             shootTimer = shootTimer + 0.016
                         end
@@ -664,8 +673,14 @@ local function startAutoplay()
             if not isAiming or not hasLOS then
                 if clickFrame > 0 then
                     pcall(function()
-                        local viewport = Camera.ViewportSize
-                        VirtualInputManager:SendMouseButtonEvent(viewport.X - 50, viewport.Y - 50, 0, false, game, 1)
+                        if mouse1release then
+                            mouse1release()
+                        else
+                            local viewport = Camera.ViewportSize
+                            local clickX = viewport.X / 2
+                            local clickY = viewport.Y / 2
+                            VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, false, game, 1)
+                        end
                     end)
                     clickFrame = 0
                 end
