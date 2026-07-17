@@ -949,30 +949,45 @@ UI.InitializeUI = function()
             VH.Cleanup.cleanupAll()
             task.wait(0.1)
             
-            local success = false
-            pcall(function()
-                if readfile and isfile then
+            local loadedPath = nil
+            local errLog = ""
+            
+            -- Try local WASOR/init.lua
+            if readfile and isfile then
+                local ok, err = pcall(function()
                     if isfile("WASOR/init.lua") then
                         loadstring(readfile("WASOR/init.lua"))()
-                        success = true
+                        loadedPath = "local WASOR/init.lua"
                     elseif isfile("init.lua") then
                         loadstring(readfile("init.lua"))()
-                        success = true
+                        loadedPath = "local init.lua"
                     end
-                end
-            end)
-            
-            if not success then
-                pcall(function()
-                    loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/refs/heads/main/github_loader.lua"))()
-                    success = true
                 end)
+                if not ok then errLog = errLog .. "\nLocal file execution failed: " .. tostring(err) end
             end
             
-            if not success then
-                pcall(function()
-                    loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/init.lua"))()
+            -- Try remote github_loader.lua
+            if not loadedPath then
+                local ok, err = pcall(function()
+                    loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/refs/heads/main/github_loader.lua"))()
+                    loadedPath = "remote github_loader.lua"
                 end)
+                if not ok then errLog = errLog .. "\nRemote github_loader.lua failed: " .. tostring(err) end
+            end
+            
+            -- Try remote init.lua
+            if not loadedPath then
+                local ok, err = pcall(function()
+                    loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/init.lua"))()
+                    loadedPath = "remote init.lua"
+                end)
+                if not ok then errLog = errLog .. "\nRemote init.lua failed: " .. tostring(err) end
+            end
+            
+            if loadedPath then
+                print("[WASOR Reload]: Successfully reloaded from " .. loadedPath)
+            else
+                warn("[WASOR Reload]: Failed to reload from any source!" .. errLog)
             end
         end)
     end)
