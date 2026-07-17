@@ -913,7 +913,6 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
             local targetHRP = targetChar and (targetChar:FindFirstChild("HumanoidRootPart") or targetChar:FindFirstChild("Torso") or targetChar.PrimaryPart)
             local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
             if targetHRP and targetHum and targetHum.Health > 0 then
-                for _, part in ipairs(myChar:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end
                 myHRP.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 1)
                 myHRP.AssemblyLinearVelocity = Vector3.new(0, 1000, 0); myHRP.AssemblyAngularVelocity = Vector3.new(0, 50000, 0)
             else
@@ -930,7 +929,6 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
                 else targetHRP = nil end
             end
             if targetHRP then
-                for _, part in ipairs(myChar:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end
                 myHRP.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 1)
                 myHRP.AssemblyLinearVelocity = Vector3.new(0, 1000, 0); myHRP.AssemblyAngularVelocity = Vector3.new(0, 50000, 0)
             end
@@ -939,7 +937,7 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
 end))
 
 table.insert(S.Connections, RunService.Stepped:Connect(function()
-    if S.NoClip then
+    if S.NoClip or S.FlingActive or S.FlingAllActive then
         local char = getChar()
         if char then for _, p in ipairs(char:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = false end end end
     end
@@ -1029,6 +1027,8 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
             end
             hrp.CFrame = CFrame.new(targetPos) * hrp.CFrame.Rotation; notify("Blinked forward safely!", Color3.fromRGB(50, 195, 75))
         end
+    elseif S.AutoClickerKey and S.AutoClickerKey ~= Enum.KeyCode.Unknown and k == S.AutoClickerKey then
+        S.AutoClicker = not S.AutoClicker; notify("Auto Clicker " .. (S.AutoClicker and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Auto Clicker"]; if mod then mod.SetActive(S.AutoClicker) end
     end
 end))
 
