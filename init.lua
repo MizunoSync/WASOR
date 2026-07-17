@@ -117,6 +117,7 @@ local Modules = {
     "Modules/Render/SkeletonESP",
     "Modules/Render/Chams",
     "Modules/Render/SkipTeammates",
+    "Modules/Render/LineOfSight",
     "Modules/Render/HeadsUpOverheads",
     "Modules/Render/NetworkUserTags",
     "Modules/Render/MapXRay",
