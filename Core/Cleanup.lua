@@ -16,6 +16,7 @@ Cleanup.destroyESP = function(p)
         pcall(function() pool.distText.Visible = false; pool.distText:Remove() end)
         pcall(function() pool.healthBarOutline.Visible = false; pool.healthBarOutline:Remove() end)
         pcall(function() pool.healthBarFill.Visible = false; pool.healthBarFill:Remove() end)
+        pcall(function() if pool.losLine then pool.losLine.Visible = false; pool.losLine:Remove() end end)
         if pool.skeleton then
             for _, line in ipairs(pool.skeleton) do pcall(function() line.Visible = false; line:Remove() end) end
         end
