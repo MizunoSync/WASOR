@@ -103,6 +103,7 @@ local Modules = {
     "Modules/Movement/WaterWalk",
     "Modules/Movement/TallAnimations",
     "Modules/Movement/PlayerSpin",
+    "Modules/Movement/UltraInstinct",
     "Modules/Movement/GravityModifier",
     "Modules/Movement/AntiAnchor",
     "Modules/Movement/AntiSit",
