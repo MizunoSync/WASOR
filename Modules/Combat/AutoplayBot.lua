@@ -16,7 +16,6 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local getChar = Utils.getChar
 local getHRP = Utils.getHRP
 local getHum = Utils.getHum
-local notify = Utils.notify
 local checkFriendship = Utils.checkFriendship
 local registerModule = UI.registerModule
 
@@ -86,7 +85,7 @@ local function drawPath(waypoints, startIndex)
     local lineIndex = 1
     local circleIndex = 1
     local pillarIndex = 1
-    
+
     for i = startIndex, #waypoints do
         local wp = waypoints[i]
         if wp then
@@ -100,15 +99,15 @@ local function drawPath(waypoints, startIndex)
                     circ.Transparency = 0.7
                     waypointCircles[circleIndex] = circ
                 end
-                
+
                 local dist = (wp.Position - Camera.CFrame.Position).Magnitude
                 local radius = math.clamp(120 / math.max(dist, 1), 3, 20)
-                
+
                 circ.Color = (i == startIndex) and Color3.fromRGB(50, 205, 50) or (State.currentThemeColor or Color3.fromRGB(141, 47, 196))
                 circ.Position = Vector2.new(pos.X, pos.Y)
                 circ.Radius = radius
                 circ.Visible = true
-                
+
                 circleIndex = circleIndex + 1
             end
         end
@@ -260,27 +259,27 @@ end
 local function checkLineOfSight(targetHRP)
     local char = getChar()
     if not char or not targetHRP then return false end
-    
+
     local origin = Camera.CFrame.Position
     local destination = targetHRP.Position
     local direction = (destination - origin)
-    
+
     local filterList = {char, Camera}
     local rp = RaycastParams.new()
     rp.FilterType = Enum.RaycastFilterType.Exclude
-    
+
     for i = 1, 5 do
         rp.FilterDescendantsInstances = filterList
         local res = workspace:Raycast(origin, direction, rp)
         if not res then
             return true
         end
-        
+
         local hitPart = res.Instance
         if hitPart:IsDescendantOf(targetHRP.Parent) then
             return true
         end
-        
+
         if hitPart.CanCollide == false or hitPart.Transparency >= 0.7 or hitPart.Name:lower():find("glass") or hitPart.Name:lower():find("clip") or hitPart.Name:lower():find("water") or hitPart.Name:lower():find("trigger") or hitPart.Name:lower():find("effect") then
             table.insert(filterList, hitPart)
         else
@@ -412,7 +411,7 @@ task.spawn(function()
                         local targetPos = targetHRP.Position
                         local targetVel = targetHRP.AssemblyLinearVelocity
                         local shouldRecalculate = false
-                        
+
                         local velChange = (targetVel - lastTargetVelocity).Magnitude
                         lastTargetVelocity = targetVel
 
@@ -424,7 +423,7 @@ task.spawn(function()
                                 shouldRecalculate = true
                             end
                         end
-                        
+
                         if not shouldRecalculate and (not lastPathRecalcTime or (tick() - lastPathRecalcTime) > 0.6) then
                             shouldRecalculate = true
                         end
@@ -432,7 +431,7 @@ task.spawn(function()
                         if shouldRecalculate then
                             lastComputedTargetPos = targetPos
                             lastPathRecalcTime = tick()
-                            
+
                             local path = PathfindingService:CreatePath({
                                 AgentRadius = 2.0,
                                 AgentHeight = 5.0,
@@ -506,7 +505,7 @@ end
 
 local function startAutoplay()
     stopAutoplay()
-    
+
     lastPositionCheckTime = tick()
     stuckTime = 0
     lastVisibleTargetTime = 0
@@ -574,7 +573,7 @@ local function startAutoplay()
             if stuckTime >= 1.0 and tick() - jumpDebounce > 0.4 then
                 hum.Jump = true
                 jumpDebounce = tick()
-                
+
                 if stuckTime >= 2.0 then
                     local rightVec = myHRP.CFrame.RightVector
                     local nudgeDir = (math.random() > 0.5) and rightVec or -rightVec
@@ -595,16 +594,16 @@ local function startAutoplay()
                 local dist = (targetHRP.Position - myHRP.Position).Magnitude
                 local inRange = (dist <= S.AutoplayRange)
                 hasLOS = checkLineOfSight(targetHRP)
-                
+
                 if hasLOS then
                     lastVisibleTargetTime = tick()
                 end
-                
+
                 local targetIsRecent = (tick() - lastVisibleTargetTime) < 0.5
 
                 if S.AutoplayShoot and inRange and (hasLOS or targetIsRecent) then
                     isAiming = true
-                    
+
                     if tick() - randomizerTimer > 0.5 then
                         randomizerTimer = tick()
                         if S.AutoplayPartRandomizer == "Random" then
@@ -657,7 +656,7 @@ local function startAutoplay()
                         simulateReload()
                     end
                 end
-                
+
                 drawTargetTracerLine(myHRP.Position, targetHRP.Position)
             else
                 if targetTracer then targetTracer.Visible = false end
@@ -684,7 +683,7 @@ local function startAutoplay()
                 if currentWP then
                     local wpPos = currentWP.Position
                     local distToWP = (Vector3.new(myHRP.Position.X, wpPos.Y, myHRP.Position.Z) - wpPos).Magnitude
-                    
+
                     local wallParams = RaycastParams.new()
                     wallParams.FilterType = Enum.RaycastFilterType.Exclude
                     wallParams.FilterDescendantsInstances = {char}
@@ -704,7 +703,7 @@ local function startAutoplay()
                     if S.WalkSpeed and S.WalkSpeed > 16 then
                         hum.WalkSpeed = S.WalkSpeed
                     end
-                    
+
                     local wpPos = targetWP.Position
                     if not lastMoveToPos or (lastMoveToPos - wpPos).Magnitude > 0.2 then
                         hum:MoveTo(wpPos)
@@ -736,7 +735,7 @@ local function startAutoplay()
                         end
                     end
                 end
-                
+
                 drawPath(activeWaypoints, activeWaypointIndex)
             else
                 clearDrawings()
@@ -758,24 +757,24 @@ local function startAutoplay()
             local rayParams = RaycastParams.new()
             rayParams.FilterType = Enum.RaycastFilterType.Exclude
             rayParams.FilterDescendantsInstances = {char}
-            
+
             local scanRight = Vector3.new(-scanDir.Z, 0, scanDir.X).Unit
             local scanLeft = -scanRight
-            
+
             local scanDist = 4.5
             local offsets = { Vector3.zero, scanLeft * 1.2, scanRight * 1.2 }
             local hitRay = nil
             local hitHigh = false
-            
+
             for _, offset in ipairs(offsets) do
                 local originLow = myHRP.Position + offset - Vector3.new(0, 1.8, 0)
                 local originMid = myHRP.Position + offset
                 local originHigh = myHRP.Position + offset + Vector3.new(0, 2.2, 0)
-                
+
                 local rLow = workspace:Raycast(originLow, scanDir * scanDist, rayParams)
                 local rMid = workspace:Raycast(originMid, scanDir * scanDist, rayParams)
                 local rHigh = workspace:Raycast(originHigh, scanDir * scanDist, rayParams)
-                
+
                 if rLow or rMid then
                     hitRay = rLow or rMid
                     if rHigh then
@@ -784,12 +783,12 @@ local function startAutoplay()
                     break
                 end
             end
-            
+
             if hitRay and hitRay.Instance then
                 local inst = hitRay.Instance
-                
+
                 local isClimbable = inst:IsA("TrussPart") or inst.Name:lower():find("ladder") or inst.Name:lower():find("truss") or inst.Name:lower():find("climb")
-                
+
                 if isClimbable then
                     if tick() - jumpDebounce > 0.4 then
                         hum.Jump = true
@@ -819,7 +818,7 @@ local function startAutoplay()
                 end
             end
         end)
-        
+
         if not ok then
             warn("[WASOR Autoplay Error]: " .. tostring(err))
         end
