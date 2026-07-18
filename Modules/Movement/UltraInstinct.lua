@@ -7,73 +7,23 @@ local UI = VH.UI
 
 local Players = Services.Players
 local LP = Services.LP
-local Mouse = Services.Mouse
-local Camera = Services.Camera
 local Workspace = Services.Workspace
 
 local getChar = Utils.getChar
 local getHRP = Utils.getHRP
-local getHum = Utils.getHum
 local notify = Utils.notify
-local showToast = UI.showToast
-local updateHUDArrayList = UI.updateHUDArrayList
 local registerModule = UI.registerModule
 
-local addToggleOption = UI.addToggleOption
 local addSliderOption = UI.addSliderOption
-local addDropdownOption = UI.addDropdownOption
-local addKeybindOption = UI.addKeybindOption
-local addTextboxOption = UI.addTextboxOption
-local addButtonOption = UI.addButtonOption
-local addSectionHeader = UI.addSectionHeader
-local addInfoRowOption = UI.addInfoRowOption
-local addCustomFrameOption = UI.addCustomFrameOption
-local addScrollFeedOption = UI.addScrollFeedOption
-local getOrCreateWindow = UI.getOrCreateWindow
-local createFloatingWindow = UI.createFloatingWindow
 
 local saveConfig = VH.Config.saveConfig
-local loadConfig = VH.Config.loadConfig
-local saveFavorites = VH.Config.saveFavorites
-local loadFavorites = VH.Config.loadFavorites
-local logMessage = VH.Logger.logMessage
-
-local checkFriendship = Utils.checkFriendship
-local teleportToHRP = Utils.teleportToHRP
-local spectatePlayer = Utils.spectatePlayer
-local resetCameraToSelf = Utils.resetCameraToSelf
-local enableFreecam = Utils.enableFreecam
-local disableFreecam = Utils.disableFreecam
-local teleportToRandom = Utils.teleportToRandom
-local teleportToLowestPop = Utils.teleportToLowestPop
-local teleportToHighestPop = Utils.teleportToHighestPop
-local runExternalScript = Utils.runExternalScript
-local teleportToPlace = Utils.teleportToPlace
-
-local serverStatsLabels = State.serverStatsLabels
-local rowRegion = State.rowRegion
-local rowPing = State.rowPing
-local rowPlayers = State.rowPlayers
-local rowAge = State.rowAge
-
-local spectateStatsLabels = State.spectateStatsLabels
-local specNameRow = State.specNameRow
-local specHpRow = State.specHpRow
-local specTeamRow = State.specTeamRow
-
-local activeChatFeed = State.activeChatFeed
-local activeConsoleFeed = State.activeConsoleFeed
-
-local consoleLogs = State.consoleLogs
-local consoleLogsMap = State.consoleLogsMap
-
 
 local ultraInstinctConn = nil
 local lastDodge = 0
 
 local function startUltraInstinct()
     if ultraInstinctConn then return end
-    
+
     ultraInstinctConn = Services.RunService.Heartbeat:Connect(function()
         if not S.UltraInstinct or not State.uiRunning then
             if ultraInstinctConn then
@@ -86,7 +36,7 @@ local function startUltraInstinct()
             end
             return
         end
-        
+
         local myChar = getChar()
         local myHRP = getHRP()
         if not myChar or not myHRP then
@@ -95,7 +45,7 @@ local function startUltraInstinct()
             end
             return
         end
-        
+
         -- Create/Update Circle Visual
         local radius = S.UltraInstinctRadius or 12
         if not State.UI_CirclePart or not State.UI_CirclePart.Parent then
@@ -112,7 +62,7 @@ local function startUltraInstinct()
                 State.UI_CirclePart = p
             end)
         end
-        
+
         if State.UI_CirclePart then
             local groundY = myHRP.Position.Y - 3.2
             pcall(function()
@@ -130,7 +80,7 @@ local function startUltraInstinct()
                 State.UI_CirclePart.Transparency = 0.85
             end)
         end
-        
+
         -- Dodge Check
         local now = tick()
         if now - lastDodge > 0.15 then
@@ -145,13 +95,13 @@ local function startUltraInstinct()
                             local dir = (myHRP.Position - hrp.Position)
                             local dirH = Vector3.new(dir.X, 0, dir.Z)
                             local dodgeDir = dirH.Magnitude > 0.01 and dirH.Unit or myHRP.CFrame.LookVector
-                            
+
                             pcall(function()
                                 -- Dodge target: push back/away slightly further than radius
                                 local targetCF = myHRP.CFrame + (dodgeDir * (radius + 5))
                                 myHRP.CFrame = targetCF
                                 myHRP.AssemblyLinearVelocity = Vector3.zero
-                                
+
                                 -- Visual flash indicator
                                 if State.UI_CirclePart then
                                     State.UI_CirclePart.Color = Color3.fromRGB(0, 255, 0)
@@ -161,7 +111,7 @@ local function startUltraInstinct()
                                         end
                                     end)
                                 end
-                                
+
                                 notify("Ultra Instinct Dodged: " .. p.DisplayName, Color3.fromRGB(50, 195, 75))
                             end)
                             break
@@ -173,7 +123,6 @@ local function startUltraInstinct()
     end)
     table.insert(S.Connections, ultraInstinctConn)
 end
-
 
 registerModule("Movement", "Ultra Instinct", 300, 50, true, S.UltraInstinct, function(v)
     S.UltraInstinct = v
