@@ -918,7 +918,7 @@ UI.InitializeUI = function()
     topTitle.Size = UDim2.new(0, 450, 1, 0); topTitle.Position = UDim2.new(0, 10, 0, 0); topTitle.BackgroundTransparency = 1
     topTitle.Font = Enum.Font.GothamBold; topTitle.TextSize = 11; topTitle.TextColor3 = State.currentThemeColor
     topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.Text = "WeAreSkidding <font color='#ffffff'>On Roblox v1.5</font> <font color='#888888'>(" .. executorName .. ")</font>"
+    topTitle.Text = "WeAreSkidding <font color='#ffffff'>On Roblox v2.0</font> <font color='#888888'>(" .. executorName .. ")</font>"
     topTitle.RichText = true; topTitle.Parent = topBar; table.insert(themeTexts, topTitle)
     
     local hudTextLabel = Instance.new("TextLabel")
@@ -1027,7 +1027,7 @@ UI.InitializeUI = function()
     hudWatermark = Instance.new("TextLabel")
     hudWatermark.Size = UDim2.new(0, 200, 0, 14); hudWatermark.Position = UDim2.new(0, 10, 0, 30); hudWatermark.BackgroundTransparency = 1
     hudWatermark.Font = Enum.Font.GothamBold; hudWatermark.TextSize = 10; hudWatermark.TextColor3 = State.currentThemeColor
-    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 1.5"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
+    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 2.0"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
     
     hudCoords = Instance.new("TextLabel")
     hudCoords.Size = UDim2.new(0, 250, 0, 14); hudCoords.Position = UDim2.new(0, 10, 0, 44); hudCoords.BackgroundTransparency = 1

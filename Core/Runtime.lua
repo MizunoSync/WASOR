@@ -27,14 +27,9 @@ local VirtualUser = Services.VirtualUser
 local RunService = Services.RunService
 
 local themeToggles = UI.themeToggles
-local themeHeaders = UI.themeHeaders
-local themeFills = UI.themeFills
-local themeTexts = UI.themeTexts
 
-local hudWatermark = UI.hudWatermark
 local hudCoords = UI.hudCoords
 local hudServerAge = UI.hudServerAge
-local hudArrayListFrame = UI.hudArrayListFrame
 
 local rowHomeFPS = State.rowHomeFPS
 local rowHomePing = State.rowHomePing
@@ -48,58 +43,23 @@ local getChar = Utils.getChar
 local getHRP = Utils.getHRP
 local getHum = Utils.getHum
 local notify = Utils.notify
-local showToast = UI.showToast
 local updateHUDArrayList = UI.updateHUDArrayList
-local registerModule = UI.registerModule
-
-local addToggleOption = UI.addToggleOption
-local addSliderOption = UI.addSliderOption
-local addDropdownOption = UI.addDropdownOption
-local addKeybindOption = UI.addKeybindOption
-local addTextboxOption = UI.addTextboxOption
-local addButtonOption = UI.addButtonOption
-local addSectionHeader = UI.addSectionHeader
-local addInfoRowOption = UI.addInfoRowOption
-local addCustomFrameOption = UI.addCustomFrameOption
-local addScrollFeedOption = UI.addScrollFeedOption
-local getOrCreateWindow = UI.getOrCreateWindow
-local createFloatingWindow = UI.createFloatingWindow
 
 local saveConfig = VH.Config.saveConfig
-local loadConfig = VH.Config.loadConfig
-local saveFavorites = VH.Config.saveFavorites
-local loadFavorites = VH.Config.loadFavorites
 local logMessage = VH.Logger.logMessage
 
 local checkFriendship = Utils.checkFriendship
 local teleportToHRP = Utils.teleportToHRP
 local spectatePlayer = Utils.spectatePlayer
-local resetCameraToSelf = Utils.resetCameraToSelf
-local enableFreecam = Utils.enableFreecam
-local disableFreecam = Utils.disableFreecam
-local teleportToRandom = Utils.teleportToRandom
-local teleportToLowestPop = Utils.teleportToLowestPop
-local teleportToHighestPop = Utils.teleportToHighestPop
-local runExternalScript = Utils.runExternalScript
 local teleportToPlace = Utils.teleportToPlace
 
-local serverStatsLabels = State.serverStatsLabels
-local rowRegion = State.rowRegion
 local rowPing = State.rowPing
 local rowPlayers = State.rowPlayers
 local rowAge = State.rowAge
 
-local spectateStatsLabels = State.spectateStatsLabels
 local specNameRow = State.specNameRow
 local specHpRow = State.specHpRow
 local specTeamRow = State.specTeamRow
-
-local activeChatFeed = State.activeChatFeed
-local activeConsoleFeed = State.activeConsoleFeed
-
-local consoleLogs = State.consoleLogs
-local consoleLogsMap = State.consoleLogsMap
-
 
 local fovCircle = State.fovCircle
 if not fovCircle then
@@ -120,7 +80,6 @@ local bonesR15 = {
     {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}
 }
 local bonesR6 = { {"Head", "Torso"}, {"Torso", "Left Arm"}, {"Torso", "Right Arm"}, {"Torso", "Left Leg"}, {"Torso", "Right Leg"} }
-
 
 local lastTriggerFire = 0
 local fpsCount = State.fpsCount
@@ -154,7 +113,6 @@ end
 
 local bhopOrigProps = PhysicalProperties.new(0.7, 0.3, 0.5, 1, 1)
 local bhopSlipProps = PhysicalProperties.new(bhopOrigProps.Density, bhopLowFriction, bhopOrigProps.Elasticity, 100, bhopOrigProps.ElasticityWeight)
-
 
 local function getNextFlingAllTarget(currentTarget)
     local candidates = {}
@@ -246,19 +204,13 @@ local function runNetworkTagsSync()
 end
 
 local networkTagsPool = State.networkTagsPool
-local networkUsersHUD = State.networkUsersHUD
-
-
-
-
-
 
 table.insert(S.Connections, RunService.RenderStepped:Connect(function()
     Camera = Workspace.CurrentCamera or Workspace:FindFirstChildOfClass("Camera") or Camera
     if S.ClearVision then Lighting.FogEnd = 100000 end
     fovCircle.Visible = S.AimbotActive and S.AimbotShowFOV
     if fovCircle.Visible then local vp = Camera.ViewportSize; fovCircle.Position = Vector2.new(vp.X / 2, vp.Y / 2); fovCircle.Radius = S.AimbotFOV end
-    
+
     local aimbotPressed = false
     if S.AimbotHoldMode == "Keyboard" then if S.AimbotHoldKey and S.AimbotHoldKey ~= Enum.KeyCode.Unknown then aimbotPressed = UserInputService:IsKeyDown(S.AimbotHoldKey) end
     else aimbotPressed = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) end
@@ -297,7 +249,7 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
             end
         end
     end)
-    
+
     local espColorMapping = {
         ["Red"] = Color3.fromRGB(220, 40, 40), ["Green"] = Color3.fromRGB(55, 200, 80), ["Blue"] = Color3.fromRGB(40, 120, 220),
         ["Yellow"] = Color3.fromRGB(220, 175, 45), ["Cyan"] = Color3.fromRGB(45, 200, 220), ["White"] = Color3.fromRGB(255, 255, 255)
@@ -375,17 +327,17 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
             if valid then
                 local isTeammate = p.Team == LP.Team
                 local isFriend = checkFriendship(p.UserId)
-                
+
                 local espAllowed = true
                 if S.ESPTeamCheck and isTeammate then espAllowed = false end
                 if S.ESPIgnoreFriends and isFriend then espAllowed = false end
-                
+
                 local losAllowed = S.LineOfSight
                 if losAllowed then
                     if S.LineOfSightTeamCheck and isTeammate then losAllowed = false end
                     if S.LineOfSightFriendCheck and isFriend then losAllowed = false end
                 end
-                
+
                 if not espAllowed and not losAllowed then
                     destroyESP(p)
                     continue
@@ -410,38 +362,38 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
                 if not pool.losLine then
                     pool.losLine = Drawing.new("Line")
                 end
-                
+
                 local box = getBoundingBox(char); local sp, onScreen = Camera:WorldToViewportPoint(hrp.Position)
 
                 if box and sp.Z > 0 then
                     local topLeft, bottomRight = box[1], box[2]; local width, height = bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y
-                    
+
                     local showFull = espAllowed and S.ESPBoxes and S.ESPBoxStyle == "Full"
                     local showCorners = espAllowed and S.ESPBoxes and S.ESPBoxStyle == "Corners"
-                    
+
                     local outline = pool.boxOutline; outline.Visible = showFull; outline.Position = topLeft; outline.Size = Vector2.new(width, height)
                     outline.Color = espDrawCol; outline.Thickness = 1.5; outline.Transparency = 1; outline.Filled = false
-                    
+
                     local fill = pool.boxFill; fill.Visible = espAllowed and S.ESPBoxes; fill.Position = topLeft; fill.Size = Vector2.new(width, height)
                     fill.Color = espDrawCol; fill.Transparency = 1 - S.ESPTransparency; fill.Filled = true
-                    
+
                     if showCorners then
                         local len = math.clamp(math.min(width, height) * 0.25, 4, 15)
                         local c = pool.corners
                         c[1].From = topLeft; c[1].To = topLeft + Vector2.new(len, 0)
                         c[2].From = topLeft; c[2].To = topLeft + Vector2.new(0, len)
-                        
+
                         local tr = Vector2.new(bottomRight.X, topLeft.Y)
                         c[3].From = tr; c[3].To = tr + Vector2.new(-len, 0)
                         c[4].From = tr; c[4].To = tr + Vector2.new(0, len)
-                        
+
                         local bl = Vector2.new(topLeft.X, bottomRight.Y)
                         c[5].From = bl; c[5].To = bl + Vector2.new(len, 0)
                         c[6].From = bl; c[6].To = bl + Vector2.new(0, -len)
-                        
+
                         c[7].From = bottomRight; c[7].To = bottomRight + Vector2.new(-len, 0)
                         c[8].From = bottomRight; c[8].To = bottomRight + Vector2.new(0, -len)
-                        
+
                         for _, line in ipairs(c) do
                             line.Color = espDrawCol
                             line.Thickness = 1.5
@@ -490,10 +442,10 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
                         local head = char:FindFirstChild("Head") or hrp
                         local startPos = head.Position
                         local endPos = startPos + (head.CFrame.LookVector * (S.LineOfSightLength or 30))
-                        
+
                         local startScreen, startOnScreen = Camera:WorldToViewportPoint(startPos)
                         local endScreen, endOnScreen = Camera:WorldToViewportPoint(endPos)
-                        
+
                         if startOnScreen and endOnScreen and startScreen.Z > 0 and endScreen.Z > 0 then
                             losLine.From = Vector2.new(startScreen.X, startScreen.Y)
                             losLine.To = Vector2.new(endScreen.X, endScreen.Y)
@@ -574,9 +526,9 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
         end
         if updated then fpsCount = 0 end
     end)
-    
+
     local myChar = getChar(); local myHRP = getHRP(); local myHum = getHum()
-    
+
     local currentCameraCFrame = Camera.CFrame
     local _, currentYaw, _ = currentCameraCFrame:ToEulerAnglesYXZ()
     local deltaYaw = 0
@@ -675,7 +627,7 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
             if S.ForceJumpPower then myHum.UseJumpPower = true; myHum.JumpPower = S.JumpPower end
         end
     end)
-    
+
     pcall(function()
         if S.BHop and myHRP and myHum then
             local horizVel = myHRP.Velocity * Vector3.new(1, 0, 1)
@@ -735,7 +687,7 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
             bhopCurrSpeed = bhopBaseSpeed
         end
     end)
-    
+
     pcall(function()
         if S.AirWalk then
             if myHRP then
@@ -766,7 +718,7 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
             end
         end
     end)
-    
+
     pcall(function()
         if S.WaterWalk and myHRP and myChar then
             if not S.WaterRaycastParams then S.WaterRaycastParams = RaycastParams.new(); S.WaterRaycastParams.FilterType = Enum.RaycastFilterType.Exclude; S.WaterRaycastParams.IgnoreWater = false end
@@ -782,7 +734,7 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
             if S.WaterPlat then S.WaterPlat:Destroy(); S.WaterPlat = nil end
         end
     end)
-    
+
     pcall(function()
         if S.AntiVoid and myHRP then
             if myHRP.Position.Y > S.AntiVoidY then S.LastSafePosition = myHRP.CFrame
@@ -793,16 +745,16 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
             end
         end
     end)
-    
+
     pcall(function()
         if S.FollowActive and S.FollowTarget then
             local tgtHRP = S.FollowTarget.Character and (S.FollowTarget.Character:FindFirstChild("HumanoidRootPart") or S.FollowTarget.Character:FindFirstChild("Torso") or S.FollowTarget.Character.PrimaryPart)
             if tgtHRP then teleportToHRP(tgtHRP) end
         end
     end)
-    
+
     pcall(function() if S.GravityEnabled then Workspace.Gravity = S.CustomGravity end end)
-    
+
     pcall(function()
         if S.FullBright then
             Lighting.Ambient = Color3.new(1, 1, 1)
@@ -813,9 +765,9 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
             Lighting.ClockTime = S.TimeOfDay
         end
     end)
-    
+
     pcall(function() if S.Spin and myHRP then myHRP.CFrame = myHRP.CFrame * CFrame.Angles(0, math.rad(S.SpinSpeed), 0) end end)
-    
+
     pcall(function()
         if S.AutoInteract and myHRP then
             for _, prompt in ipairs(Workspace:GetDescendants()) do
@@ -842,7 +794,7 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
             end
         end
     end)
-    
+
     pcall(function()
         if S.ToolMagnet and myHRP then
             for _, item in ipairs(Workspace:GetDescendants()) do
@@ -850,7 +802,7 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
             end
         end
     end)
-    
+
     pcall(function()
         if S.AutoJump and myHum and myHRP and myHum.FloorMaterial ~= Enum.Material.Air then
             local edgeRay = Ray.new(myHRP.Position + (myHRP.CFrame.LookVector * 2), Vector3.new(0, -5, 0))
@@ -858,7 +810,7 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
             if not hit then myHum:ChangeState(Enum.HumanoidStateType.Jumping) end
         end
     end)
-    
+
     pcall(function()
         if S.KillAura and myChar and myHRP then
             local tool = myChar:FindFirstChildOfClass("Tool")
@@ -874,9 +826,7 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
             end
         end
     end)
-    
 
-    
     pcall(function()
         if not State.isFreecam and Camera.CameraType == Enum.CameraType.Watch then
             local subj = Camera.CameraSubject
@@ -895,9 +845,9 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
             end
         end
     end)
-    
+
     pcall(function() if S.HUDCoords and myHRP then local pos = myHRP.Position; hudCoords.Text = string.format("XYZ: %.1f, %.1f, %.1f", pos.X, pos.Y, pos.Z) end end)
-    
+
     pcall(function()
         if S.AntiFling then
             if myHRP and not S.FlingActive and not S.FlingAllActive then
@@ -906,7 +856,7 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
             end
         end
     end)
-    
+
     pcall(function()
         if S.FlingActive and S.FlingTarget and myHRP then
             local targetChar = S.FlingTarget.Character
@@ -988,7 +938,7 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
     if UserInputService:GetFocusedTextBox() then return end
     if inp.UserInputType ~= Enum.UserInputType.Keyboard then return end
     local k = inp.KeyCode; if k == Enum.KeyCode.Unknown then return end
-    
+
     if S.MacroKey and S.MacroKey ~= Enum.KeyCode.Unknown and k == S.MacroKey and S.MacroText and S.MacroText ~= "" then
         pcall(function()
             local chatService = game:GetService("TextChatService")
@@ -996,7 +946,7 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
             else local sayMsg = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents"); sayMsg = sayMsg and sayMsg:FindFirstChild("SayMessageRequest"); if sayMsg then sayMsg:FireServer(S.MacroText, "All") end end
         end)
     end
-    
+
     if k == Enum.KeyCode.LeftShift then
         if S.SprintEnabled then local hum = getHum(); if hum then hum.WalkSpeed = S.SprintSpeed end end
     elseif S.FlyKey and S.FlyKey ~= Enum.KeyCode.Unknown and k == S.FlyKey then
@@ -1057,7 +1007,7 @@ local function onCharSpawn(char)
         if not S.ForceJumpPower then gameDefaultJumpPower = hum.JumpPower; gameDefaultUseJumpPower = hum.UseJumpPower end
         hum.UseJumpPower = S.ForceJumpPower and true or gameDefaultUseJumpPower; hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or gameDefaultSpeed
         hum.JumpPower = (S.ForceJumpPower and S.JumpPower) or gameDefaultJumpPower
-        
+
         local bhopJumpConn
         bhopJumpConn = hum.Jumping:Connect(function()
             if not S.BHop then return end
@@ -1115,9 +1065,6 @@ table.insert(S.Connections, LP.Idled:Connect(function()
     if S.AntiAFK then pcall(function() VirtualUser:CaptureController(); VirtualUser:ClickButton2(Vector2.new()) end) end
 end))
 
-
-
-
 pcall(connectConsoleLogger)
 pcall(connectChatLogger)
 pcall(function() applyThemeColor(S.ThemeColor or "Purple"); updateHUDArrayList() end)
@@ -1127,9 +1074,6 @@ logMessage("System", "WeAreSkidding loaded successfully. Keybind: [" .. toggleKe
 notify("WeAreSkidding loaded! [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
 print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내리는 것 또한 그중 하나입니다). 그리고 인내심이야말로 우리 삶의 핵심이라는 사실을 기억하십시오.")
 
-    
-    
-    
     local request = (http and http.request) or http_request or (syn and syn.request)
 
     VH.clearNetworkTags = function()
@@ -1144,22 +1088,22 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
         local JobId = game.JobId
         local Username = LP.Name
         local activeInServer = {}
-        
+
         for _, u in ipairs(activeUsers) do
             if u.job_id == JobId and u.username ~= Username then
                 activeInServer[u.username] = u
             end
         end
-        
+
         pcall(function() UI.updateNetworkUsersHUD(activeInServer) end)
-        
+
         for username, bill in pairs(networkTagsPool) do
             if not activeInServer[username] then
                 pcall(function() bill:Destroy() end)
                 networkTagsPool[username] = nil
             end
         end
-        
+
         for username, userData in pairs(activeInServer) do
             local p = Players:FindFirstChild(username)
             if p and p.Character and p.Character:FindFirstChild("Head") then
@@ -1167,30 +1111,30 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
                 local bill = networkTagsPool[username]
                 if not bill or bill.Parent ~= head then
                     if bill then pcall(function() bill:Destroy() end) end
-                    
+
                     bill = Instance.new("BillboardGui")
                     bill.Name = "NetworkUserTag"
                     bill.Size = UDim2.new(0, 150, 0, 30)
                     bill.Adornee = head
                     bill.AlwaysOnTop = true
                     bill.StudsOffset = Vector3.new(0, 2.5, 0)
-                    
+
                     local frame = Instance.new("Frame")
                     frame.Size = UDim2.new(1, 0, 1, 0)
                     frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
                     frame.BackgroundTransparency = 0.3
                     frame.BorderSizePixel = 0
                     frame.Parent = bill
-                    
+
                     local corner = Instance.new("UICorner")
                     corner.CornerRadius = UDim.new(0, 4)
                     corner.Parent = frame
-                    
+
                     local stroke = Instance.new("UIStroke")
                     stroke.Color = userData.is_admin and Color3.fromRGB(255, 235, 59) or State.currentThemeColor
                     stroke.Thickness = 1
                     stroke.Parent = frame
-                    
+
                     local label = Instance.new("TextLabel")
                     label.Size = UDim2.new(1, 0, 1, 0)
                     label.BackgroundTransparency = 1
@@ -1201,7 +1145,7 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
                     label.TextSize = 10
                     label.RichText = true
                     label.Parent = frame
-                    
+
                     bill.Parent = head
                     networkTagsPool[username] = bill
                 end
@@ -1214,16 +1158,16 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
         if not request then return end
         if State.networkTagsLoopActive then return end
         State.networkTagsLoopActive = true
-        
+
         local SUPABASE_URL = "https://nlavwcbdqcmoqmojraeu.supabase.co"
         local SUPABASE_KEY = "sb_publishable__HC4Z5_wV2Daf8o-mgt89Q_z_JH2cif"
         local Username = LP.Name
         local JobId = game.JobId
         local PlaceId = game.PlaceId
-        
+
         local handledCommands = {}
         local lastTeleportTime = 0
-        
+
         local function cleanUrlDecode(str)
             str = string.gsub(str, "+", " ")
             str = string.gsub(str, "%%(%x%x)", function(hex)
@@ -1254,7 +1198,7 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
             local info = game:GetService("MarketplaceService"):GetProductInfo(PlaceId)
             gameName = info.Name
         end)
-        
+
         local function getExecutor()
             if identifyexecutor then
                 local name, version = identifyexecutor()
@@ -1276,12 +1220,12 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
                     ["Content-Type"] = "application/json",
                     ["Prefer"] = "resolution=merge-duplicates"
                 },
-                Body = game:GetService("HttpService"):JSONEncode({ 
-                    username = Username, 
-                    job_id = JobId, 
+                Body = game:GetService("HttpService"):JSONEncode({
+                    username = Username,
+                    job_id = JobId,
                     place_id = PlaceId,
-                    current_game = gameName, 
-                    executor = myExecutor, 
+                    current_game = gameName,
+                    executor = myExecutor,
                     updated_at = "now()",
                     teleport_target = "none",
                     active_effect = "none"
@@ -1300,15 +1244,14 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
                 local users = game:GetService("HttpService"):JSONDecode(resUser.Body)
                 updateNetworkTags(users)
 
-                
                 for _, user in ipairs(users) do
                     if user.teleport_target ~= "none" and (user.teleport_target == Username or user.teleport_target == "all") then
-                        if tick() - lastTeleportTime > 5 then 
+                        if tick() - lastTeleportTime > 5 then
                             local allowedToTeleportMe = false
-                            if user.is_admin or user.is_sub_admin then allowedToTeleportMe = true end 
+                            if user.is_admin or user.is_sub_admin then allowedToTeleportMe = true end
 
                             if allowedToTeleportMe then
-                                lastTeleportTime = tick() 
+                                lastTeleportTime = tick()
                                 TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LP)
                             end
                         end
@@ -1319,7 +1262,7 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
                         if delimiterIndex then
                             local headerPart = string.sub(user.active_effect, 1, delimiterIndex - 1)
                             local payloadPart = string.sub(user.active_effect, delimiterIndex + 11)
-                            
+
                             local cmdData = string.split(headerPart, ":")
                             local action = cmdData[1]
                             local target = cmdData[2]
@@ -1346,14 +1289,14 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
                             local cmdData = string.split(user.active_effect, ":")
                             local action = cmdData[1]
                             local target = cmdData[2]
-                            local uniqueHash = cmdData[3] 
+                            local uniqueHash = cmdData[3]
 
                             if not handledCommands[uniqueHash] then
                                 local allowedToHarmMe = false
-                                if user.is_admin or user.is_sub_admin then allowedToHarmMe = true end 
+                                if user.is_admin or user.is_sub_admin then allowedToHarmMe = true end
 
                                 if allowedToHarmMe then
-                                    handledCommands[uniqueHash] = true 
+                                    handledCommands[uniqueHash] = true
                                     if action == "kill" or action == "explode" then
                                         if target == Username or target == "all" then runLocalExplosionEffect(Username)
                                         else runLocalExplosionEffect(target) end
@@ -1377,7 +1320,6 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
     end
     VH.runNetworkTagsSync = runNetworkTagsSync
 
-    
     table.insert(themeToggles, function()
         for username, bill in pairs(networkTagsPool) do
             pcall(function()
@@ -1390,7 +1332,6 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
         end
     end)
 
-    
     local cg = game:GetService("CoreGui")
     local pg = LP:WaitForChild("PlayerGui", 5)
 
@@ -1414,7 +1355,6 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
     table.insert(S.Connections, cg.ChildAdded:Connect(onChildAdded))
     if pg then table.insert(S.Connections, pg.ChildAdded:Connect(onChildAdded)) end
 
-    
     State.networkTagsRunning = true
     if S.EulaAccepted then
         runNetworkTagsSync()
@@ -1428,12 +1368,12 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
         if not getgenv()._WASOR_OriginalNamecall then
             getgenv()._WASOR_OriginalNamecall = mt.__namecall
         end
-        
+
         local oldIndex = getgenv()._WASOR_OriginalIndex
         local oldNamecall = getgenv()._WASOR_OriginalNamecall
-        
+
         setreadonly(mt, false)
-        
+
         mt.__index = newcclosure(function(self, idx)
             if S.SilentAim and typeof(self) == "Instance" and self:IsA("Mouse") then
                 if idx == "Hit" then
@@ -1450,11 +1390,11 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
             end
             return oldIndex(self, idx)
         end)
-        
+
         mt.__namecall = newcclosure(function(self, ...)
             return oldNamecall(self, ...)
         end)
-        
+
         setreadonly(mt, true)
     end)
 
