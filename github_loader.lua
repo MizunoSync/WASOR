@@ -97,6 +97,8 @@ local Modules = {
     "Modules/Render/FullBrightMode",
     "Modules/Render/TimeofDayCycle",
     "Modules/Render/FieldofView",
+    "Modules/Render/OutOfViewIndicators",
+    "Modules/Render/Minimap",
 
     -- World
     "Modules/World/InstantPrompts",
