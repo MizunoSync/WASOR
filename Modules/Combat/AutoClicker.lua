@@ -3,6 +3,7 @@ local Services = VH.Services
 local State = VH.State
 local S = State.S
 local UI = VH.UI
+local Utils = VH.Utils
 
 local Mouse = Services.Mouse
 local VirtualUser = Services.VirtualUser
@@ -25,20 +26,24 @@ registerModule("Combat", "Auto Clicker", 20, 50, true, S.AutoClicker, function(v
                 task.wait(S.AutoClickerDelay)
             end
             while S.AutoClicker and State.uiRunning and clickerSession == currentSession do
-                if mouse1press and mouse1release then
-                    mouse1press()
-                    task.wait(0.01)
-                    mouse1release()
-                    task.wait(S.AutoClickerInterval or 0.1)
-                elseif mouse1click then
-                    mouse1click()
-                    task.wait(S.AutoClickerInterval or 0.1)
+                if not Utils.isMouseOverHubUI() then
+                    if mouse1press and mouse1release then
+                        mouse1press()
+                        task.wait(0.01)
+                        mouse1release()
+                        task.wait(S.AutoClickerInterval or 0.1)
+                    elseif mouse1click then
+                        mouse1click()
+                        task.wait(S.AutoClickerInterval or 0.1)
+                    else
+                        pcall(function()
+                            VirtualUser:CaptureController()
+                            VirtualUser:ClickButton1(Vector2.new(Mouse.X, Mouse.Y))
+                        end)
+                        task.wait(S.AutoClickerInterval or 0.1)
+                    end
                 else
-                    pcall(function()
-                        VirtualUser:CaptureController()
-                        VirtualUser:ClickButton1(Vector2.new(Mouse.X, Mouse.Y))
-                    end)
-                    task.wait(S.AutoClickerInterval or 0.1)
+                    task.wait(0.1)
                 end
             end
         end)
