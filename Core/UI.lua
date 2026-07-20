@@ -705,12 +705,24 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     container.AutomaticSize = Enum.AutomaticSize.Y; container.BackgroundTransparency = 1; container.BorderSizePixel = 0; container.Parent = win.List
     local btn = Instance.new("TextButton"); btn.Size = UDim2.new(1, 0, 0, 20); btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     btn.BackgroundTransparency = 0.5; btn.BorderSizePixel = 0; btn.Font = Enum.Font.Gotham; btn.TextSize = 9
-    btn.TextColor3 = (isToggle and defaultState) and Color3.fromRGB(100, 240, 100) or Color3.fromRGB(200, 200, 200)
+    local inactiveColor = Color3.fromRGB(200, 200, 200)
+    if name == "No Recoil" or name == "Silent Aim" or name == "Instant Respawn" then
+        inactiveColor = Color3.fromRGB(255, 120, 120)
+    elseif name == "God Mode" then
+        inactiveColor = Color3.fromRGB(255, 180, 100)
+    end
+    btn.TextColor3 = (isToggle and defaultState) and Color3.fromRGB(100, 240, 100) or inactiveColor
     btn.Text = "  " .. name; btn.TextXAlignment = Enum.TextXAlignment.Left; btn.Parent = container
     local active = defaultState
     
     local function updateColor()
-        btn.TextColor3 = (isToggle and active) and Color3.fromRGB(100, 240, 100) or Color3.fromRGB(200, 200, 200)
+        local currentInactiveColor = Color3.fromRGB(200, 200, 200)
+        if name == "No Recoil" or name == "Silent Aim" or name == "Instant Respawn" then
+            currentInactiveColor = Color3.fromRGB(255, 120, 120)
+        elseif name == "God Mode" then
+            currentInactiveColor = Color3.fromRGB(255, 180, 100)
+        end
+        btn.TextColor3 = (isToggle and active) and Color3.fromRGB(100, 240, 100) or currentInactiveColor
         task.defer(UI.updateHUDArrayList)
     end
     
