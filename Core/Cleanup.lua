@@ -52,6 +52,7 @@ Cleanup.cleanupAll = function()
     
     for _, c in ipairs(S.Connections) do pcall(function() c:Disconnect() end) end
     S.Connections = {}
+    pcall(function() Services.RunService:UnbindFromRenderStep("VoidESPUpdate") end)
     
     if S.GodModeConn then pcall(function() S.GodModeConn:Disconnect() end) S.GodModeConn = nil end
     if S.TallRunningConn then pcall(function() S.TallRunningConn:Disconnect() end) S.TallRunningConn = nil end
