@@ -22,6 +22,7 @@ local registerModule = UI.registerModule
 local addToggleOption = UI.addToggleOption
 local addSliderOption = UI.addSliderOption
 local addDropdownOption = UI.addDropdownOption
+local addKeybindOption = UI.addKeybindOption
 local saveConfig = VH.Config.saveConfig
 
 local lastReloadTime = 0
@@ -625,18 +626,20 @@ local function startAutoplay()
                         if not lastAutoplayShootTime or (now - lastAutoplayShootTime) >= 0.05 then
                             lastAutoplayShootTime = now
                             pcall(function()
-                                if mouse1press and mouse1release then
-                                    task.spawn(function()
-                                        mouse1press()
-                                        task.wait(0.01)
-                                        mouse1release()
-                                    end)
-                                elseif mouse1click then
-                                    mouse1click()
-                                else
-                                    local VirtualUser = game:GetService("VirtualUser")
-                                    VirtualUser:CaptureController()
-                                    VirtualUser:ClickButton1(Vector2.new(Mouse.X, Mouse.Y))
+                                if not Utils.isMouseOverHubUI() then
+                                    if mouse1press and mouse1release then
+                                        task.spawn(function()
+                                            mouse1press()
+                                            task.wait(0.01)
+                                            mouse1release()
+                                        end)
+                                    elseif mouse1click then
+                                        mouse1click()
+                                    else
+                                        local VirtualUser = game:GetService("VirtualUser")
+                                        VirtualUser:CaptureController()
+                                        VirtualUser:ClickButton1(Vector2.new(Mouse.X, Mouse.Y))
+                                    end
                                 end
                             end)
                         end
@@ -844,6 +847,7 @@ end, function(drawer)
     addDropdownOption(drawer, "Target Select Mode", {"Closest", "Lowest HP"}, table.find({"Closest", "Lowest HP"}, S.AutoplayTargetMode) or 1, function(_, opt) S.AutoplayTargetMode = opt; saveConfig() end)
     addSliderOption(drawer, "Target Max Range", 10, 500, S.AutoplayRange, function(v) S.AutoplayRange = v; saveConfig() end)
     addSliderOption(drawer, "Auto Reload Interval", 3, 30, S.AutoplayReloadInterval, function(v) S.AutoplayReloadInterval = v; saveConfig() end)
+    addKeybindOption(drawer, "Autoplay Bot Bind", S.AutoplayBotKey or Enum.KeyCode.Unknown, function(k) S.AutoplayBotKey = k; saveConfig() end)
 end, false)
 
 if S.AutoplayBot then
