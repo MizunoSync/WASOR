@@ -22,4 +22,14 @@ end, function(drawer)
         if UI.networkUsersHUD then UI.networkUsersHUD.Visible = S.NetworkTags and v end
         saveConfig()
     end)
+    addToggleOption(drawer, "Show Player Head Tags", S.ShowNetworkHeadTags, function(v)
+        S.ShowNetworkHeadTags = v
+        if not v then
+            for username, bill in pairs(State.networkTagsPool) do
+                pcall(function() bill:Destroy() end)
+                State.networkTagsPool[username] = nil
+            end
+        end
+        saveConfig()
+    end)
 end, false)
