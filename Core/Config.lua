@@ -64,6 +64,11 @@ Config.loadConfig = function()
     S.FollowActive = false; S.AntiAnchor = false; S.No3DRender = false; S.ClickTeleport = false; S.SprintEnabled = false
     S.GraphicsReducer = false; S.ForceWalkSpeed = false; S.ForceJumpPower = false; S.Climb = false; S.AimlockActive = false
     S.WallRun = false; S.FlyBypass = false; S.PathfindingWalk = false
+    pcall(function()
+        if setfpscap then
+            setfpscap(S.FPSCap or 144)
+        end
+    end)
 end
 
 Config.loadConfig()
