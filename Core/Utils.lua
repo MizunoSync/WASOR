@@ -210,6 +210,37 @@ Utils.toggleClearVision = function(v)
     end
 end
 
+Utils.isMouseOverHubUI = function()
+    local UI = VH.UI
+    local State = VH.State
+    local Services = VH.Services
+    if not State or not State.uiVisible then
+        return false
+    end
+    if not UI or not UI.GetScreenGui then
+        return false
+    end
+    local gui = UI.GetScreenGui()
+    if not gui then
+        return false
+    end
+    local UserInputService = Services.UserInputService
+    if not UserInputService then
+        return false
+    end
+    local mousePos = UserInputService:GetMouseLocation()
+    local objects = {}
+    pcall(function()
+        objects = UserInputService:GetGuiObjectsAtPosition(mousePos.X, mousePos.Y)
+    end)
+    for _, obj in ipairs(objects) do
+        if obj:IsDescendantOf(gui) then
+            return true
+        end
+    end
+    return false
+end
+
 Utils.toggleGraphicsReducer = function(v)
     local S = State.S
     S.GraphicsReducer = v
