@@ -48,7 +48,7 @@ State.S = {
     ESPBoxes = false, ESPTracers = false, ESPNames = false, ESPHealth = false, ESPDistances = false,
     ESPTeamCheck = false, ESPIgnoreFriends = false, ESPTransparency = 0.8, ESPDistanceColor = false, SkeletonESP = false, Chams = false, ChamsColor = "Team Color", ESPBoxStyle = "Full",
     LineOfSight = false, LineOfSightTeamCheck = false, LineOfSightFriendCheck = false, LineOfSightLength = 30,
-    UltraInstinct = false, UltraInstinctRadius = 12,
+    UltraInstinct = false, UltraInstinctRadius = 12, UltraInstinctAntiClip = false, UltraInstinctSolidGround = false,
     OverheadInfo = false,
     AimbotActive = false, AimbotTeamCheck = false, AimbotIgnoreFriends = false, AimbotFOV = 120, AimbotSmooth = 5, AimbotPart = "Head",
     AimbotVisibility = false, AimbotShowFOV = false, SilentAim = false, NoRecoil = false, TouchAura = false,
@@ -72,7 +72,7 @@ State.S = {
     MapXray = false, ClearVision = false, FullBright = false, TimeCycle = false, TimeCycleSpeed = 1,
     TimeOfDay = 14, CameraMaxZoom = 128, ViewModelFOV = 70,
     ClickDelete = false, CameraFOV = 70, ForceShiftLock = false, ESPColor = "Red", AntiAnchor = false,
-    No3DRender = false, FPSCap = 60, ClickTeleport = false, SprintEnabled = false, SprintSpeed = 35,
+    No3DRender = false, FPSCap = 144, ClickTeleport = false, SprintEnabled = false, SprintSpeed = 35,
     AntiSit = false, GraphicsReducer = false, AutoRejoin = false, NetworkChat = true, NetworkTags = true, ShowNetworkUsersHUD = true, FreecamSpeed = 40, TracerOrigin = "Bottom",
     LagReducePotatoMode = true, LagReduceShadows = true, LagReduceDecals = true, LagReduceParticles = true, LagReduceEffects = true,
     FloatBody = nil, WaterPlat = nil, WaterRaycastParams = nil, TallWalkTrack = nil, TallIdleTrack = nil,
@@ -89,7 +89,13 @@ State.S = {
     TriggerbotActive = false, TriggerbotTeamCheck = true, TriggerbotIgnoreFriends = false, TriggerbotDelay = 0.05,
     PanicKey = Enum.KeyCode.End, UserIDGrabKey = Enum.KeyCode.K,
     EulaAccepted = false,
-    currentOptionsModule = ""
+    currentOptionsModule = "",
+    OutOfViewIndicators = false, OutOfViewIndicatorRadius = 200, OutOfViewTeamCheck = false,
+    MinimapActive = false, MinimapKey = Enum.KeyCode.Unknown,
+    AutoplayBotKey = Enum.KeyCode.Unknown,
+    FirePromptsFilter = "", FirePromptsDistance = 500,
+    FireCDFilter = "", FireCDDistance = 500,
+    FireTouchinterestsActive = false, FireTouchFilter = "", FireTouchDistance = 100
 }
 
 State.serverStatsLabels = { region = nil, ping = nil, players = nil, age = nil }
