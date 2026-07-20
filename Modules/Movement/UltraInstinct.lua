@@ -15,6 +15,7 @@ local notify = Utils.notify
 local registerModule = UI.registerModule
 
 local addSliderOption = UI.addSliderOption
+local addToggleOption = UI.addToggleOption
 
 local saveConfig = VH.Config.saveConfig
 
@@ -97,22 +98,61 @@ local function startUltraInstinct()
                             local dodgeDir = dirH.Magnitude > 0.01 and dirH.Unit or myHRP.CFrame.LookVector
 
                             pcall(function()
-                                -- Dodge target: push back/away slightly further than radius
-                                local targetCF = myHRP.CFrame + (dodgeDir * (radius + 5))
-                                myHRP.CFrame = targetCF
-                                myHRP.AssemblyLinearVelocity = Vector3.zero
-
-                                -- Visual flash indicator
-                                if State.UI_CirclePart then
-                                    State.UI_CirclePart.Color = Color3.fromRGB(0, 255, 0)
-                                    task.delay(0.15, function()
-                                        if State.UI_CirclePart and S.UltraInstinct then
-                                            State.UI_CirclePart.Color = Color3.fromRGB(255, 0, 0)
+                                local success = false
+                                local finalCF = myHRP.CFrame
+                                
+                                for i = 0, 7 do
+                                    local angleOffset = (i == 0) and 0 or (math.rad(i * 45) * (i % 2 == 0 and 1 or -1))
+                                    local testDir = (CFrame.Angles(0, angleOffset, 0) * Vector3.new(dodgeDir.X, 0, dodgeDir.Z)).Unit
+                                    
+                                    local testDist = radius + 5
+                                    local testPos = myHRP.Position + (testDir * testDist)
+                                    
+                                    if S.UltraInstinctAntiClip then
+                                        local rayParams = RaycastParams.new()
+                                        rayParams.FilterType = Enum.RaycastFilterType.Exclude
+                                        rayParams.FilterDescendantsInstances = {myChar, State.UI_CirclePart}
+                                        local rayResult = Workspace:Raycast(myHRP.Position, testDir * testDist, rayParams)
+                                        if rayResult then
+                                            testPos = rayResult.Position - (testDir * 2)
                                         end
-                                    end)
+                                    end
+                                    
+                                    local hasGround = true
+                                    local finalGroundY = testPos.Y
+                                    if S.UltraInstinctSolidGround then
+                                        local rayParams = RaycastParams.new()
+                                        rayParams.FilterType = Enum.RaycastFilterType.Exclude
+                                        rayParams.FilterDescendantsInstances = {myChar, State.UI_CirclePart}
+                                        local rayResult = Workspace:Raycast(testPos + Vector3.new(0, 2, 0), Vector3.new(0, -22, 0), rayParams)
+                                        if rayResult then
+                                            finalGroundY = rayResult.Position.Y + 3.2
+                                        else
+                                            hasGround = false
+                                        end
+                                    end
+                                    
+                                    if hasGround then
+                                        finalCF = CFrame.new(testPos.X, finalGroundY, testPos.Z) * myHRP.CFrame.Rotation
+                                        success = true
+                                        break
+                                    end
                                 end
-
-                                notify("Ultra Instinct Dodged: " .. p.DisplayName, Color3.fromRGB(50, 195, 75))
+                                
+                                if success then
+                                    myHRP.CFrame = finalCF
+                                    myHRP.AssemblyLinearVelocity = Vector3.zero
+                                    
+                                    if State.UI_CirclePart then
+                                        State.UI_CirclePart.Color = Color3.fromRGB(0, 255, 0)
+                                        task.delay(0.15, function()
+                                            if State.UI_CirclePart and S.UltraInstinct then
+                                                State.UI_CirclePart.Color = Color3.fromRGB(255, 0, 0)
+                                            end
+                                        end)
+                                    end
+                                    notify("Ultra Instinct Dodged: " .. p.DisplayName, Color3.fromRGB(50, 195, 75))
+                                end
                             end)
                             break
                         end
@@ -136,6 +176,8 @@ registerModule("Movement", "Ultra Instinct", 300, 50, true, S.UltraInstinct, fun
     end
     saveConfig()
 end, function(drawer)
+    addToggleOption(drawer, "Anti-Clip (No Wall Dodge)", S.UltraInstinctAntiClip, function(v) S.UltraInstinctAntiClip = v; saveConfig() end)
+    addToggleOption(drawer, "Solid Ground Only", S.UltraInstinctSolidGround, function(v) S.UltraInstinctSolidGround = v; saveConfig() end)
     addSliderOption(drawer, "Dodge Radius", 5, 30, S.UltraInstinctRadius or 12, function(v)
         S.UltraInstinctRadius = v
         saveConfig()
