@@ -73,13 +73,46 @@ if not fovCircle then
 end
 
 local bonesR15 = {
-    {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
-    {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-    {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
-    {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
-    {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}
+    { {"Head", nil}, {"UpperTorso", "NeckAttachment"} },
+    { {"UpperTorso", "NeckAttachment"}, {"UpperTorso", "WaistAttachment"} },
+    { {"UpperTorso", "NeckAttachment"}, {"UpperTorso", "LeftShoulderAttachment"} },
+    { {"UpperTorso", "LeftShoulderAttachment"}, {"LeftUpperArm", "LeftElbowAttachment"} },
+    { {"LeftUpperArm", "LeftElbowAttachment"}, {"LeftLowerArm", "LeftWristAttachment"} },
+    { {"LeftLowerArm", "LeftWristAttachment"}, {"LeftHand", nil} },
+    { {"UpperTorso", "NeckAttachment"}, {"UpperTorso", "RightShoulderAttachment"} },
+    { {"UpperTorso", "RightShoulderAttachment"}, {"RightUpperArm", "RightElbowAttachment"} },
+    { {"RightUpperArm", "RightElbowAttachment"}, {"RightLowerArm", "RightWristAttachment"} },
+    { {"RightLowerArm", "RightWristAttachment"}, {"RightHand", nil} },
+    { {"UpperTorso", "WaistAttachment"}, {"LowerTorso", "WaistAttachment"} },
+    { {"LowerTorso", "WaistAttachment"}, {"LowerTorso", "LeftHipAttachment"} },
+    { {"LowerTorso", "LeftHipAttachment"}, {"LeftUpperLeg", "LeftKneeAttachment"} },
+    { {"LeftUpperLeg", "LeftKneeAttachment"}, {"LeftLowerLeg", "LeftAnkleAttachment"} },
+    { {"LeftLowerLeg", "LeftAnkleAttachment"}, {"LeftFoot", nil} },
+    { {"LowerTorso", "WaistAttachment"}, {"LowerTorso", "RightHipAttachment"} },
+    { {"LowerTorso", "RightHipAttachment"}, {"RightUpperLeg", "RightKneeAttachment"} },
+    { {"RightUpperLeg", "RightKneeAttachment"}, {"RightLowerLeg", "RightAnkleAttachment"} },
+    { {"RightLowerLeg", "RightAnkleAttachment"}, {"RightFoot", nil} }
 }
-local bonesR6 = { {"Head", "Torso"}, {"Torso", "Left Arm"}, {"Torso", "Right Arm"}, {"Torso", "Left Leg"}, {"Torso", "Right Leg"} }
+local bonesR6 = {
+    { {"Head", nil}, {"Torso", "NeckAttachment"} },
+    { {"Torso", "NeckAttachment"}, {"Left Arm", nil} },
+    { {"Torso", "NeckAttachment"}, {"Right Arm", nil} },
+    { {"Torso", "NeckAttachment"}, {"Left Leg", nil} },
+    { {"Torso", "NeckAttachment"}, {"Right Leg", nil} }
+}
+
+local function getNodePosition(char, node)
+    local partName, attachmentName = node[1], node[2]
+    local part = char:FindFirstChild(partName)
+    if not part then return nil end
+    if attachmentName then
+        local attach = part:FindFirstChild(attachmentName)
+        if attach and attach:IsA("Attachment") then
+            return attach.WorldPosition
+        end
+    end
+    return part.Position
+end
 
 local lastTriggerFire = 0
 local fpsCount = State.fpsCount
@@ -205,7 +238,7 @@ end
 
 local networkTagsPool = State.networkTagsPool
 
-table.insert(S.Connections, RunService.RenderStepped:Connect(function()
+local function updateESPAndAimbot()
     Camera = Workspace.CurrentCamera or Workspace:FindFirstChildOfClass("Camera") or Camera
     if S.ClearVision then Lighting.FogEnd = 100000 end
     fovCircle.Visible = S.AimbotActive and S.AimbotShowFOV
@@ -359,10 +392,15 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
                         healthBarOutline = Drawing.new("Square"), healthBarFill = Drawing.new("Square"), skeleton = {},
                         corners = {}, losLine = Drawing.new("Line"), indicator = Drawing.new("Triangle")
                     }
-                    for i=1, 15 do table.insert(S.ESPPool[p].skeleton, Drawing.new("Line")) end
+                    for i=1, 20 do table.insert(S.ESPPool[p].skeleton, Drawing.new("Line")) end
                     for i=1, 8 do table.insert(S.ESPPool[p].corners, Drawing.new("Line")) end
                 end
                 local pool = S.ESPPool[p]
+                if pool and #pool.skeleton < 20 then
+                    for i = #pool.skeleton + 1, 20 do
+                        table.insert(pool.skeleton, Drawing.new("Line"))
+                    end
+                end
                 if not pool.losLine then
                     pool.losLine = Drawing.new("Line")
                 end
@@ -461,13 +499,27 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
                         for i, bone in ipairs(useBones) do
                             local line = pool.skeleton[i]
                             if line then
-                                local part1 = char:FindFirstChild(bone[1]); local part2 = char:FindFirstChild(bone[2])
-                                if part1 and part2 then
-                                    local sp1, on1 = Camera:WorldToViewportPoint(part1.Position); local sp2, on2 = Camera:WorldToViewportPoint(part2.Position)
-                                    if on1 and on2 then line.Visible = true; line.From = Vector2.new(sp1.X, sp1.Y); line.To = Vector2.new(sp2.X, sp2.Y); line.Color = espDrawCol; line.Thickness = 1
-                                    else line.Visible = false end
-                                else line.Visible = false end
+                                local pos1 = getNodePosition(char, bone[1])
+                                local pos2 = getNodePosition(char, bone[2])
+                                if pos1 and pos2 then
+                                    local sp1, on1 = Camera:WorldToViewportPoint(pos1)
+                                    local sp2, on2 = Camera:WorldToViewportPoint(pos2)
+                                    if sp1.Z > 0 and sp2.Z > 0 then
+                                        line.Visible = true
+                                        line.From = Vector2.new(sp1.X, sp1.Y)
+                                        line.To = Vector2.new(sp2.X, sp2.Y)
+                                        line.Color = espDrawCol
+                                        line.Thickness = 1
+                                    else
+                                        line.Visible = false
+                                    end
+                                else
+                                    line.Visible = false
+                                end
                             end
+                        end
+                        for i = #useBones + 1, #pool.skeleton do
+                            pool.skeleton[i].Visible = false
                         end
                     else for _, line in ipairs(pool.skeleton) do line.Visible = false end end
 
@@ -507,7 +559,8 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
     else
         if next(S.ESPPool) ~= nil then for p, _ in pairs(S.ESPPool) do destroyESP(p) end end
     end
-end))
+end
+RunService:BindToRenderStep("VoidESPUpdate", Enum.RenderPriority.Camera.Value + 1, updateESPAndAimbot)
 
 local fpsCount, lastFpsTick, lastPingTick, pingVal = 0, tick(), tick(), 0
 local flingAllTarget, flingAllTime = nil, 0
