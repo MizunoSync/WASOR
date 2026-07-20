@@ -87,6 +87,9 @@ local function startUltraInstinct()
         if now - lastDodge > 0.15 then
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LP and p.Character then
+                    if S.UltraInstinctTeamCheck and p.Team == LP.Team then
+                        continue
+                    end
                     local hrp = p.Character:FindFirstChild("HumanoidRootPart") or p.Character:FindFirstChild("Torso") or p.Character.PrimaryPart
                     local hum = p.Character:FindFirstChildOfClass("Humanoid")
                     if hrp and hum and hum.Health > 0 then
@@ -178,6 +181,7 @@ registerModule("Movement", "Ultra Instinct", 300, 50, true, S.UltraInstinct, fun
 end, function(drawer)
     addToggleOption(drawer, "Anti-Clip (No Wall Dodge)", S.UltraInstinctAntiClip, function(v) S.UltraInstinctAntiClip = v; saveConfig() end)
     addToggleOption(drawer, "Solid Ground Only", S.UltraInstinctSolidGround, function(v) S.UltraInstinctSolidGround = v; saveConfig() end)
+    addToggleOption(drawer, "Team Check", S.UltraInstinctTeamCheck, function(v) S.UltraInstinctTeamCheck = v; saveConfig() end)
     addSliderOption(drawer, "Dodge Radius", 5, 30, S.UltraInstinctRadius or 12, function(v)
         S.UltraInstinctRadius = v
         saveConfig()
