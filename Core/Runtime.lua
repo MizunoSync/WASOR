@@ -225,7 +225,7 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
     end
 
     pcall(function()
-        if S.TriggerbotActive and not UserInputService:GetFocusedTextBox() then
+        if S.TriggerbotActive and not UserInputService:GetFocusedTextBox() and not Utils.isMouseOverHubUI() then
             local target = Mouse.Target
             if target then
                 local current = target; local char, hum = nil, nil
@@ -332,13 +332,17 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
                 if S.ESPTeamCheck and isTeammate then espAllowed = false end
                 if S.ESPIgnoreFriends and isFriend then espAllowed = false end
 
+                local oodAllowed = S.OutOfViewIndicators
+                if S.OutOfViewTeamCheck and isTeammate then oodAllowed = false end
+                if S.ESPIgnoreFriends and isFriend then oodAllowed = false end
+
                 local losAllowed = S.LineOfSight
                 if losAllowed then
                     if S.LineOfSightTeamCheck and isTeammate then losAllowed = false end
                     if S.LineOfSightFriendCheck and isFriend then losAllowed = false end
                 end
 
-                if not espAllowed and not losAllowed then
+                if not espAllowed and not losAllowed and not oodAllowed then
                     destroyESP(p)
                     continue
                 end
@@ -353,7 +357,7 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
                         boxOutline = Drawing.new("Square"), boxFill = Drawing.new("Square"), tracer = Drawing.new("Line"),
                         nameTag = Drawing.new("Text"), healthText = Drawing.new("Text"), distText = Drawing.new("Text"),
                         healthBarOutline = Drawing.new("Square"), healthBarFill = Drawing.new("Square"), skeleton = {},
-                        corners = {}, losLine = Drawing.new("Line")
+                        corners = {}, losLine = Drawing.new("Line"), indicator = Drawing.new("Triangle")
                     }
                     for i=1, 15 do table.insert(S.ESPPool[p].skeleton, Drawing.new("Line")) end
                     for i=1, 8 do table.insert(S.ESPPool[p].corners, Drawing.new("Line")) end
@@ -364,8 +368,39 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
                 end
 
                 local box = getBoundingBox(char); local sp, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                local showIndicator = oodAllowed and (not onScreen or sp.Z <= 0)
 
-                if box and sp.Z > 0 then
+                if showIndicator then
+                    pool.boxOutline.Visible = false; pool.boxFill.Visible = false; pool.tracer.Visible = false; pool.nameTag.Visible = false
+                    pool.healthText.Visible = false; pool.distText.Visible = false; pool.healthBarOutline.Visible = false; pool.healthBarFill.Visible = false
+                    for _, line in ipairs(pool.skeleton) do line.Visible = false end
+                    for _, line in ipairs(pool.corners) do line.Visible = false end
+                    if pool.losLine then pool.losLine.Visible = false end
+
+                    local dir = (hrp.Position - Camera.CFrame.Position).Unit
+                    local camSpaceDir = Camera.CFrame:VectorToObjectSpace(dir)
+                    local angle = math.atan2(camSpaceDir.Y, camSpaceDir.X)
+
+                    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                    local radius = S.OutOfViewIndicatorRadius or 200
+
+                    local pointA = center + Vector2.new(math.cos(angle), -math.sin(angle)) * (radius + 15)
+                    local pointB = center + Vector2.new(math.cos(angle + 0.35), -math.sin(angle + 0.35)) * radius
+                    local pointC = center + Vector2.new(math.cos(angle - 0.35), -math.sin(angle - 0.35)) * radius
+
+                    if pool.indicator then
+                        pool.indicator.PointA = pointA
+                        pool.indicator.PointB = pointB
+                        pool.indicator.PointC = pointC
+                        pool.indicator.Color = espDrawCol
+                        pool.indicator.Filled = true
+                        pool.indicator.Transparency = 1
+                        pool.indicator.Visible = true
+                    end
+                else
+                    if pool.indicator then pool.indicator.Visible = false end
+
+                    if box and sp.Z > 0 then
                     local topLeft, bottomRight = box[1], box[2]; local width, height = bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y
 
                     local showFull = espAllowed and S.ESPBoxes and S.ESPBoxStyle == "Full"
@@ -466,6 +501,7 @@ table.insert(S.Connections, RunService.RenderStepped:Connect(function()
                     for _, line in ipairs(pool.corners) do line.Visible = false end
                     if pool.losLine then pool.losLine.Visible = false end
                 end
+            end
             else destroyESP(p) end
         end
     else
@@ -475,6 +511,7 @@ end))
 
 local fpsCount, lastFpsTick, lastPingTick, pingVal = 0, tick(), tick(), 0
 local flingAllTarget, flingAllTime = nil, 0
+local lastFireTouchTime = 0
 
 local function getNextFlingAllTarget(currentTarget)
     local candidates = {}
@@ -796,6 +833,35 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
     end)
 
     pcall(function()
+        if S.FireTouchinterestsActive and myHRP then
+            local now = tick()
+            if now - lastFireTouchTime >= 0.3 then
+                lastFireTouchTime = now
+                local filter = (S.FireTouchFilter or ""):lower()
+                local maxDist = S.FireTouchDistance or 100
+                for _, descendant in ipairs(Workspace:GetDescendants()) do
+                    if descendant:IsA("TouchTransmitter") then
+                        local part = descendant.Parent
+                        if part and part:IsA("BasePart") then
+                            local matches = (filter == "") or part.Name:lower():find(filter, 1, true)
+                            if matches then
+                                local dist = (part.Position - myHRP.Position).Magnitude
+                                if dist <= maxDist then
+                                    task.spawn(function()
+                                        firetouchinterest(myHRP, part, 0)
+                                        task.wait(0.01)
+                                        firetouchinterest(myHRP, part, 1)
+                                    end)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+
+    pcall(function()
         if S.ToolMagnet and myHRP then
             for _, item in ipairs(Workspace:GetDescendants()) do
                 if item:IsA("Tool") and item:FindFirstChild("Handle") then item.Handle.CFrame = myHRP.CFrame end
@@ -885,11 +951,25 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
         end
     end)
 end))
-
+local wasNoclipping = false
 table.insert(S.Connections, RunService.Stepped:Connect(function()
-    if S.NoClip or S.FlingActive or S.FlingAllActive then
+    local isNoclipping = S.NoClip or S.FlingActive or S.FlingAllActive
+    if isNoclipping then
         local char = getChar()
-        if char then for _, p in ipairs(char:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = false end end end
+        if char then
+            for _, p in ipairs(char:GetDescendants()) do
+                if p:IsA("BasePart") then p.CanCollide = false end
+            end
+        end
+        wasNoclipping = true
+    elseif wasNoclipping then
+        wasNoclipping = false
+        local char = getChar()
+        if char then
+            for _, p in ipairs(char:GetDescendants()) do
+                if p:IsA("BasePart") then p.CanCollide = true end
+            end
+        end
     end
     if S.AntiFling then
         for _, p in ipairs(Players:GetPlayers()) do
@@ -979,6 +1059,10 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
         end
     elseif S.AutoClickerKey and S.AutoClickerKey ~= Enum.KeyCode.Unknown and k == S.AutoClickerKey then
         S.AutoClicker = not S.AutoClicker; notify("Auto Clicker " .. (S.AutoClicker and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Auto Clicker"]; if mod then mod.SetActive(S.AutoClicker) end
+    elseif S.MinimapKey and S.MinimapKey ~= Enum.KeyCode.Unknown and k == S.MinimapKey then
+        S.MinimapActive = not S.MinimapActive; notify("Minimap " .. (S.MinimapActive and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Minimap"]; if mod then mod.SetActive(S.MinimapActive) end
+    elseif S.AutoplayBotKey and S.AutoplayBotKey ~= Enum.KeyCode.Unknown and k == S.AutoplayBotKey then
+        S.AutoplayBot = not S.AutoplayBot; notify("Autoplay Bot " .. (S.AutoplayBot and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Autoplay Bot"]; if mod then mod.SetActive(S.AutoplayBot) end
     end
 end))
 
