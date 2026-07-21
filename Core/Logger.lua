@@ -4,6 +4,29 @@ local Logger = {}
 local Services = VH.Services
 local State = VH.State
 
+Logger.logCrash = function(context, err, stack)
+    local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+    local crashHeader = string.format("==================== CRASH LOG [%s] ====================\nContext: %s\nError: %s\nTraceback:\n%s\n=================================================================\n\n", timestamp, tostring(context), tostring(err), tostring(stack or "N/A"))
+    
+    warn(string.format("[WASOR CRASH] [%s] Error: %s\nTraceback: %s", tostring(context), tostring(err), tostring(stack or "")))
+    
+    pcall(function()
+        if writefile then
+            local filename = "WASOR_crash.log"
+            if isfile and isfile(filename) then
+                if appendfile then
+                    appendfile(filename, crashHeader)
+                else
+                    local cur = readfile(filename)
+                    writefile(filename, cur .. crashHeader)
+                end
+            else
+                writefile(filename, crashHeader)
+            end
+        end
+    end)
+end
+
 Logger.logMessage = function(sender, text, color)
     local logObj = {
         message = string.format("[%s]: %s", sender, text),

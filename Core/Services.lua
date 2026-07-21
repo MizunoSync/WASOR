@@ -14,9 +14,32 @@ Services.VirtualUser        = game:GetService("VirtualUser")
 Services.TweenService       = game:GetService("TweenService")
 Services.PathfindingService = game:GetService("PathfindingService")
 
-Services.LP                 = Services.Players.LocalPlayer
-Services.Mouse              = Services.LP:GetMouse()
-Services.Camera             = Services.Workspace.CurrentCamera
+local LP = Services.Players.LocalPlayer
+Services.LP = LP
+
+setmetatable(Services, {
+    __index = function(t, k)
+        if k == "Camera" then
+            return Services.Workspace.CurrentCamera or Services.Workspace:FindFirstChildOfClass("Camera")
+        elseif k == "LP" then
+            local p = rawget(t, "LP")
+            if not p then
+                p = Services.Players.LocalPlayer
+                rawset(t, "LP", p)
+            end
+            return p or Services.Players.LocalPlayer
+        elseif k == "Mouse" then
+            local lp = t.LP
+            if lp then
+                local s, m = pcall(function() return lp:GetMouse() end)
+                if s and m then return m end
+            end
+            return nil
+        end
+        return rawget(t, k)
+    end
+})
 
 VH.Services = Services
 return Services
+

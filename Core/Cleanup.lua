@@ -128,7 +128,16 @@ Cleanup.cleanupAll = function()
         local oldBlur = Services.Lighting:FindFirstChild("WeAreSkiddingBlur")
         if oldBlur then oldBlur:Destroy() end
     end)
-    pcall(function() if getgenv().VoidFOVCircle then getgenv().VoidFOVCircle:Remove(); getgenv().VoidFOVCircle = nil end end)
+    pcall(function()
+        if getgenv().VoidFOVCircle then
+            pcall(function() getgenv().VoidFOVCircle.Visible = false; getgenv().VoidFOVCircle:Remove() end)
+            getgenv().VoidFOVCircle = nil
+        end
+        if State.fovCircle then
+            pcall(function() State.fovCircle.Visible = false; State.fovCircle:Remove() end)
+            State.fovCircle = nil
+        end
+    end)
     pcall(function()
         if VH.AutoplayPathLines then
             for _, line in ipairs(VH.AutoplayPathLines) do

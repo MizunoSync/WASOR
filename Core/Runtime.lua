@@ -63,13 +63,17 @@ local specTeamRow = State.specTeamRow
 
 local fovCircle = State.fovCircle
 if not fovCircle then
-    fovCircle = Drawing.new("Circle")
-    fovCircle.Thickness = 1
-    fovCircle.Color = Color3.fromRGB(218, 38, 38)
-    fovCircle.Filled = false
-    fovCircle.Transparency = 1
-    getgenv().VoidFOVCircle = fovCircle
-    State.fovCircle = fovCircle
+    pcall(function()
+        if Drawing and Drawing.new then
+            fovCircle = Drawing.new("Circle")
+            fovCircle.Thickness = 1
+            fovCircle.Color = Color3.fromRGB(218, 38, 38)
+            fovCircle.Filled = false
+            fovCircle.Transparency = 1
+            getgenv().VoidFOVCircle = fovCircle
+            State.fovCircle = fovCircle
+        end
+    end)
 end
 
 local bonesR15 = {
@@ -239,10 +243,12 @@ end
 local networkTagsPool = State.networkTagsPool
 
 local function updateESPAndAimbot()
-    Camera = Workspace.CurrentCamera or Workspace:FindFirstChildOfClass("Camera") or Camera
+    Camera = Services.Camera or Workspace.CurrentCamera or Workspace:FindFirstChildOfClass("Camera") or Camera
     if S.ClearVision then Lighting.FogEnd = 100000 end
-    fovCircle.Visible = S.AimbotActive and S.AimbotShowFOV
-    if fovCircle.Visible then local vp = Camera.ViewportSize; fovCircle.Position = Vector2.new(vp.X / 2, vp.Y / 2); fovCircle.Radius = S.AimbotFOV end
+    if fovCircle then
+        fovCircle.Visible = S.AimbotActive and S.AimbotShowFOV
+        if fovCircle.Visible and Camera then local vp = Camera.ViewportSize; fovCircle.Position = Vector2.new(vp.X / 2, vp.Y / 2); fovCircle.Radius = S.AimbotFOV end
+    end
 
     local aimbotPressed = false
     if S.AimbotHoldMode == "Keyboard" then if S.AimbotHoldKey and S.AimbotHoldKey ~= Enum.KeyCode.Unknown then aimbotPressed = UserInputService:IsKeyDown(S.AimbotHoldKey) end
@@ -860,10 +866,14 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
 
     pcall(function()
         if S.AutoInteract and myHRP then
-            for _, prompt in ipairs(Workspace:GetDescendants()) do
-                if prompt:IsA("ProximityPrompt") and prompt.Parent and prompt.Parent:IsA("BasePart") then
-                    local dist = (myHRP.Position - prompt.Parent.Position).Magnitude
-                    if dist <= S.AutoInteractRadius then fireproximityprompt(prompt) end
+            local now = tick()
+            if not State.lastAutoInteractTick or (now - State.lastAutoInteractTick) >= 0.1 then
+                State.lastAutoInteractTick = now
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") and prompt.Parent and prompt.Parent:IsA("BasePart") then
+                        local dist = (myHRP.Position - prompt.Parent.Position).Magnitude
+                        if dist <= S.AutoInteractRadius then fireproximityprompt(prompt) end
+                    end
                 end
             end
         end
@@ -916,11 +926,16 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
 
     pcall(function()
         if S.ToolMagnet and myHRP then
-            for _, item in ipairs(Workspace:GetDescendants()) do
-                if item:IsA("Tool") and item:FindFirstChild("Handle") then item.Handle.CFrame = myHRP.CFrame end
+            local now = tick()
+            if not State.lastToolMagnetTick or (now - State.lastToolMagnetTick) >= 0.2 then
+                State.lastToolMagnetTick = now
+                for _, item in ipairs(Workspace:GetDescendants()) do
+                    if item:IsA("Tool") and item:FindFirstChild("Handle") then item.Handle.CFrame = myHRP.CFrame end
+                end
             end
         end
     end)
+
 
     pcall(function()
         if S.AutoJump and myHum and myHRP and myHum.FloorMaterial ~= Enum.Material.Air then
@@ -1045,9 +1060,14 @@ end
 
 table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gpe)
     if S.SilentAim and inp.UserInputType == Enum.UserInputType.MouseButton1 and not UserInputService:GetFocusedTextBox() then
-        if not getrawmetatable then
-            local target = getAimbotTarget()
-            if target then local oldCF = Camera.CFrame; Camera.CFrame = CFrame.new(oldCF.Position, target.Position); RunService.RenderStepped:Wait(); Camera.CFrame = oldCF end
+        local target = getAimbotTarget()
+        if target then
+            task.spawn(function()
+                local oldCF = Camera.CFrame
+                Camera.CFrame = CFrame.new(oldCF.Position, target.Position)
+                RunService.RenderStepped:Wait()
+                Camera.CFrame = oldCF
+            end)
         end
     end
     if inp.KeyCode == (S.UIToggleKey or Enum.KeyCode.RightControl) or inp.KeyCode == Enum.KeyCode.RightControl then toggleUIVisibility(); return end
@@ -1499,43 +1519,13 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
         runNetworkTagsSync()
     end
 
-    pcall(function()
-        local mt = getrawmetatable(game)
-        if not getgenv()._WASOR_OriginalIndex then
-            getgenv()._WASOR_OriginalIndex = mt.__index
-        end
-        if not getgenv()._WASOR_OriginalNamecall then
-            getgenv()._WASOR_OriginalNamecall = mt.__namecall
-        end
+    -- Metatable hooking disabled to prevent engine crash on injection
+    pcall(setupAutoReinject)
+    pcall(function() Utils.setupAutoRejoin() end)
 
-        local oldIndex = getgenv()._WASOR_OriginalIndex
-        local oldNamecall = getgenv()._WASOR_OriginalNamecall
 
-        setreadonly(mt, false)
 
-        mt.__index = newcclosure(function(self, idx)
-            if S.SilentAim and typeof(self) == "Instance" and self:IsA("Mouse") then
-                if idx == "Hit" then
-                    local targetPart = Utils.getAimbotTarget()
-                    if targetPart then
-                        return targetPart.CFrame
-                    end
-                elseif idx == "Target" then
-                    local targetPart = Utils.getAimbotTarget()
-                    if targetPart then
-                        return targetPart
-                    end
-                end
-            end
-            return oldIndex(self, idx)
-        end)
 
-        mt.__namecall = newcclosure(function(self, ...)
-            return oldNamecall(self, ...)
-        end)
-
-        setreadonly(mt, true)
-    end)
 
     pcall(setupAutoReinject)
     pcall(function() Utils.setupAutoRejoin() end)
