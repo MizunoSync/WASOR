@@ -22,22 +22,47 @@ local CoreModules = {
 }
 
 
+local function logInitCrash(context, err, stack)
+    if VH.Logger and VH.Logger.logCrash then
+        VH.Logger.logCrash(context, err, stack)
+    else
+        local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+        local crashMsg = string.format("==================== CRASH LOG [%s] ====================\nContext: %s\nError: %s\nTraceback:\n%s\n=================================================================\n\n", timestamp, tostring(context), tostring(err), tostring(stack or "N/A"))
+        warn(string.format("[WASOR CRASH] [%s] Error: %s\nTraceback:\n%s", tostring(context), tostring(err), tostring(stack or "")))
+        pcall(function()
+            if writefile then
+                local filename = "WASOR_crash.log"
+                if isfile and isfile(filename) then
+                    if appendfile then appendfile(filename, crashMsg)
+                    else writefile(filename, readfile(filename) .. crashMsg) end
+                else writefile(filename, crashMsg) end
+            end
+        end)
+    end
+end
+
 local function runFile(path)
     if readfile and isfile and loadstring then
         local fullPath = "WASOR/" .. path .. ".lua"
         if isfile(fullPath) then
             local code = readfile(fullPath)
-            local func, err = loadstring(code, fullPath)
+            local func, parseErr = loadstring(code, fullPath)
             if func then
-                return func()
+                local errTrace = nil
+                local success, execErr = xpcall(func, function(e)
+                    errTrace = debug.traceback(tostring(e), 2)
+                    return e
+                end)
+                if not success then
+                    logInitCrash("Executing " .. fullPath, execErr, errTrace)
+                end
             else
-                warn("[WASOR Loader] Error parsing " .. fullPath .. ": " .. tostring(err))
+                logInitCrash("Parsing " .. fullPath, parseErr, debug.traceback())
             end
         else
             warn("[WASOR Loader] File not found: " .. fullPath)
         end
     else
-        
         local target = script
         for segment in path:gmatch("[^/]+") do
             target = target:FindFirstChild(segment)
@@ -50,16 +75,8 @@ local function runFile(path)
 end
 
 
-for _, modulePath in ipairs(CoreModules) do
-    runFile(modulePath)
-end
-
-
-VH.UI.InitializeUI()
-
-
 local Modules = {
-    
+    -- Combat
     "Modules/Combat/GodMode",
     "Modules/Combat/AutoplayBot",
     "Modules/Combat/KillAura",
@@ -72,7 +89,7 @@ local Modules = {
     "Modules/Combat/FlingPlayer",
     "Modules/Combat/FlingAll",
 
-    
+    -- Player
     "Modules/Player/ResetCharacter",
     "Modules/Player/InstantRespawn",
     "Modules/Player/NametagCustomizer",
@@ -87,7 +104,7 @@ local Modules = {
     "Modules/Player/AutoRejoin",
     "Modules/Player/SpectateFreecam",
 
-    
+    -- Movement
     "Modules/Movement/SpeedModification",
     "Modules/Movement/SprintSpeedBoost",
     "Modules/Movement/JumpHackStrength",
@@ -111,7 +128,7 @@ local Modules = {
     "Modules/Movement/AntiAnchor",
     "Modules/Movement/AntiSit",
 
-    
+    -- Render
     "Modules/Render/ESPBoxOutlines",
     "Modules/Render/ESPTracerLines",
     "Modules/Render/ShowPlayerNames",
@@ -134,7 +151,7 @@ local Modules = {
     "Modules/Render/OutOfViewIndicators",
     "Modules/Render/Minimap",
 
-    
+    -- World
     "Modules/World/InstantPrompts",
     "Modules/World/FireAllPrompts",
     "Modules/World/FireCDDetectors",
@@ -149,7 +166,7 @@ local Modules = {
     "Modules/World/AntiVoidNet",
     "Modules/World/FireTouchinterests",
 
-    
+    -- Misc
     "Modules/Misc/ServerControls",
     "Modules/Misc/FavoritesManager",
     "Modules/Misc/OnlineFriends",
@@ -161,14 +178,26 @@ local Modules = {
     "Modules/Misc/NetworkChatHub"
 }
 
+local success, err = pcall(function()
+    for _, modulePath in ipairs(CoreModules) do
+        runFile(modulePath)
+    end
 
-for _, modulePath in ipairs(Modules) do
-    runFile(modulePath)
-end
+    if VH.UI and VH.UI.InitializeUI then
+        VH.UI.InitializeUI()
+    end
 
+    for _, modulePath in ipairs(Modules) do
+        runFile(modulePath)
+    end
 
-runFile("Core/Runtime")
-
-print("[WASOR] Loader: FileBuild")
+    runFile("Core/Runtime")
+end)
 
 _G.VoidHubLoading = nil
+
+if not success then
+    warn("[WASOR Loader] Initialization error: " .. tostring(err))
+else
+    print("[WASOR] Loader: FileBuild")
+end
