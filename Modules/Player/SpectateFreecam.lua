@@ -28,7 +28,6 @@ local disableFreecam = Utils.disableFreecam
 
 local spectateStatsLabels = State.spectateStatsLabels
 
--- FIX: Define the missing variables so they don't error as nil/unknown globals
 local currentSpectateTarget = nil
 local isFreecam = false 
 
@@ -67,7 +66,6 @@ registerModule("Player", "Spectate & Freecam", 160, 50, true, false, function(v)
     
     addSliderOption(drawer, "Freecam Speed", 10, 300, S.FreecamSpeed, function(v) S.FreecamSpeed = v; saveConfig() end)
     
-    -- FIX: Ensure `isFreecam` is updated when toggled
     addToggleOption(drawer, "Freecam Active Mode", isFreecam, function(v) 
         isFreecam = v 
         if v then enableFreecam() else disableFreecam() end 
@@ -111,7 +109,6 @@ registerModule("Player", "Spectate & Freecam", 160, 50, true, false, function(v)
     
     box:GetPropertyChangedSignal("Text"):Connect(renderPlayers)
     
-    -- FIX: Also ensure currentSpectateTarget clears if the viewed player leaves
     local addedCon = Players.PlayerAdded:Connect(renderPlayers); 
     local removedCon = Players.PlayerRemoving:Connect(function(p) 
         if currentSpectateTarget == p then 
