@@ -13,4 +13,4 @@ local addSliderOption = UI.addSliderOption
 
 local saveConfig = VH.Config.saveConfig
 
-registerModule("Movement", "Fly Mode", 300, 50, true, S.Fly, function(v) S.Fly = v; if v then flyOn() else flyOff() end; saveConfig() end, function(drawer) addSliderOption(drawer, "Fly Speed factor", 10, 30000, S.FlySpeed, function(v) S.FlySpeed = v; saveConfig() end) end, false)
+registerModule("Movement", "Fly Mode", 300, 50, true, S.Fly, function(v) S.Fly = v; if v then flyOn() else flyOff() end; saveConfig() end, function(drawer) addSliderOption(drawer, "Fly Speed factor", 10, 1000, S.FlySpeed, function(v) S.FlySpeed = v; saveConfig() end) end, false)
