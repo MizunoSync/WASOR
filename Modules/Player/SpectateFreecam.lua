@@ -31,7 +31,7 @@ local spectateStatsLabels = State.spectateStatsLabels
 local currentSpectateTarget = nil
 local isFreecam = false 
 
-registerModule("Player", "Spectate & Freecam", 160, 50, true, false, function(v) if not v then resetCameraToSelf() end end, function(drawer)
+registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, function(drawer)
     local rName = addInfoRowOption(drawer, "Viewing Target Name", currentSpectateTarget and currentSpectateTarget.DisplayName or "--")
     local rHp = addInfoRowOption(drawer, "Target Health", "--"); local rTeam = addInfoRowOption(drawer, "Target Team", "--")
     spectateStatsLabels.name = rName.Label; spectateStatsLabels.hp = rHp.Label; spectateStatsLabels.team = rTeam.Label
