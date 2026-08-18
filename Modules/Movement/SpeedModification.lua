@@ -12,7 +12,7 @@ local addSliderOption = UI.addSliderOption
 
 local saveConfig = VH.Config.saveConfig
 
-registerModule("Movement", "Speed Modification", 300, 50, true, S.ForceWalkSpeed, function(v) S.ForceWalkSpeed = v; local hum = getHum(); if hum then hum.WalkSpeed = v and S.WalkSpeed or gameDefaultSpeed end; saveConfig() end, function(drawer)
+registerModule("Movement", "WalkSpeed", 300, 50, true, S.ForceWalkSpeed, function(v) S.ForceWalkSpeed = v; local hum = getHum(); if hum then hum.WalkSpeed = v and S.WalkSpeed or (State.gameDefaultSpeed or 16) end; saveConfig() end, function(drawer)
     addSliderOption(drawer, "WalkSpeed Speed", 16, 250, S.WalkSpeed, function(v) S.WalkSpeed = v; saveConfig(); local hum = getHum(); if hum and S.ForceWalkSpeed then hum.WalkSpeed = v end end)
-    addToggleOption(drawer, "Always Enforce WalkSpeed", S.ForceWalkSpeed, function(v) S.ForceWalkSpeed = v; saveConfig(); local hum = getHum(); if hum then hum.WalkSpeed = v and S.WalkSpeed or gameDefaultSpeed end end)
+    addToggleOption(drawer, "Always Enforce WalkSpeed", S.ForceWalkSpeed, function(v) S.ForceWalkSpeed = v; saveConfig(); local hum = getHum(); if hum then hum.WalkSpeed = v and S.WalkSpeed or (State.gameDefaultSpeed or 16) end end)
 end, false)

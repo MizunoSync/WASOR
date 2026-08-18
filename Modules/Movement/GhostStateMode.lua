@@ -13,4 +13,4 @@ local addToggleOption = UI.addToggleOption
 
 local saveConfig = VH.Config.saveConfig
 
-registerModule("Movement", "Ghost State Mode", 300, 50, true, S.GhostMode, function(v) S.GhostMode = v; if v then enableGhostMode() else disableGhostMode() end; saveConfig() end, function(drawer) addToggleOption(drawer, "Teleport to Ghost End", S.GhostTeleportToEnd, function(v) S.GhostTeleportToEnd = v; saveConfig() end) end, false)
+registerModule("Movement", "Ghost Mode", 300, 50, true, S.GhostMode, function(v) S.GhostMode = v; if v then enableGhostMode() else disableGhostMode() end; saveConfig() end, function(drawer) addToggleOption(drawer, "Teleport to Ghost End", S.GhostTeleportToEnd, function(v) S.GhostTeleportToEnd = v; saveConfig() end) end, false)

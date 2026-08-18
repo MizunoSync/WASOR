@@ -7,4 +7,4 @@ local registerModule = UI.registerModule
 
 local saveConfig = VH.Config.saveConfig
 
-registerModule("Movement", "NoClip Passes", 300, 50, true, S.NoClip, function(v) S.NoClip = v; saveConfig() end)
+registerModule("Movement", "Noclip", 300, 50, true, S.NoClip, function(v) S.NoClip = v; saveConfig() end)
