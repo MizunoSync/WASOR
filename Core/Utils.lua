@@ -54,22 +54,50 @@ end
 
 
 Utils.processUISpoofText = function(obj)
+    if not obj or not obj:IsA("Instance") then return end
     local S = State.S
     local txt = obj.Text
-    local newName = (S.CustomUIText and S.CustomUIText ~= "") and S.CustomUIText or State.SessionSpoofName
-    local newText = txt
-    local lowerText = string.lower(txt)
-    local lowerName = string.lower(Services.LP.Name)
-    local startPos, endPos = string.find(lowerText, lowerName, 1, true)
-    
-    if startPos then
-        newText = string.sub(txt, 1, startPos - 1) .. newName .. string.sub(txt, endPos + 1)
-    else
-        local lowerDisp = string.lower(Services.LP.DisplayName)
-        startPos, endPos = string.find(lowerText, lowerDisp, 1, true)
-        if startPos then newText = string.sub(txt, 1, startPos - 1) .. newName .. string.sub(txt, endPos + 1) end
+    if not txt or type(txt) ~= "string" or txt == "" then return end
+
+    local newName = (S.CustomUIText and S.CustomUIText ~= "") and S.CustomUIText or S.SessionSpoofName or State.SessionSpoofName or "Guest_1337"
+    local username = Services.LP.Name
+    local displayName = Services.LP.DisplayName
+
+    local result = txt
+
+    local function replaceCaseInsensitive(str, target, replacement)
+        if not target or target == "" then return str end
+        local lowerStr = str:lower()
+        local lowerTarget = target:lower()
+        local searchStart = 1
+        local buffer = ""
+        local lastEnd = 1
+
+        while true do
+            local s, e = lowerStr:find(lowerTarget, searchStart, true)
+            if not s then break end
+            buffer = buffer .. str:sub(lastEnd, s - 1) .. replacement
+            lastEnd = e + 1
+            searchStart = e + 1
+        end
+
+        if lastEnd == 1 then
+            return str
+        else
+            return buffer .. str:sub(lastEnd)
+        end
     end
-    if newText ~= txt then obj.Text = newText end
+
+    if displayName and displayName ~= "" then
+        result = replaceCaseInsensitive(result, displayName, newName)
+    end
+    if username and username ~= "" then
+        result = replaceCaseInsensitive(result, username, newName)
+    end
+
+    if result ~= txt then
+        obj.Text = result
+    end
 end
 
 
@@ -103,7 +131,9 @@ Utils.revertTallAnimations = function(char)
     if S.TallWalkTrack then S.TallWalkTrack:Stop() S.TallWalkTrack = nil end
     if S.TallIdleTrack then S.TallIdleTrack:Stop() S.TallIdleTrack = nil end
     if S.TallRunningConn then S.TallRunningConn:Disconnect() S.TallRunningConn = nil end
-    hum.WalkSpeed = S.WalkSpeed; hum.JumpPower = S.JumpPower; hum.UseJumpPower = true
+    hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or (State.gameDefaultSpeed or 16)
+    hum.JumpPower = (S.ForceJumpPower and S.JumpPower) or (State.gameDefaultJumpPower or 50)
+    hum.UseJumpPower = S.ForceJumpPower and true or ((State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or true)
 end
 
 Utils.applyCustomIdle = function(char)
@@ -294,7 +324,13 @@ Utils.setupAutoRejoin = function()
     local S = State.S
     if State.rejoinHooked then return end; State.rejoinHooked = true
     pcall(function()
-        local conn = game:GetService("GuiService").ErrorMessageChanged:Connect(function()
+        local conn = Services.GuiService.ErrorMessageChanged:Connect(function()
+            local errMsg = ""
+            pcall(function() errMsg = Services.GuiService:GetErrorMessage() end)
+            if errMsg:lower():find("teleport") and not errMsg:lower():find("disconnected") then
+                Utils.notify("[WASOR 3.0] Teleport message: " .. errMsg .. " (UI preserved)", Color3.fromRGB(218, 170, 42))
+                return
+            end
             pcall(function()
                 if VH.Cleanup and VH.Cleanup.cleanupAll then
                     VH.Cleanup.cleanupAll()
@@ -308,6 +344,12 @@ Utils.setupAutoRejoin = function()
             end
         end)
         table.insert(S.Connections, conn)
+    end)
+    pcall(function()
+        local tpFailConn = Services.TeleportService.TeleportInitFailed:Connect(function(_, result, err)
+            Utils.notify("[WASOR 3.0] Teleport Failed: " .. tostring(err or result) .. " (UI preserved)", Color3.fromRGB(218, 38, 38))
+        end)
+        table.insert(S.Connections, tpFailConn)
     end)
 end
 
@@ -482,35 +524,8 @@ Utils.runExternalScript = function(name, url, optionalPlaceId)
 end
 
 
-Utils.createOverhead = function(p)
-    local S = State.S
-    if p == Services.LP then return end; local char = p.Character; local head = char and char:WaitForChild("Head", 3)
-    if not head then return end
-    if S.OverheadPool[p] then pcall(function() S.OverheadPool[p]:Destroy() end) end
-    local billboard = Instance.new("BillboardGui"); billboard.Name = "VoidOverhead"; billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.AlwaysOnTop = true; billboard.StudsOffset = Vector3.new(0, 2.5, 0); billboard.Adornee = head; billboard.Parent = head
-    local label = Instance.new("TextLabel"); label.Size = UDim2.new(1, 0, 1, 0); label.BackgroundTransparency = 1
-    label.Font = Enum.Font.GothamBold; label.TextSize = 10
-    label.TextColor3 = p.TeamColor and p.TeamColor.Color or Color3.fromRGB(255, 255, 255)
-    label.TextStrokeTransparency = 0; label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    
-    local function updateText()
-        local hum = char:FindFirstChildOfClass("Humanoid"); local health = hum and math.floor(hum.Health) or 0
-        label.Text = string.format("%s\n<font color='#2ecc71'>%d HP</font> | %s", p.DisplayName, health, p.Team and p.Team.Name or "Neutral")
-    end
-    
-    label.RichText = true; updateText(); label.Parent = billboard; S.OverheadPool[p] = billboard
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if hum then local connection = hum.HealthChanged:Connect(updateText); table.insert(S.Connections, connection) end
-end
-
-Utils.refreshOverheads = function()
-    local S = State.S
-    for p, bill in pairs(S.OverheadPool) do pcall(function() bill:Destroy() end) end
-    S.OverheadPool = {}
-    if not S.OverheadInfo then return end
-    for _, p in ipairs(Services.Players:GetPlayers()) do if p ~= Services.LP and p.Character then Utils.createOverhead(p) end end
-end
+Utils.createOverhead = function(p) end
+Utils.refreshOverheads = function() end
 
 
 Utils.updateFlyVelocity = function()
@@ -518,6 +533,7 @@ Utils.updateFlyVelocity = function()
     local hrp = Utils.getHRP(); if not hrp then return end
     local bv = hrp:FindFirstChild("VoidFlyBV"); local bg = hrp:FindFirstChild("VoidFlyBG")
     if not bv or not bg then return end
+    pcall(function() hrp.AssemblyAngularVelocity = Vector3.zero end)
     local dir = Vector3.zero; local cf = Services.Camera.CFrame; local fwd = cf.LookVector
     if Services.UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + fwd end
     if Services.UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - fwd end
@@ -546,48 +562,77 @@ end
 
 Utils.enableGhostMode = function()
     local S = State.S
-    local myChar = Services.LP.Character; local myHRP = myChar and (myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso") or myChar.PrimaryPart)
+    local myChar = Services.LP.Character
+    local myHRP = myChar and (myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso") or myChar.PrimaryPart)
     local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
     if not myHRP then return end
-    S.GhostCFrame = myHRP.CFrame
+
+    S.GhostParkedCFrame = myHRP.CFrame
+
     pcall(function()
-        myChar.Archivable = true; local clone = myChar:Clone(); clone.Name = "GhostDummyMarker"
+        myChar.Archivable = true
+        local clone = myChar:Clone()
+        clone.Name = "GhostParkedBody"
         for _, obj in ipairs(clone:GetDescendants()) do
-            if obj:IsA("LuaSourceContainer") or obj:IsA("Script") or obj:IsA("LocalScript") then obj:Destroy()
-            elseif obj:IsA("BodyMover") or obj:IsA("Constraint") or obj:IsA("Attachment") then pcall(function() obj:Destroy() end)
-            elseif obj:IsA("BasePart") then obj.Anchored = true; pcall(function() obj.CanCollide = false end); pcall(function() obj.CanTouch = false end); pcall(function() obj.CanQuery = false end); obj.Transparency = 0.5
-            elseif obj:IsA("Humanoid") then obj.PlatformStand = true; pcall(function() obj.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end); pcall(function() obj.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff end) end
+            if obj:IsA("LuaSourceContainer") or obj:IsA("Script") or obj:IsA("LocalScript") then
+                obj:Destroy()
+            elseif obj:IsA("BodyMover") or obj:IsA("Constraint") or obj:IsA("Attachment") then
+                pcall(function() obj:Destroy() end)
+            elseif obj:IsA("BasePart") then
+                obj.Anchored = true
+                pcall(function() obj.CanCollide = false end)
+                pcall(function() obj.CanTouch = false end)
+                pcall(function() obj.CanQuery = false end)
+                obj.Transparency = 0.4
+            elseif obj:IsA("Humanoid") then
+                obj.PlatformStand = true
+                pcall(function() obj.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end)
+                pcall(function() obj.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff end)
+            end
         end
-        clone.Parent = Services.Workspace; S.GhostDummy = clone
+        clone.Parent = Services.Workspace
+        S.GhostDummy = clone
     end)
-    
+
     State.ghostOriginalTransparencies = {}
     for _, part in ipairs(myChar:GetDescendants()) do
         if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
             State.ghostOriginalTransparencies[part] = part.Transparency
-            part.Transparency = 1
+            part.Transparency = 0.6
         elseif part:IsA("Decal") then
             State.ghostOriginalTransparencies[part] = part.Transparency
-            part.Transparency = 1
+            part.Transparency = 0.6
         end
     end
-    if myHum then
-        State.ghostOriginalDisplayNameType = myHum.DisplayDistanceType
-        myHum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-    end
-    
-    S.Fly = true; Utils.flyOn(); S.NoClip = true; Utils.notify("Ghost state active: body parked", Color3.fromRGB(218, 170, 42))
+
+    S.Fly = true
+    Utils.flyOn()
+    S.NoClip = true
+
+    Utils.notify("Ghost Mode ON: Body parked, fly freely!", Color3.fromRGB(218, 170, 42))
 end
 
 Utils.disableGhostMode = function()
     local S = State.S
-    local myChar = Services.LP.Character; local myHRP = myChar and (myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso") or myChar.PrimaryPart)
-    local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
-    if S.GhostDummy then pcall(function() S.GhostDummy:Destroy() end); S.GhostDummy = nil end
-    if myHRP and S.GhostCFrame then
-        Utils.notify("Ghost mode disabled: body updated to current position!", Color3.fromRGB(50, 195, 75))
-        S.GhostCFrame = nil
+    local myChar = Services.LP.Character
+    local myHRP = myChar and (myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso") or myChar.PrimaryPart)
+
+    local ghostEndCF = myHRP and myHRP.CFrame
+
+    if S.GhostDummy then
+        pcall(function() S.GhostDummy:Destroy() end)
+        S.GhostDummy = nil
     end
+
+    if myHRP and (ghostEndCF or S.GhostParkedCFrame) then
+        myHRP.CFrame = ghostEndCF or S.GhostParkedCFrame
+        S.GhostParkedCFrame = nil
+    end
+
+    S.Fly = false
+    Utils.flyOff()
+    S.NoClip = false
+
     if myChar then
         for _, part in ipairs(myChar:GetDescendants()) do
             if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
@@ -606,6 +651,9 @@ Utils.disableGhostMode = function()
         end
         State.ghostOriginalTransparencies = nil
     end
+
+    Utils.notify("Ghost Mode OFF: Teleported to ghost location!", Color3.fromRGB(50, 195, 75))
+    local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
     if myHum then
         if State.ghostOriginalDisplayNameType then
             myHum.DisplayDistanceType = State.ghostOriginalDisplayNameType
@@ -668,6 +716,79 @@ Utils.getBoundingBox = function(char)
     local botSp = Services.Camera:WorldToViewportPoint(hrPos - Vector3.new(0, 3.5, 0))
     local height = math.abs(topSp.Y - botSp.Y); local width = height * 0.6
     return { Vector2.new(topSp.X - width/2, topSp.Y), Vector2.new(topSp.X + width/2, botSp.Y) }
+end
+
+Utils.toggleNo3DRenderCover = function(enable)
+    local S = State.S
+    local CoreGui = Services.CoreGui or Services.LP:WaitForChild("PlayerGui")
+
+    if not enable then
+        pcall(function() Services.RunService:Set3dRenderingEnabled(true) end)
+        if State.no3DCoverGui then
+            pcall(function() State.no3DCoverGui:Destroy() end)
+            State.no3DCoverGui = nil
+        end
+        return
+    end
+
+    pcall(function() Services.RunService:Set3dRenderingEnabled(false) end)
+
+    if State.no3DCoverGui then
+        pcall(function() State.no3DCoverGui:Destroy() end)
+        State.no3DCoverGui = nil
+    end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "VoidNo3DCoverGui"
+    gui.DisplayOrder = -100
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+
+    local bgFrame = Instance.new("Frame")
+    bgFrame.Name = "BlackBackground"
+    bgFrame.Size = UDim2.new(1, 0, 1, 0)
+    bgFrame.Position = UDim2.new(0, 0, 0, 0)
+    bgFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    bgFrame.BackgroundTransparency = 0
+    bgFrame.BorderSizePixel = 0
+    bgFrame.Parent = gui
+
+    if not S.No3DRenderDisableCover then
+        local rawAssetId = (S.No3DRenderCustomCover and S.No3DRenderCustomCover ~= "") and S.No3DRenderCustomCover or "6723684726"
+        local assetId = rawAssetId:match("%d+") or "6723684726"
+        local imgLabel = Instance.new("ImageLabel")
+        imgLabel.Name = "CoverImage"
+        imgLabel.Size = UDim2.new(1, 0, 1, 0)
+        imgLabel.Position = UDim2.new(0, 0, 0, 0)
+        imgLabel.BackgroundTransparency = 1
+        imgLabel.Image = "rbxassetid://" .. assetId
+        imgLabel.ScaleType = Enum.ScaleType.Fit
+        imgLabel.Parent = bgFrame
+    end
+
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Name = "StatusText"
+    statusLabel.Size = UDim2.new(1, 0, 0, 30)
+    statusLabel.Position = UDim2.new(0, 0, 1, -40)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Font = Enum.Font.GothamBold
+    statusLabel.TextSize = 13
+    statusLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
+    statusLabel.Text = "3D Rendering Paused (No 3D Rendering)"
+    statusLabel.Parent = bgFrame
+
+    pcall(function()
+        if gethui then
+            gui.Parent = gethui()
+        elseif syn and syn.protect_gui then
+            syn.protect_gui(gui)
+            gui.Parent = CoreGui
+        else
+            gui.Parent = CoreGui
+        end
+    end)
+
+    State.no3DCoverGui = gui
 end
 
 VH.Utils = Utils

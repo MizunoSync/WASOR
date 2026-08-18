@@ -209,12 +209,44 @@ end
 local function protectUIFonts(gui)
     local function lockFont(obj)
         if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-            local origFont = obj.Font
-            obj:GetPropertyChangedSignal("Font"):Connect(function() if obj.Font ~= origFont then obj.Font = origFont end end)
+            local targetFont = Enum.Font[State.S.UIFont or "Gotham"] or Enum.Font.Gotham
+            pcall(function() obj.Font = targetFont end)
+            obj:GetPropertyChangedSignal("Font"):Connect(function()
+                local fontNow = Enum.Font[State.S.UIFont or "Gotham"] or Enum.Font.Gotham
+                if obj.Font ~= fontNow then
+                    pcall(function() obj.Font = fontNow end)
+                end
+            end)
         end
     end
     for _, desc in ipairs(gui:GetDescendants()) do lockFont(desc) end
     gui.DescendantAdded:Connect(lockFont)
+end
+
+UI.applyUIFont = function(fontName)
+    local S = State.S
+    S.UIFont = fontName or "Gotham"
+    local enumFont = Enum.Font[S.UIFont] or Enum.Font.Gotham
+    if not screenGui then return end
+    for _, desc in ipairs(screenGui:GetDescendants()) do
+        if desc:IsA("TextLabel") or desc:IsA("TextButton") or desc:IsA("TextBox") then
+            pcall(function() desc.Font = enumFont end)
+        end
+    end
+end
+
+UI.applyUIScale = function(scaleFactor)
+    local S = State.S
+    scaleFactor = scaleFactor or S.UIScale or 1.0
+    S.UIScale = scaleFactor
+    if not screenGui then return end
+    local uiScale = screenGui:FindFirstChildOfClass("UIScale") or screenGui:FindFirstChild("VoidUIScale")
+    if not uiScale then
+        uiScale = Instance.new("UIScale")
+        uiScale.Name = "VoidUIScale"
+        uiScale.Parent = screenGui
+    end
+    uiScale.Scale = scaleFactor
 end
 
 UI.updateMenuBlur = function()
@@ -708,7 +740,7 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     local inactiveColor = Color3.fromRGB(200, 200, 200)
     if name == "No Recoil" or name == "Silent Aim" or name == "Instant Respawn" then
         inactiveColor = Color3.fromRGB(255, 120, 120)
-    elseif name == "God Mode" then
+    elseif name == "God Mode" or name == "UI Name Spoof" then
         inactiveColor = Color3.fromRGB(255, 180, 100)
     end
     btn.TextColor3 = (isToggle and defaultState) and Color3.fromRGB(100, 240, 100) or inactiveColor
@@ -719,7 +751,7 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         local currentInactiveColor = Color3.fromRGB(200, 200, 200)
         if name == "No Recoil" or name == "Silent Aim" or name == "Instant Respawn" then
             currentInactiveColor = Color3.fromRGB(255, 120, 120)
-        elseif name == "God Mode" then
+        elseif name == "God Mode" or name == "UI Name Spoof" then
             currentInactiveColor = Color3.fromRGB(255, 180, 100)
         end
         btn.TextColor3 = (isToggle and active) and Color3.fromRGB(100, 240, 100) or currentInactiveColor
@@ -930,7 +962,7 @@ UI.InitializeUI = function()
     topTitle.Size = UDim2.new(0, 450, 1, 0); topTitle.Position = UDim2.new(0, 10, 0, 0); topTitle.BackgroundTransparency = 1
     topTitle.Font = Enum.Font.GothamBold; topTitle.TextSize = 11; topTitle.TextColor3 = State.currentThemeColor
     topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.Text = "WeAreSkidding <font color='#ffffff'>On Roblox v2.0</font> <font color='#888888'>(" .. executorName .. ")</font>"
+    topTitle.Text = "WeAreSkidding <font color='#ffffff'>On Roblox v3.0</font> <font color='#888888'>(" .. executorName .. ")</font>"
     topTitle.RichText = true; topTitle.Parent = topBar; table.insert(themeTexts, topTitle)
     
     local hudTextLabel = Instance.new("TextLabel")
@@ -1039,7 +1071,7 @@ UI.InitializeUI = function()
     hudWatermark = Instance.new("TextLabel")
     hudWatermark.Size = UDim2.new(0, 200, 0, 14); hudWatermark.Position = UDim2.new(0, 10, 0, 30); hudWatermark.BackgroundTransparency = 1
     hudWatermark.Font = Enum.Font.GothamBold; hudWatermark.TextSize = 10; hudWatermark.TextColor3 = State.currentThemeColor
-    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 2.0"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
+    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 3.0"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
     
     hudCoords = Instance.new("TextLabel")
     hudCoords.Size = UDim2.new(0, 250, 0, 14); hudCoords.Position = UDim2.new(0, 10, 0, 44); hudCoords.BackgroundTransparency = 1
@@ -1173,7 +1205,7 @@ UI.InitializeUI = function()
     UI.addButtonOption(pageProfiles, "Apply legit closet profile", function()
         UI:ResetAllToggles()
         S.WalkSpeed = 22; S.JumpPower = 55; S.ForceWalkSpeed = true; S.ESPBoxes = true; S.ESPTransparency = 0.9; S.AimbotActive = true; S.AimbotFOV = 40; S.AimbotSmooth = 15; S.ESPNames = true
-        if UI.moduleButtons["Speed Modification"] then UI.moduleButtons["Speed Modification"].SetActive(true) end
+        if UI.moduleButtons["WalkSpeed"] then UI.moduleButtons["WalkSpeed"].SetActive(true) end
         if UI.moduleButtons["ESP Box Outlines"] then UI.moduleButtons["ESP Box Outlines"].SetActive(true) end
         if UI.moduleButtons["Aimbot"] then UI.moduleButtons["Aimbot"].SetActive(true) end
         if UI.moduleButtons["Show Player Names"] then UI.moduleButtons["Show Player Names"].SetActive(true) end
@@ -1183,10 +1215,10 @@ UI.InitializeUI = function()
         UI:ResetAllToggles()
         S.Fly = true; S.NoClip = true; S.InfJump = true; S.WalkSpeed = 65; S.JumpPower = 80; S.ForceWalkSpeed = true; S.ForceJumpPower = true; S.ESPBoxes = true; S.ESPHealth = true; S.ESPNames = true; S.ESPDistances = true
         if UI.moduleButtons["Fly Mode"] then UI.moduleButtons["Fly Mode"].SetActive(true) end
-        if UI.moduleButtons["NoClip Passes"] then UI.moduleButtons["NoClip Passes"].SetActive(true) end
+        if UI.moduleButtons["Noclip"] then UI.moduleButtons["Noclip"].SetActive(true) end
         if UI.moduleButtons["Infinite Jump"] then UI.moduleButtons["Infinite Jump"].SetActive(true) end
-        if UI.moduleButtons["Speed Modification"] then UI.moduleButtons["Speed Modification"].SetActive(true) end
-        if UI.moduleButtons["Jump Hack Strength"] then UI.moduleButtons["Jump Hack Strength"].SetActive(true) end
+        if UI.moduleButtons["WalkSpeed"] then UI.moduleButtons["WalkSpeed"].SetActive(true) end
+        if UI.moduleButtons["Jump Force"] then UI.moduleButtons["Jump Force"].SetActive(true) end
         if UI.moduleButtons["ESP Box Outlines"] then UI.moduleButtons["ESP Box Outlines"].SetActive(true) end
         if UI.moduleButtons["Show Player Names"] then UI.moduleButtons["Show Player Names"].SetActive(true) end
         if UI.moduleButtons["Show Health Text"] then UI.moduleButtons["Show Health Text"].SetActive(true) end
@@ -1196,18 +1228,32 @@ UI.InitializeUI = function()
         UI:ResetAllToggles()
         S.Fly = true; S.NoClip = true; S.KillAura = true; S.GodMode = true; S.AimbotActive = true; S.AimbotFOV = 600; S.AimbotSmooth = 1; S.InstantPrompts = true; S.AntiVoid = true
         if UI.moduleButtons["Fly Mode"] then UI.moduleButtons["Fly Mode"].SetActive(true) end
-        if UI.moduleButtons["NoClip Passes"] then UI.moduleButtons["NoClip Passes"].SetActive(true) end
+        if UI.moduleButtons["Noclip"] then UI.moduleButtons["Noclip"].SetActive(true) end
         if UI.moduleButtons["Kill Aura"] then UI.moduleButtons["Kill Aura"].SetActive(true) end
         if UI.moduleButtons["God Mode"] then UI.moduleButtons["God Mode"].SetActive(true) end
         if UI.moduleButtons["Aimbot"] then UI.moduleButtons["Aimbot"].SetActive(true) end
         if UI.moduleButtons["Instant Prompts"] then UI.moduleButtons["Instant Prompts"].SetActive(true) end
-        if UI.moduleButtons["Anti-Void Net"] then UI.moduleButtons["Anti-Void Net"].SetActive(true) end
+        if UI.moduleButtons["Anti Void"] then UI.moduleButtons["Anti Void"].SetActive(true) end
         VH.Config.saveConfig(); VH.Utils.notify("Rage profile applied!", Color3.fromRGB(218, 38, 38))
     end)
     
     -- PAGE: UI & HUD
-    UI.addSectionHeader(pageUI, "Visual Theme")
+    UI.addSectionHeader(pageUI, "Visual Theme & Customization")
     UI.addDropdownOption(pageUI, "Interface Theme Color", {"Purple", "Red", "Green", "Blue", "Yellow", "Cyan", "Pink", "Orange", "Rainbow"}, table.find({"Purple", "Red", "Green", "Blue", "Yellow", "Cyan", "Pink", "Orange", "Rainbow"}, S.ThemeColor) or 1, function(_, opt) UI.applyThemeColor(opt); VH.Config.saveConfig() end)
+    
+    local fontsList = {"Gotham", "GothamBold", "SourceSans", "SourceSansBold", "Roboto", "RobotoBold", "Ubuntu", "Arcade", "Code", "FredokaOne"}
+    UI.addDropdownOption(pageUI, "Interface Font Style", fontsList, table.find(fontsList, S.UIFont or "Gotham") or 1, function(_, opt)
+        UI.applyUIFont(opt)
+        VH.Config.saveConfig()
+        VH.Utils.notify("[WASOR 3.0] UI Font set to: " .. opt, Color3.fromRGB(50, 195, 75))
+    end)
+    
+    UI.addSliderOption(pageUI, "UI Scale Sizing (%)", 70, 150, math.round((S.UIScale or 1.0) * 100), function(v)
+        local scale = v / 100
+        UI.applyUIScale(scale)
+        VH.Config.saveConfig()
+    end)
+    
     UI.addKeybindOption(pageUI, "Menu Toggle Keybind", S.UIToggleKey or Enum.KeyCode.RightControl, function(k) S.UIToggleKey = k; VH.Config.saveConfig(); VH.Utils.notify("UI Toggle Keybind set to: " .. k.Name, Color3.fromRGB(50, 195, 75)) end)
     UI.addToggleOption(pageUI, "Show Toasts Enabled", S.ToastEnabled, function(v) S.ToastEnabled = v; VH.Config.saveConfig() end)
     
@@ -1349,6 +1395,8 @@ UI.InitializeUI = function()
     
     selectTab("Modules")
     UI.applyThemeColor(S.ThemeColor or "Purple")
+    UI.applyUIFont(S.UIFont or "Gotham")
+    UI.applyUIScale(S.UIScale or 1.0)
     
     UI.hudWatermark = hudWatermark
     UI.hudCoords = hudCoords
@@ -1370,7 +1418,7 @@ UI.InitializeUI = function()
                 if writefile then
                     pcall(function() writefile("utility_hub_visited.txt", "true") end)
                 end
-                UI.showToast("Welcome to WASOR!", State.currentThemeColor)
+                UI.showToast("Welcome to WASOR 3.0!", State.currentThemeColor)
                 task.wait(2.2)
                 UI.showToast("Toggle UI with [Right Control]", State.currentThemeColor)
                 task.wait(2.2)

@@ -71,7 +71,6 @@ Cleanup.cleanupAll = function()
     S.ChatConnections = {}
     
     for p, _ in pairs(S.ESPPool) do Cleanup.destroyESP(p) end
-    for p, bill in pairs(S.OverheadPool) do pcall(function() bill:Destroy() end) end
     S.OverheadPool = {}
     
     if S.AirWalkPlat then pcall(function() S.AirWalkPlat:Destroy() end) S.AirWalkPlat = nil end
@@ -116,13 +115,16 @@ Cleanup.cleanupAll = function()
             end
             for _, part in ipairs(Services.LP.Character:GetDescendants()) do
                 if part:IsA("BasePart") then
-                    part.CanCollide = true
+                    local isRootOrTorso = (part.Name == "HumanoidRootPart" or part.Name == "Torso" or part.Name == "UpperTorso" or part.Name == "LowerTorso" or part.Name == "Head") and not part:IsA("Accessory") and not part:FindFirstAncestorOfClass("Accessory") and not part:FindFirstAncestorOfClass("Tool")
+                    part.CanCollide = isRootOrTorso
                 end
             end
         end
     end)
     
+    pcall(function() State.S.HeadSitActive = false; State.S.HeadSitTargetPlayer = nil; State.S.AirSwim = false end)
     pcall(function() VH.Utils.toggleMapXray(false); VH.Utils.toggleClearVision(false) end)
+    pcall(function() if VH.Utils.toggleNo3DRenderCover then VH.Utils.toggleNo3DRenderCover(false) else Services.RunService:Set3dRenderingEnabled(true) end end)
     pcall(function() Services.Lighting.Ambient = State.originalAmbient; Services.Lighting.OutdoorAmbient = State.originalOutdoor end)
     pcall(function()
         local oldBlur = Services.Lighting:FindFirstChild("WeAreSkiddingBlur")

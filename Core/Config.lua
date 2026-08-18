@@ -60,7 +60,7 @@ Config.loadConfig = function()
     local S = State.S
     S.Fly = false; S.NoClip = false; S.BHop = false; S.AirWalk = false; S.GhostMode = false
     S.Float = false; S.WaterWalk = false; S.TallAnim = false; S.Spin = false; S.GravityEnabled = false
-    S.GodMode = false; S.KillAura = false; S.AutoClicker = false; S.FlingActive = false; S.FlingAllActive = false
+    S.GodMode = false; S.KillAura = false; S.AutoClicker = false; S.FlingActive = false; S.FlingAllActive = false; S.WalkFling = false
     S.FollowActive = false; S.AntiAnchor = false; S.No3DRender = false; S.ClickTeleport = false; S.SprintEnabled = false
     S.GraphicsReducer = false; S.ForceWalkSpeed = false; S.ForceJumpPower = false; S.Climb = false; S.AimlockActive = false
     S.WallRun = false; S.FlyBypass = false; S.PathfindingWalk = false

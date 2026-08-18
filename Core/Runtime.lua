@@ -14,7 +14,7 @@ local disableGhostMode = Utils.disableGhostMode
 local applyTallAnimations = Utils.applyTallAnimations
 local toggleClearVision = Utils.toggleClearVision
 local Lighting = Services.Lighting
-local refreshOverheads = Utils.refreshOverheads
+
 local toggleGraphicsReducer = Utils.toggleGraphicsReducer
 local toggleMapXray = Utils.toggleMapXray
 local moduleButtons = UI.moduleButtons
@@ -304,18 +304,7 @@ local function updateESPAndAimbot()
             destroyESP(p)
         end
     end
-    for p, bill in pairs(S.OverheadPool) do
-        local inPlayers = false
-        pcall(function()
-            if p and p.Parent == Players then
-                inPlayers = true
-            end
-        end)
-        if not inPlayers then
-            pcall(function() bill:Destroy() end)
-            S.OverheadPool[p] = nil
-        end
-    end
+
 
     if S.Chams then
         for _, p in ipairs(Players:GetPlayers()) do
@@ -347,16 +336,22 @@ local function updateESPAndAimbot()
         end
     end
 
-    if S.ViewModelFOV ~= 70 then
+    if S.CameraFOV ~= 70 or S.ViewModelFOV ~= 70 then
         local hum = getHum()
         if hum and hum.Health > 0 then
             local hrp = getHRP()
-            if hrp and (Camera.Focus.Position - Camera.CFrame.Position).Magnitude < 1 then Camera.FieldOfView = S.ViewModelFOV
-            else Camera.FieldOfView = S.CameraFOV end
+            if hrp then
+                local camDist = (Camera.CFrame.Position - Camera.Focus.Position).Magnitude
+                local isFirstPerson = camDist < 0.6
+                local targetFOV = isFirstPerson and (S.ViewModelFOV or 70) or (S.CameraFOV or 70)
+                if math.abs(Camera.FieldOfView - targetFOV) > 0.01 then
+                    Camera.FieldOfView = targetFOV
+                end
+            end
         end
     end
 
-    local espEnabled = (S.ESPBoxes or S.ESPTracers or S.ESPNames or S.ESPHealth or S.ESPDistances or S.SkeletonESP or S.LineOfSight)
+    local espEnabled = (S.ESPBoxes or S.ESPTracers or S.ESPNames or S.ESPHealth or S.ESPDistances or S.SkeletonESP or S.LineOfSight or S.OutOfViewIndicators)
     if espEnabled then
         for _, p in ipairs(Players:GetPlayers()) do
             if p == LP then continue end
@@ -371,9 +366,12 @@ local function updateESPAndAimbot()
                 if S.ESPTeamCheck and isTeammate then espAllowed = false end
                 if S.ESPIgnoreFriends and isFriend then espAllowed = false end
 
+                local dist = math.round((hrp.Position - Camera.CFrame.Position).Magnitude)
+
                 local oodAllowed = S.OutOfViewIndicators
                 if S.OutOfViewTeamCheck and isTeammate then oodAllowed = false end
                 if S.ESPIgnoreFriends and isFriend then oodAllowed = false end
+                if oodAllowed and dist > (S.OutOfViewMaxDistance or 300) then oodAllowed = false end
 
                 local losAllowed = S.LineOfSight
                 if losAllowed then
@@ -386,7 +384,6 @@ local function updateESPAndAimbot()
                     continue
                 end
 
-                local dist = math.round((hrp.Position - Camera.CFrame.Position).Magnitude)
                 local teamCol = p.Team and p.Team.TeamColor.Color or Color3.fromRGB(218, 38, 38)
                 local espDrawCol = espColorMapping[S.ESPColor] or teamCol
                 if S.ESPDistanceColor then local pct = math.clamp(dist / 500, 0, 1); espDrawCol = Color3.fromRGB(255 * pct, 255 * (1 - pct), 0) end
@@ -427,10 +424,11 @@ local function updateESPAndAimbot()
 
                     local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
                     local radius = S.OutOfViewIndicatorRadius or 200
+                    local size = S.OutOfViewSize or 10
 
-                    local pointA = center + Vector2.new(math.cos(angle), -math.sin(angle)) * (radius + 15)
-                    local pointB = center + Vector2.new(math.cos(angle + 0.35), -math.sin(angle + 0.35)) * radius
-                    local pointC = center + Vector2.new(math.cos(angle - 0.35), -math.sin(angle - 0.35)) * radius
+                    local pointA = center + Vector2.new(math.cos(angle), -math.sin(angle)) * (radius + size)
+                    local pointB = center + Vector2.new(math.cos(angle + 0.15), -math.sin(angle + 0.15)) * radius
+                    local pointC = center + Vector2.new(math.cos(angle - 0.15), -math.sin(angle - 0.15)) * radius
 
                     if pool.indicator then
                         pool.indicator.PointA = pointA
@@ -647,18 +645,38 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
 
     if S.FlyBypass and myHum and myHRP then
         myHum.PlatformStand = true
-        if not myHRP:FindFirstChild("VoidBypassFly") then local bv = Instance.new("BodyVelocity"); bv.Name = "VoidBypassFly"; bv.MaxForce = Vector3.new(1, 1, 1) * 30000; bv.Parent = myHRP end
-        local dir = Vector3.zero; local cf = Camera.CFrame
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + cf.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - cf.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - cf.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + cf.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
-        myHRP.VoidBypassFly.Velocity = (dir.Magnitude > 0 and dir.Unit * S.FlySpeed) or Vector3.zero
-    elseif not S.FlyBypass and myHRP and myHRP:FindFirstChild("VoidBypassFly") then
-        myHRP.VoidBypassFly:Destroy()
-        if myHum then myHum.PlatformStand = false end
+        pcall(function()
+            myHRP.AssemblyLinearVelocity = Vector3.zero
+            myHRP.AssemblyAngularVelocity = Vector3.zero
+        end)
+        if myHRP:FindFirstChild("VoidBypassFly") then myHRP.VoidBypassFly:Destroy() end
+        if myHRP:FindFirstChild("VoidBypassBG") then myHRP.VoidBypassBG:Destroy() end
+
+        local speed = S.FlySpeed or 60
+        local moveDir = Vector3.zero
+        local cameraCF = Camera.CFrame
+        local lookVec = cameraCF.LookVector
+        local rightVec = cameraCF.RightVector
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + lookVec end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - lookVec end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - rightVec end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + rightVec end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+
+        local frameDelta = dt or 0.016
+        if moveDir.Magnitude > 0 then
+            moveDir = moveDir.Unit
+            local newPos = myHRP.Position + (moveDir * (speed * frameDelta))
+            myHRP.CFrame = CFrame.new(newPos, newPos + lookVec)
+        else
+            myHRP.CFrame = CFrame.new(myHRP.Position, myHRP.Position + lookVec)
+        end
+    elseif not S.FlyBypass and myHRP then
+        if myHRP:FindFirstChild("VoidBypassFly") then myHRP.VoidBypassFly:Destroy() end
+        if myHRP:FindFirstChild("VoidBypassBG") then myHRP.VoidBypassBG:Destroy() end
+        if myHum and not S.Fly and not S.AirSwim and not S.HeadSitActive then myHum.PlatformStand = false end
     end
 
     pcall(function()
@@ -984,7 +1002,7 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
 
     pcall(function()
         if S.AntiFling then
-            if myHRP and not S.FlingActive and not S.FlingAllActive then
+            if myHRP and not S.FlingActive and not S.FlingAllActive and not S.WalkFling then
                 if myHRP.AssemblyLinearVelocity.Magnitude > 1000 then myHRP.AssemblyLinearVelocity = Vector3.zero end
                 if myHRP.AssemblyAngularVelocity.Magnitude > 300 then myHRP.AssemblyAngularVelocity = Vector3.zero end
             end
@@ -1019,14 +1037,56 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
         end
     end)
 end))
+
+task.spawn(function()
+    local movelFling = 0.1
+    while true do
+        RunService.Heartbeat:Wait()
+        if S.WalkFling then
+            local character = LP.Character
+            local root = getHRP(character)
+
+            while S.WalkFling and not (character and character.Parent and root and root.Parent) do
+                RunService.Heartbeat:Wait()
+                character = LP.Character
+                root = getHRP(character)
+            end
+
+            if S.WalkFling and character and character.Parent and root and root.Parent then
+                local vel = root.Velocity
+                root.Velocity = vel * 10000 + Vector3.new(0, 10000, 0)
+
+                RunService.RenderStepped:Wait()
+                if character and character.Parent and root and root.Parent then
+                    root.Velocity = vel
+                end
+
+                RunService.Stepped:Wait()
+                if character and character.Parent and root and root.Parent then
+                    root.Velocity = vel + Vector3.new(0, movelFling, 0)
+                    movelFling = movelFling * -1
+                end
+            end
+        end
+    end
+end)
+
 local wasNoclipping = false
+local noclipOrigCanCollide = {}
+local wasAntiFling = false
+
 table.insert(S.Connections, RunService.Stepped:Connect(function()
     local isNoclipping = S.NoClip or S.FlingActive or S.FlingAllActive
     if isNoclipping then
         local char = getChar()
         if char then
             for _, p in ipairs(char:GetDescendants()) do
-                if p:IsA("BasePart") then p.CanCollide = false end
+                if p:IsA("BasePart") then
+                    if noclipOrigCanCollide[p] == nil then
+                        noclipOrigCanCollide[p] = p.CanCollide
+                    end
+                    p.CanCollide = false
+                end
             end
         end
         wasNoclipping = true
@@ -1035,15 +1095,35 @@ table.insert(S.Connections, RunService.Stepped:Connect(function()
         local char = getChar()
         if char then
             for _, p in ipairs(char:GetDescendants()) do
-                if p:IsA("BasePart") then p.CanCollide = true end
+                if p:IsA("BasePart") then
+                    if noclipOrigCanCollide[p] ~= nil then
+                        p.CanCollide = noclipOrigCanCollide[p]
+                    else
+                        local isRootOrTorso = (p.Name == "HumanoidRootPart" or p.Name == "Torso" or p.Name == "UpperTorso" or p.Name == "LowerTorso" or p.Name == "Head") and not p:IsA("Accessory") and not p:FindFirstAncestorOfClass("Accessory") and not p:FindFirstAncestorOfClass("Tool")
+                        p.CanCollide = isRootOrTorso
+                    end
+                end
             end
         end
+        noclipOrigCanCollide = {}
     end
-    if S.AntiFling then
+
+    local isFlinging = S.FlingActive or S.FlingAllActive or S.WalkFling
+    if S.AntiFling and not isFlinging then
+        wasAntiFling = true
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LP and p.Character then
                 for _, part in ipairs(p.Character:GetDescendants()) do
                     if part:IsA("BasePart") then pcall(function() part.CanCollide = false; part.AssemblyLinearVelocity = Vector3.zero; part.AssemblyAngularVelocity = Vector3.zero end) end
+                end
+            end
+        end
+    elseif wasAntiFling then
+        wasAntiFling = false
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LP and p.Character then
+                for _, part in ipairs(p.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then pcall(function() part.CanCollide = true end) end
                 end
             end
         end
@@ -1105,7 +1185,7 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
     elseif S.FlyKey and S.FlyKey ~= Enum.KeyCode.Unknown and k == S.FlyKey then
         S.Fly = not S.Fly; if S.Fly then flyOn() else flyOff() end; notify("Fly Mode " .. (S.Fly and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Fly Mode"]; if mod then mod.SetActive(S.Fly) end
     elseif S.NoClipKey and S.NoClipKey ~= Enum.KeyCode.Unknown and k == S.NoClipKey then
-        S.NoClip = not S.NoClip; notify("NoClip " .. (S.NoClip and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["NoClip Passes"]; if mod then mod.SetActive(S.NoClip) end
+        S.NoClip = not S.NoClip; notify("NoClip " .. (S.NoClip and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Noclip"]; if mod then mod.SetActive(S.NoClip) end
     elseif S.BHopKey and S.BHopKey ~= Enum.KeyCode.Unknown and k == S.BHopKey then
         S.BHop = not S.BHop; notify("Bunnyhop " .. (S.BHop and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Auto Bunnyhop"]; if mod then mod.SetActive(S.BHop) end
     elseif S.InfJumpKey and S.InfJumpKey ~= Enum.KeyCode.Unknown and k == S.InfJumpKey then
@@ -1113,10 +1193,10 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
     elseif S.JumpStrengthKey and S.JumpStrengthKey ~= Enum.KeyCode.Unknown and k == S.JumpStrengthKey then
         S.ForceJumpPower = not S.ForceJumpPower; local hum = getHum()
         if hum then if S.ForceJumpPower then hum.UseJumpPower = true; hum.JumpPower = S.JumpPower else hum.UseJumpPower = gameDefaultUseJumpPower; hum.JumpPower = gameDefaultJumpPower end end
-        notify("Jump Strength " .. (S.ForceJumpPower and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Jump Hack Strength"]; if mod then mod.SetActive(S.ForceJumpPower) end; saveConfig()
+        notify("Jump Force " .. (S.ForceJumpPower and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Jump Force"]; if mod then mod.SetActive(S.ForceJumpPower) end; saveConfig()
     elseif S.GhostKey and S.GhostKey ~= Enum.KeyCode.Unknown and k == S.GhostKey then
         S.GhostMode = not S.GhostMode; if S.GhostMode then enableGhostMode() else disableGhostMode() end
-        local mod = moduleButtons["Ghost State Mode"]; if mod then mod.SetActive(S.GhostMode) end
+        local mod = moduleButtons["Ghost Mode"]; if mod then mod.SetActive(S.GhostMode) end
     elseif S.BlinkKey and S.BlinkKey ~= Enum.KeyCode.Unknown and k == S.BlinkKey then
         local hrp = getHRP(); local hum = getHum()
         if hrp and hum then
@@ -1142,7 +1222,7 @@ end))
 table.insert(S.Connections, UserInputService.InputEnded:Connect(function(inp, gpe)
     if gpe then return end
     if inp.KeyCode == Enum.KeyCode.LeftShift then
-        if S.SprintEnabled then local hum = getHum(); if hum then hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or gameDefaultSpeed end end
+        if S.SprintEnabled then local hum = getHum(); if hum then hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or (State.gameDefaultSpeed or 16) end end
     end
 end))
 
@@ -1160,9 +1240,18 @@ local function onCharSpawn(char)
         bhopSlipProps = PhysicalProperties.new(bhopOrigProps.Density, bhopLowFriction, bhopOrigProps.Elasticity, 100, bhopOrigProps.ElasticityWeight)
     end
     if hum then
-        if not S.ForceWalkSpeed then gameDefaultSpeed = hum.WalkSpeed end
-        if not S.ForceJumpPower then gameDefaultJumpPower = hum.JumpPower; gameDefaultUseJumpPower = hum.UseJumpPower end
-        hum.UseJumpPower = S.ForceJumpPower and true or gameDefaultUseJumpPower; hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or gameDefaultSpeed
+        if not S.ForceWalkSpeed and not S.TallAnim and not S.SprintEnabled and not S.BHop then
+            State.gameDefaultSpeed = hum.WalkSpeed
+        end
+        if not S.ForceJumpPower and not S.TallAnim then
+            State.gameDefaultJumpPower = hum.JumpPower
+            State.gameDefaultUseJumpPower = hum.UseJumpPower
+        end
+        gameDefaultSpeed = State.gameDefaultSpeed or 16
+        gameDefaultJumpPower = State.gameDefaultJumpPower or 50
+        gameDefaultUseJumpPower = (State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or true
+        hum.UseJumpPower = S.ForceJumpPower and true or gameDefaultUseJumpPower
+        hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or gameDefaultSpeed
         hum.JumpPower = (S.ForceJumpPower and S.JumpPower) or gameDefaultJumpPower
 
         local bhopJumpConn
@@ -1196,7 +1285,6 @@ local function onCharSpawn(char)
     if S.TallAnim then applyTallAnimations(char) end
     if S.CustomIdleAnim then applyCustomIdle(char) end
     if S.GodMode then applyGodMode(char) end
-    if S.OverheadInfo then task.wait(0.3); refreshOverheads() end
     if S.ForceShiftLock then pcall(function() LP.DevEnableMouseLock = true end) end
     updateLocalNametag()
 end
@@ -1212,7 +1300,6 @@ table.insert(S.Connections, Players.PlayerRemoving:Connect(function(p)
     if S.JoinLeaveToasts then notify(p.DisplayName .. " left the server.", Color3.fromRGB(218, 38, 38)) end
     pcall(function()
         destroyESP(p)
-        if S.OverheadPool[p] then pcall(function() S.OverheadPool[p]:Destroy() end); S.OverheadPool[p] = nil end
         if S.ChatConnections[p] then pcall(function() S.ChatConnections[p]:Disconnect() end); S.ChatConnections[p] = nil end
         if State.currentSpectateTarget == p then spectatePlayer(nil) end
     end)
