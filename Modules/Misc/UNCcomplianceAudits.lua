@@ -9,7 +9,7 @@ local addButtonOption = UI.addButtonOption
 local runExternalScript = Utils.runExternalScript
 local teleportToPlace = Utils.teleportToPlace
 
-registerModule("Misc", "UNC compliance & Audits", 720, 50, false, false, nil, function(drawer)
+registerModule("Misc", "Map and Executor tests", 720, 50, false, false, nil, function(drawer)
     addButtonOption(drawer, "Run UNC Test Compliance Suite", function() runExternalScript("UNC Test", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/Unc.lua") end)
     addButtonOption(drawer, "Run Executor Vuln Test", function() runExternalScript("Vulnerability Test", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/VulnerabilityTest.lua") end)
     addButtonOption(drawer, "Run Workspace Instance Dumper", function() runExternalScript("Workspace Dumper", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/WorkspaceDumper.lua") end)

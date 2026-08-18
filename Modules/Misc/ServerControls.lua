@@ -21,7 +21,7 @@ local teleportToHighestPop = Utils.teleportToHighestPop
 
 local serverStatsLabels = State.serverStatsLabels
 
-registerModule("Misc", "Server Controls", 720, 50, false, false, nil, function(drawer)
+registerModule("Misc", "Server Options", 720, 50, false, false, nil, function(drawer)
     addButtonOption(drawer, "Rejoin Instance", function() notify("Rejoining server instance...", Color3.fromRGB(218, 170, 42)); setupAutoReinject(); task.delay(0.5, function() TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LP) end) end)
     addButtonOption(drawer, "Standard Server Hop", teleportToRandom)
     addButtonOption(drawer, "Join Random Server", teleportToRandom)

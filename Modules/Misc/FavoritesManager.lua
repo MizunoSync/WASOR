@@ -36,7 +36,7 @@ local function rebuildFavorites(scroll, filter)
     end
 end
 
-registerModule("Misc", "Favorites Manager", 720, 50, false, false, nil, function(drawer)
+registerModule("Misc", "Favorite games", 720, 50, false, false, nil, function(drawer)
     addTextboxOption(drawer, "Save Place ID to Favorites", "Place ID", function(txt)
         local pid = tonumber(txt:match("%d+"))
         if not pid then notify("Enter a valid place ID", Color3.fromRGB(218, 38, 38)); return end

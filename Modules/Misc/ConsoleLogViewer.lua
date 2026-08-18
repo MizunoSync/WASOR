@@ -13,7 +13,7 @@ local activeConsoleFeed = State.activeConsoleFeed
 local consoleLogs = State.consoleLogs
 local consoleLogsMap = State.consoleLogsMap
 
-registerModule("Misc", "Console Log Viewer", 720, 50, false, false, nil, function(drawer)
+registerModule("Misc", "Console Viewer", 720, 50, false, false, nil, function(drawer)
     local conFeed = addScrollFeedOption(drawer, 80); activeConsoleFeed = conFeed; local showI, showW, showE = true, true, true
     local function rebuildConsole()
         conFeed:Clear()
