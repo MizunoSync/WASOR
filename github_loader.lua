@@ -37,6 +37,7 @@ local Modules = {
     "Modules/Combat/Triggerbot",
     "Modules/Combat/FlingPlayer",
     "Modules/Combat/FlingAll",
+    "Modules/Combat/WalkFling",
 
     -- Player
     "Modules/Player/ResetCharacter",
@@ -76,6 +77,8 @@ local Modules = {
     "Modules/Movement/GravityModifier",
     "Modules/Movement/AntiAnchor",
     "Modules/Movement/AntiSit",
+    "Modules/Movement/HeadSit",
+    "Modules/Movement/AirSwim",
 
     -- Render
     "Modules/Render/ESPBoxOutlines",
@@ -88,7 +91,6 @@ local Modules = {
     "Modules/Render/Chams",
     "Modules/Render/SkipTeammates",
     "Modules/Render/LineOfSight",
-    "Modules/Render/HeadsUpOverheads",
     "Modules/Render/NetworkUserTags",
     "Modules/Render/MapXRay",
     "Modules/Render/ClearVision",
@@ -124,7 +126,8 @@ local Modules = {
     "Modules/Misc/UNCcomplianceAudits",
     "Modules/Misc/ConsoleLogViewer",
     "Modules/Misc/SettingsKeybinds",
-    "Modules/Misc/NetworkChatHub"
+    "Modules/Misc/NetworkChatHub",
+    "Modules/Misc/SaveGame"
 }
 
 local hasFileSystem = isfile and readfile and writefile and makefolder

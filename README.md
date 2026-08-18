@@ -52,7 +52,7 @@ WASOR comes packed with a shit ton of options split into 6 major panels: (Some m
 * **Fire touchinterests** — Relocated from Combat. Fires nearby touch interests as you move.
 * **Proximity Prompt Hacks** — Auto-trigger prompts, instant interact, and fire them all from across the map.
 * **Anti-Void Net** — Auto-saves you if you fall into the void, teleporting you back to safety.
-* **Tool Magnet** — Suck every dropped tool in the map straight to your character.(Client)
+* **Tool Magnet(Local)** — Suck every dropped tool in the map straight to your character.(Client)
 * **Destroy Killbricks & Seats** — Vaporize laser walls and seats instantly.(Client)
 
 ### ⚙️ Other Cool Stuff
