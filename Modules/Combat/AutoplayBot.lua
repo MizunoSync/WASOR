@@ -703,7 +703,7 @@ local function startAutoplay()
 
                 local targetWP = activeWaypoints[activeWaypointIndex]
                 if targetWP then
-                    if S.WalkSpeed and S.WalkSpeed > 16 then
+                    if S.WalkSpeed and S.WalkSpeed > (State.gameDefaultSpeed or 16) then
                         hum.WalkSpeed = S.WalkSpeed
                     end
 
@@ -743,7 +743,7 @@ local function startAutoplay()
             else
                 clearDrawings()
                 if targetHRP then
-                    if S.WalkSpeed and S.WalkSpeed > 16 then
+                    if S.WalkSpeed and S.WalkSpeed > (State.gameDefaultSpeed or 16) then
                         hum.WalkSpeed = S.WalkSpeed
                     end
                     local tPos = targetHRP.Position
