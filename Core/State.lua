@@ -136,13 +136,16 @@ State.updateGameDefaults = function(targetHum)
         local hum = targetHum or (char and (char:FindFirstChildOfClass("Humanoid") or char:FindFirstChild("Humanoid")))
         if hum then
             local S = State.S
-            if not S or not S.ForceWalkSpeed then
+            local isSpeedModified = S and (S.ForceWalkSpeed or S.TallAnim or S.SprintEnabled or S.BHop)
+            local isJumpModified = S and (S.ForceJumpPower or S.TallAnim)
+
+            if not isSpeedModified then
                 State.gameDefaultSpeed = hum.WalkSpeed
                 if S and (not S.WalkSpeed or S.WalkSpeed < hum.WalkSpeed) then
                     S.WalkSpeed = hum.WalkSpeed
                 end
             end
-            if not S or not S.ForceJumpPower then
+            if not isJumpModified then
                 State.gameDefaultJumpPower = hum.JumpPower
                 State.gameDefaultUseJumpPower = hum.UseJumpPower
                 if S and (not S.JumpPower or S.JumpPower < hum.JumpPower) then
@@ -162,7 +165,9 @@ pcall(function()
                 State.updateGameDefaults(hum)
                 pcall(function()
                     hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
-                        if not State.S or not State.S.ForceWalkSpeed then
+                        local S = State.S
+                        local isSpeedModified = S and (S.ForceWalkSpeed or S.TallAnim or S.SprintEnabled or S.BHop)
+                        if not isSpeedModified then
                             State.gameDefaultSpeed = hum.WalkSpeed
                             if State.S then
                                 State.S.WalkSpeed = hum.WalkSpeed
@@ -173,7 +178,9 @@ pcall(function()
                         end
                     end)
                     hum:GetPropertyChangedSignal("JumpPower"):Connect(function()
-                        if not State.S or not State.S.ForceJumpPower then
+                        local S = State.S
+                        local isJumpModified = S and (S.ForceJumpPower or S.TallAnim)
+                        if not isJumpModified then
                             State.gameDefaultJumpPower = hum.JumpPower
                             State.gameDefaultUseJumpPower = hum.UseJumpPower
                             if State.S then

@@ -131,9 +131,13 @@ Utils.revertTallAnimations = function(char)
     if S.TallWalkTrack then S.TallWalkTrack:Stop() S.TallWalkTrack = nil end
     if S.TallIdleTrack then S.TallIdleTrack:Stop() S.TallIdleTrack = nil end
     if S.TallRunningConn then S.TallRunningConn:Disconnect() S.TallRunningConn = nil end
-    hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or (State.gameDefaultSpeed or hum.WalkSpeed or 16)
-    hum.JumpPower = (S.ForceJumpPower and S.JumpPower) or (State.gameDefaultJumpPower or hum.JumpPower or 50)
-    hum.UseJumpPower = S.ForceJumpPower and true or ((State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or hum.UseJumpPower)
+    local resetSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or State.gameDefaultSpeed or 16
+    local resetJump = (S.ForceJumpPower and S.JumpPower) or State.gameDefaultJumpPower or 50
+    local resetUseJump = S.ForceJumpPower and true or ((State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or true)
+
+    hum.WalkSpeed = resetSpeed
+    hum.JumpPower = resetJump
+    hum.UseJumpPower = resetUseJump
 end
 
 Utils.applyCustomIdle = function(char)
