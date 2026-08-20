@@ -109,9 +109,9 @@ Cleanup.cleanupAll = function()
             VH.Utils.disableGodMode()
             local hum = Services.LP.Character:FindFirstChildOfClass("Humanoid")
             if hum then
-                hum.WalkSpeed = State.gameDefaultSpeed or 16
-                hum.JumpPower = State.gameDefaultJumpPower or 50
-                hum.UseJumpPower = (State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or true
+                hum.WalkSpeed = State.gameDefaultSpeed or hum.WalkSpeed or 16
+                hum.JumpPower = State.gameDefaultJumpPower or hum.JumpPower or 50
+                hum.UseJumpPower = (State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or hum.UseJumpPower
             end
             for _, part in ipairs(Services.LP.Character:GetDescendants()) do
                 if part:IsA("BasePart") then

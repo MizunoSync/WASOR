@@ -1192,7 +1192,7 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
         S.InfJump = not S.InfJump; notify("Infinite Jump " .. (S.InfJump and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Infinite Jump"]; if mod then mod.SetActive(S.InfJump) end
     elseif S.JumpStrengthKey and S.JumpStrengthKey ~= Enum.KeyCode.Unknown and k == S.JumpStrengthKey then
         S.ForceJumpPower = not S.ForceJumpPower; local hum = getHum()
-        if hum then if S.ForceJumpPower then hum.UseJumpPower = true; hum.JumpPower = S.JumpPower else hum.UseJumpPower = gameDefaultUseJumpPower; hum.JumpPower = gameDefaultJumpPower end end
+        if hum then if S.ForceJumpPower then hum.UseJumpPower = true; hum.JumpPower = S.JumpPower else hum.UseJumpPower = (State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or true; hum.JumpPower = State.gameDefaultJumpPower or 50 end end
         notify("Jump Force " .. (S.ForceJumpPower and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Jump Force"]; if mod then mod.SetActive(S.ForceJumpPower) end; saveConfig()
     elseif S.GhostKey and S.GhostKey ~= Enum.KeyCode.Unknown and k == S.GhostKey then
         S.GhostMode = not S.GhostMode; if S.GhostMode then enableGhostMode() else disableGhostMode() end
@@ -1247,12 +1247,12 @@ local function onCharSpawn(char)
             State.gameDefaultJumpPower = hum.JumpPower
             State.gameDefaultUseJumpPower = hum.UseJumpPower
         end
-        gameDefaultSpeed = State.gameDefaultSpeed or 16
-        gameDefaultJumpPower = State.gameDefaultJumpPower or 50
-        gameDefaultUseJumpPower = (State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or true
-        hum.UseJumpPower = S.ForceJumpPower and true or gameDefaultUseJumpPower
-        hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or gameDefaultSpeed
-        hum.JumpPower = (S.ForceJumpPower and S.JumpPower) or gameDefaultJumpPower
+        local gDefSpeed = State.gameDefaultSpeed or hum.WalkSpeed or 16
+        local gDefJumpPower = State.gameDefaultJumpPower or hum.JumpPower or 50
+        local gDefUseJumpPower = (State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or hum.UseJumpPower
+        hum.UseJumpPower = S.ForceJumpPower and true or gDefUseJumpPower
+        hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or gDefSpeed
+        hum.JumpPower = (S.ForceJumpPower and S.JumpPower) or gDefJumpPower
 
         local bhopJumpConn
         bhopJumpConn = hum.Jumping:Connect(function()

@@ -454,7 +454,7 @@ UI.addToggleOption = function(parent, name, defaultVal, callback)
     return { Set = function(val) active = val; updateToggle(false) end }
 end
 
-UI.addSliderOption = function(parent, name, min, max, defaultVal, callback)
+UI.addSliderOption = function(parent, name, min, max, defaultVal, callback, defaultDotVal)
     local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 24); row.BackgroundTransparency = 1; row.Parent = parent
     local label = Instance.new("TextLabel"); label.Size = UDim2.new(0.65, 0, 0, 12); label.Position = UDim2.new(0, 4, 0, 0)
     label.BackgroundTransparency = 1; label.Font = Enum.Font.Gotham; label.TextSize = 10; label.TextColor3 = Color3.fromRGB(180, 180, 180)
@@ -471,6 +471,24 @@ UI.addSliderOption = function(parent, name, min, max, defaultVal, callback)
     local slideKnob = Instance.new("Frame"); slideKnob.Size = UDim2.new(0, 10, 0, 10); slideKnob.Position = UDim2.new(1, -5, 0.5, -5)
     slideKnob.BackgroundColor3 = Color3.fromRGB(240, 240, 240); slideKnob.BorderSizePixel = 0; slideKnob.Parent = slideFill
     local knobCorner = Instance.new("UICorner"); knobCorner.CornerRadius = UDim.new(0, 5); knobCorner.Parent = slideKnob
+
+    local dotMarker = nil
+    if defaultDotVal and defaultDotVal >= min and defaultDotVal <= max then
+        local dotPct = math.clamp((defaultDotVal - min) / (max - min), 0, 1)
+        dotMarker = Instance.new("Frame")
+        dotMarker.Name = "DefaultDotMarker"
+        dotMarker.Size = UDim2.new(0, 7, 0, 7)
+        dotMarker.AnchorPoint = Vector2.new(0.5, 0.5)
+        dotMarker.Position = UDim2.new(dotPct, 0, 0.5, 0)
+        dotMarker.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+        dotMarker.BorderSizePixel = 0
+        dotMarker.ZIndex = 4
+        dotMarker.Parent = slideBg
+        local dotCorner = Instance.new("UICorner")
+        dotCorner.CornerRadius = UDim.new(1, 0)
+        dotCorner.Parent = dotMarker
+    end
+
     local slideBtn = Instance.new("TextButton"); slideBtn.Size = UDim2.new(1, 0, 1, 0); slideBtn.BackgroundTransparency = 1; slideBtn.Text = ""; slideBtn.Parent = slideBg
     
     local function updateSlider(input)
@@ -484,7 +502,28 @@ UI.addSliderOption = function(parent, name, min, max, defaultVal, callback)
     slideBtn.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end end)
     local moveCon = Services.UserInputService.InputChanged:Connect(function(input) if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateSlider(input) end end)
     table.insert(State.S.Connections, moveCon)
-    return { Set = function(val) local pct = math.clamp((val - min) / (max - min), 0, 1); slideFill.Size = UDim2.new(pct, 0, 1, 0); valLabel.Text = formatVal(val) end }
+    return {
+        Set = function(val) local pct = math.clamp((val - min) / (max - min), 0, 1); slideFill.Size = UDim2.new(pct, 0, 1, 0); valLabel.Text = formatVal(val) end,
+        SetDefaultDot = function(dotVal)
+            if dotVal and slideBg then
+                local dotPct = math.clamp((dotVal - min) / (max - min), 0, 1)
+                if not dotMarker then
+                    dotMarker = Instance.new("Frame")
+                    dotMarker.Name = "DefaultDotMarker"
+                    dotMarker.Size = UDim2.new(0, 7, 0, 7)
+                    dotMarker.AnchorPoint = Vector2.new(0.5, 0.5)
+                    dotMarker.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+                    dotMarker.BorderSizePixel = 0
+                    dotMarker.ZIndex = 4
+                    dotMarker.Parent = slideBg
+                    local dotCorner = Instance.new("UICorner")
+                    dotCorner.CornerRadius = UDim.new(1, 0)
+                    dotCorner.Parent = dotMarker
+                end
+                dotMarker.Position = UDim2.new(dotPct, 0, 0.5, 0)
+            end
+        end
+    }
 end
 
 UI.addDropdownOption = function(parent, name, optionsList, defaultValIndex, callback)

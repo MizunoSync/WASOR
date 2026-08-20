@@ -23,9 +23,9 @@ State.networkTagsLoopActive = false
 State.wasClimbing = false
 State.wasWallRunning = false
 
-State.gameDefaultSpeed = 16
-State.gameDefaultJumpPower = 50
-State.gameDefaultUseJumpPower = true
+State.gameDefaultSpeed = nil
+State.gameDefaultJumpPower = nil
+State.gameDefaultUseJumpPower = nil
 
 State.currentThemeColor = Color3.fromRGB(141, 47, 196) 
 State.networkTagsRunning = false
@@ -130,13 +130,68 @@ State.flingAllTarget, State.flingAllTime = nil, 0
 State.lastCameraYaw = nil
 State.lastAirVelocity = nil
 
+State.updateGameDefaults = function(targetHum)
+    pcall(function()
+        local char = VH.Services.LP and VH.Services.LP.Character
+        local hum = targetHum or (char and (char:FindFirstChildOfClass("Humanoid") or char:FindFirstChild("Humanoid")))
+        if hum then
+            local S = State.S
+            if not S or not S.ForceWalkSpeed then
+                State.gameDefaultSpeed = hum.WalkSpeed
+                if S and (not S.WalkSpeed or S.WalkSpeed < hum.WalkSpeed) then
+                    S.WalkSpeed = hum.WalkSpeed
+                end
+            end
+            if not S or not S.ForceJumpPower then
+                State.gameDefaultJumpPower = hum.JumpPower
+                State.gameDefaultUseJumpPower = hum.UseJumpPower
+                if S and (not S.JumpPower or S.JumpPower < hum.JumpPower) then
+                    S.JumpPower = hum.JumpPower
+                end
+            end
+        end
+    end)
+end
+
 pcall(function()
-    local char = VH.Services.LP.Character
-    local hum = char and (char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 2))
-    if hum then
-        State.gameDefaultSpeed = hum.WalkSpeed
-        State.gameDefaultJumpPower = hum.JumpPower
-        State.gameDefaultUseJumpPower = hum.UseJumpPower
+    if VH.Services.LP then
+        local function bindHum(char)
+            if not char then return end
+            local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 3)
+            if hum then
+                State.updateGameDefaults(hum)
+                pcall(function()
+                    hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+                        if not State.S or not State.S.ForceWalkSpeed then
+                            State.gameDefaultSpeed = hum.WalkSpeed
+                            if State.S then
+                                State.S.WalkSpeed = hum.WalkSpeed
+                            end
+                            if State.onGameSpeedChanged then
+                                pcall(State.onGameSpeedChanged, hum.WalkSpeed)
+                            end
+                        end
+                    end)
+                    hum:GetPropertyChangedSignal("JumpPower"):Connect(function()
+                        if not State.S or not State.S.ForceJumpPower then
+                            State.gameDefaultJumpPower = hum.JumpPower
+                            State.gameDefaultUseJumpPower = hum.UseJumpPower
+                            if State.S then
+                                State.S.JumpPower = hum.JumpPower
+                            end
+                            if State.onGameJumpChanged then
+                                pcall(State.onGameJumpChanged, hum.JumpPower)
+                            end
+                        end
+                    end)
+                end)
+            end
+        end
+
+        if VH.Services.LP.Character then
+            bindHum(VH.Services.LP.Character)
+        end
+        VH.Services.LP.CharacterAdded:Connect(bindHum)
     end
 end)
 
