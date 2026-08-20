@@ -16,7 +16,7 @@ registerModule("Movement", "Auto Bunnyhop", 300, 50, true, S.BHop, function(v)
     S.BHop = v
     if not v then
         local hum = getHum()
-        if hum then hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or (State.gameDefaultSpeed or 16) end
+        if hum then hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or (State.gameDefaultSpeed or hum.WalkSpeed or 16) end
         local hrp = getHRP()
         if hrp then hrp.CustomPhysicalProperties = nil end
     end
