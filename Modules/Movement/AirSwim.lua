@@ -58,7 +58,7 @@ local function enableAirSwim()
         end)
     end)
 
-    notify("[WASOR 3.0] Air Swim enabled", Color3.fromRGB(50, 195, 75))
+    notify("Air Swim enabled", Color3.fromRGB(50, 195, 75))
 end
 
 local function disableAirSwim()
@@ -84,7 +84,7 @@ local function disableAirSwim()
         hum:ChangeState(Enum.HumanoidStateType.GettingUp)
     end
 
-    notify("[WASOR 3.0] Air Swim disabled", Color3.fromRGB(218, 170, 42))
+    notify("Air Swim disabled", Color3.fromRGB(218, 170, 42))
 end
 
 registerModule("Movement", "Air Swim", 300, 50, true, S.AirSwim, function(v)

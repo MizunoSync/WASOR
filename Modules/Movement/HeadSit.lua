@@ -36,7 +36,7 @@ registerModule("Movement", "Head Sit", 300, 50, true, S.HeadSitActive, function(
     if v then
         local targetPlayer = S.HeadSitTargetPlayer
         if not targetPlayer then
-            notify("[WASOR 3.0] Select a target player in drawer options first!", Color3.fromRGB(218, 170, 42))
+            notify("Select a target player in drawer options first!", Color3.fromRGB(218, 170, 42))
             S.HeadSitActive = false
             local mod = UI.moduleButtons["Head Sit"]
             if mod then mod.SetActive(false) end
@@ -65,20 +65,20 @@ registerModule("Movement", "Head Sit", 300, 50, true, S.HeadSitActive, function(
                 S.HeadSitActive = false
                 local mod = UI.moduleButtons["Head Sit"]
                 if mod then mod.SetActive(false) end
-                notify("[WASOR 3.0] Target player left or dead! Head Sit ended.", Color3.fromRGB(218, 38, 38))
+                notify("Target player left or dead! Head Sit ended.", Color3.fromRGB(218, 38, 38))
             end
         end)
 
-        notify("[WASOR 3.0] Head Sitting on " .. targetPlayer.DisplayName .. "!", Color3.fromRGB(50, 195, 75))
+        notify("Head Sitting on " .. targetPlayer.DisplayName .. "!", Color3.fromRGB(50, 195, 75))
     else
-        notify("[WASOR 3.0] Head Sit disabled", Color3.fromRGB(218, 170, 42))
+        notify("Head Sit disabled", Color3.fromRGB(218, 170, 42))
     end
     saveConfig()
 end, function(drawer)
     addTextboxOption(drawer, "Target Player (Username/Display)", "Type player name...", function(txt)
         if txt == "" then
             S.HeadSitTargetPlayer = nil
-            notify("[WASOR 3.0] Head Sit target cleared", Color3.fromRGB(218, 170, 42))
+            notify("Head Sit target cleared", Color3.fromRGB(218, 170, 42))
             return
         end
         local found = nil
@@ -90,10 +90,10 @@ end, function(drawer)
         end
         if found then
             S.HeadSitTargetPlayer = found
-            notify("[WASOR 3.0] Head Sit target set to: " .. found.DisplayName, Color3.fromRGB(50, 195, 75))
+            notify("Head Sit target set to: " .. found.DisplayName, Color3.fromRGB(50, 195, 75))
         else
             S.HeadSitTargetPlayer = nil
-            notify("[WASOR 3.0] Player not found: " .. txt, Color3.fromRGB(218, 38, 38))
+            notify("Player not found: " .. txt, Color3.fromRGB(218, 38, 38))
         end
     end)
 end, false)
