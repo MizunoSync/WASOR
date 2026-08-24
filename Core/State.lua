@@ -27,7 +27,8 @@ State.gameDefaultSpeed = nil
 State.gameDefaultJumpPower = nil
 State.gameDefaultUseJumpPower = nil
 
-State.currentThemeColor = Color3.fromRGB(141, 47, 196) 
+State.currentThemeColor = Color3.fromRGB(0, 0, 0) 
+State.currentThemeGradientColor = Color3.fromRGB(0, 0, 0)
 State.networkTagsRunning = false
 State.networkTagsPool = {}
 
@@ -84,7 +85,7 @@ State.S = {
     FlyKey = Enum.KeyCode.Unknown, NoClipKey = Enum.KeyCode.Unknown, BHopKey = Enum.KeyCode.Unknown,
     InfJumpKey = Enum.KeyCode.Unknown, GhostKey = Enum.KeyCode.Unknown, BlinkKey = Enum.KeyCode.Unknown,
     JumpStrengthKey = Enum.KeyCode.Unknown,
-    ThemeColor = "Purple", HUDWatermark = true, HUDCoords = true, HUDArrayList = true, HUDArrayListOutside = true,
+    ThemeColor = "Galaxy", ThemeGradientStyle = "Linear Gradient", ThemeGradientAngle = "Horizontal (0°)", CustomThemeHex = "#8D2FC4", GalaxyBgStyle = "Deep Space (Black)", GalaxyCustomBgHex = "#080810", TextAnimationStyle = "Static", HUDWatermark = true, HUDCoords = true, HUDArrayList = true, HUDArrayListOutside = true,
     MacroKey = Enum.KeyCode.Unknown, MacroText = "WeAreSkidding On Top!", UIToggleKey = Enum.KeyCode.RightControl,
     AimbotHoldMode = "M2", AimbotHoldKey = Enum.KeyCode.Unknown, HUDArrayListX = 10, HUDArrayListY = 70,
     TriggerbotActive = false, TriggerbotTeamCheck = true, TriggerbotIgnoreFriends = false, TriggerbotDelay = 0.05,

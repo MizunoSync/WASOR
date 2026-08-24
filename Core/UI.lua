@@ -13,10 +13,32 @@ UI.themeColors = {
     ["Green"] = Color3.fromRGB(46, 204, 113), ["Blue"] = Color3.fromRGB(41, 128, 185),
     ["Yellow"] = Color3.fromRGB(241, 196, 15), ["Cyan"] = Color3.fromRGB(26, 188, 156),
     ["Pink"] = Color3.fromRGB(232, 44, 154), ["Orange"] = Color3.fromRGB(230, 126, 34),
+    ["Sunset"] = Color3.fromRGB(255, 90, 0), ["Emerald"] = Color3.fromRGB(10, 180, 100),
+    ["Midnight"] = Color3.fromRGB(60, 40, 180), ["Gold Rush"] = Color3.fromRGB(255, 215, 0),
+    ["Galaxy"] = Color3.fromRGB(128, 90, 245), ["Custom"] = Color3.fromRGB(141, 47, 196),
     ["Rainbow"] = Color3.fromRGB(141, 47, 196)
 }
 
-local themeHeaders, themeTexts, themeFills, themeToggles = {}, {}, {}, {}
+UI.themeGradients = {
+    ["Purple"] = {Color3.fromRGB(141, 47, 196), Color3.fromRGB(75, 0, 130)},
+    ["Red"] = {Color3.fromRGB(218, 38, 38), Color3.fromRGB(255, 99, 71)},
+    ["Green"] = {Color3.fromRGB(46, 204, 113), Color3.fromRGB(26, 188, 156)},
+    ["Blue"] = {Color3.fromRGB(41, 128, 185), Color3.fromRGB(0, 191, 255)},
+    ["Yellow"] = {Color3.fromRGB(241, 196, 15), Color3.fromRGB(243, 156, 18)},
+    ["Cyan"] = {Color3.fromRGB(26, 188, 156), Color3.fromRGB(52, 152, 219)},
+    ["Pink"] = {Color3.fromRGB(232, 44, 154), Color3.fromRGB(155, 89, 182)},
+    ["Orange"] = {Color3.fromRGB(230, 126, 34), Color3.fromRGB(211, 84, 0)},
+    ["Sunset"] = {Color3.fromRGB(255, 90, 0), Color3.fromRGB(130, 0, 180)},
+    ["Emerald"] = {Color3.fromRGB(10, 180, 100), Color3.fromRGB(140, 240, 80)},
+    ["Midnight"] = {Color3.fromRGB(60, 40, 180), Color3.fromRGB(180, 60, 255)},
+    ["Gold Rush"] = {Color3.fromRGB(255, 215, 0), Color3.fromRGB(184, 115, 51)},
+    ["Galaxy"] = {Color3.fromRGB(130, 80, 255), Color3.fromRGB(0, 210, 255)},
+    ["Custom"] = {Color3.fromRGB(141, 47, 196), Color3.fromRGB(75, 0, 130)},
+    ["Rainbow"] = {Color3.fromRGB(141, 47, 196), Color3.fromRGB(0, 255, 255)}
+}
+
+local themeHeaders, themeTexts, themeFills, themeToggles, themeGradientsList = {}, {}, {}, {}, {}
+local themeLeftCornerFills, themeRightCornerFills = {}, {}
 local activeTab = "Modules"
 local menuBlur = nil
 local screenGui = nil
@@ -40,6 +62,8 @@ UI.showToast = function(message, color)
     if not S.ToastEnabled then return end
     if not toastContainer then return end
     
+    local toastColor = color or State.currentThemeColor
+    
     -- Check if message already exists in activeToasts
     local existing = nil
     for _, t in ipairs(activeToasts) do
@@ -51,16 +75,17 @@ UI.showToast = function(message, color)
     
     if existing then
         existing.count = existing.count + 1
-        existing.label.Text = message .. " (x" .. existing.count .. ")"
+        existing.label.Text = message .. " <font color='#ffffff'><b>(x" .. existing.count .. ")</b></font>"
+        existing.createdTime = tick()
         
         -- Reset progress bar animation
         if existing.tween then
             existing.tween:Cancel()
         end
-        existing.progressBar.Size = UDim2.new(1, 0, 0, 2)
+        existing.progressBar.Size = UDim2.new(1, 0, 0, 2.5)
         
         local tweenInfo = TweenInfo.new(3.5, Enum.EasingStyle.Linear)
-        existing.tween = Services.TweenService:Create(existing.progressBar, tweenInfo, {Size = UDim2.new(0, 0, 0, 2)})
+        existing.tween = Services.TweenService:Create(existing.progressBar, tweenInfo, {Size = UDim2.new(0, 0, 0, 2.5)})
         existing.tween:Play()
         
         -- Cancel existing destroy timer and set a new one
@@ -86,47 +111,58 @@ UI.showToast = function(message, color)
             if t3 then t3:Play() end
             
             t1.Completed:Connect(function()
-                existing.frame:Destroy()
+                pcall(function() existing.frame:Destroy() end)
+            end)
+            task.delay(0.3, function()
+                pcall(function() existing.frame:Destroy() end)
             end)
         end)
         
         return
     end
     
-    -- Create new toast
+    -- Create new toast frame
     local toast = Instance.new("Frame")
-    toast.Size = UDim2.new(1, 0, 0, 38)
-    toast.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    toast.Size = UDim2.new(1, 0, 0, 36)
+    toast.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+    toast.BackgroundTransparency = 0.05
     toast.BorderSizePixel = 0
+    toast.ClipsDescendants = true
     toast.Parent = toastContainer
+    toast:SetAttribute("CreatedTime", tick())
     
-    -- Rounded corners
+    pcall(function()
+        if Services.Debris then Services.Debris:AddItem(toast, 4.2) end
+    end)
+    
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 4)
+    corner.CornerRadius = UDim.new(0, 5)
     corner.Parent = toast
     
     local stroke = Instance.new("UIStroke")
-    stroke.Color = color or State.currentThemeColor
-    stroke.Thickness = 1.2
+    stroke.Color = toastColor
+    stroke.Thickness = 1
     stroke.Parent = toast
     
+    -- Notification Text Label
     local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, -16, 1, -4)
+    lbl.Size = UDim2.new(1, -16, 1, -6)
     lbl.Position = UDim2.new(0, 8, 0, 0)
     lbl.BackgroundTransparency = 1
     lbl.Font = Enum.Font.GothamMedium
     lbl.TextSize = 10
-    lbl.TextColor3 = Color3.fromRGB(245, 245, 245)
+    lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
     lbl.Text = message
+    lbl.RichText = true
     lbl.TextWrapped = true
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = toast
     
-    -- Progress Line at the bottom
+    -- Progress Line at the bottom (original GitHub working design)
     local progressBar = Instance.new("Frame")
-    progressBar.Size = UDim2.new(1, 0, 0, 2)
-    progressBar.Position = UDim2.new(0, 0, 1, -2)
-    progressBar.BackgroundColor3 = color or State.currentThemeColor
+    progressBar.Size = UDim2.new(1, 0, 0, 2.5)
+    progressBar.Position = UDim2.new(0, 0, 1, -2.5)
+    progressBar.BackgroundColor3 = toastColor
     progressBar.BorderSizePixel = 0
     progressBar.Parent = toast
     
@@ -134,19 +170,18 @@ UI.showToast = function(message, color)
     barCorner.CornerRadius = UDim.new(0, 2)
     barCorner.Parent = progressBar
     
-    -- Start animation
+    -- Start entrance animation
     toast.Size = UDim2.new(1, 0, 0, 0)
     lbl.TextTransparency = 1
     stroke.Transparency = 1
-    progressBar.BackgroundTransparency = 1
     
-    Services.TweenService:Create(toast, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 38)}):Play()
+    Services.TweenService:Create(toast, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 36)}):Play()
     Services.TweenService:Create(lbl, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
     Services.TweenService:Create(stroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
-    Services.TweenService:Create(progressBar, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
     
+    -- Drain progress bar width from 100% (1, 0, 0, 2.5) down to 0% (0, 0, 0, 2.5) over 3.5 seconds
     local tweenInfo = TweenInfo.new(3.5, Enum.EasingStyle.Linear)
-    local pTween = Services.TweenService:Create(progressBar, tweenInfo, {Size = UDim2.new(0, 0, 0, 2)})
+    local pTween = Services.TweenService:Create(progressBar, tweenInfo, {Size = UDim2.new(0, 0, 0, 2.5)})
     pTween:Play()
     
     local toastData = {
@@ -156,7 +191,8 @@ UI.showToast = function(message, color)
         label = lbl,
         progressBar = progressBar,
         tween = pTween,
-        color = color
+        color = toastColor,
+        createdTime = tick()
     }
     table.insert(activeToasts, toastData)
     
@@ -175,8 +211,43 @@ UI.showToast = function(message, color)
         
         t1:Play(); t2:Play(); t3:Play(); t4:Play()
         t1.Completed:Connect(function()
-            toast:Destroy()
+            pcall(function() toast:Destroy() end)
         end)
+        task.delay(0.3, function()
+            pcall(function() toast:Destroy() end)
+        end)
+    end)
+end
+
+local toastWatcherActive = false
+local function startToastCleanupWatcher()
+    if toastWatcherActive then return end
+    toastWatcherActive = true
+    task.spawn(function()
+        while State.uiRunning do
+            task.wait(2)
+            if toastContainer then
+                local now = tick()
+                for i = #activeToasts, 1, -1 do
+                    local t = activeToasts[i]
+                    if not t.frame or not t.frame.Parent or (t.createdTime and (now - t.createdTime > 4.5)) then
+                        if t.frame and t.frame.Parent then
+                            pcall(function() t.frame:Destroy() end)
+                        end
+                        table.remove(activeToasts, i)
+                    end
+                end
+                for _, child in ipairs(toastContainer:GetChildren()) do
+                    if child:IsA("Frame") then
+                        local age = child:GetAttribute("CreatedTime")
+                        if age and (now - age > 4.5) then
+                            pcall(function() child:Destroy() end)
+                        end
+                    end
+                end
+            end
+        end
+        toastWatcherActive = false
     end)
 end
 
@@ -256,12 +327,311 @@ UI.updateMenuBlur = function()
         task.delay(0.25, function() if not State.uiVisible then menuBlur.Enabled = false end end)
         return
     end
-    if activeTab == "Settings" then
+        if activeTab == "Settings" then
         menuBlur.Enabled = true; Services.TweenService:Create(menuBlur, TweenInfo.new(0.25), {Size = 16}):Play()
     else
         Services.TweenService:Create(menuBlur, TweenInfo.new(0.25), {Size = 0}):Play()
         task.delay(0.25, function() if activeTab == "Modules" or not State.uiVisible then menuBlur.Enabled = false end end)
     end
+end
+
+local function formatVal(val)
+    if typeof(val) ~= "number" then return tostring(val) end
+    if val == math.floor(val) then return tostring(math.floor(val)) end
+    return string.format("%.2f", val)
+end
+
+local function getGradientAngle(angleStr)
+    if angleStr == "Horizontal (0°)" then return 0
+    elseif angleStr == "Diagonal (45°)" then return 45
+    elseif angleStr == "Vertical (90°)" then return 90
+    elseif angleStr == "Reverse Diagonal (135°)" then return 135
+    end
+    return 0
+end
+
+UI.getGradientSequence = function(col1, col2, style)
+    col1 = col1 or State.currentThemeColor
+    col2 = col2 or State.currentThemeGradientColor or col1
+    style = style or State.S.ThemeGradientStyle or "Linear Gradient"
+    
+    if style == "Solid Color" then
+        return ColorSequence.new({
+            ColorSequenceKeypoint.new(0, col1),
+            ColorSequenceKeypoint.new(1, col1)
+        })
+    elseif style == "Glow Accent" then
+        return ColorSequence.new({
+            ColorSequenceKeypoint.new(0, col1),
+            ColorSequenceKeypoint.new(0.5, col2),
+            ColorSequenceKeypoint.new(1, col1)
+        })
+    elseif style == "Rainbow Animated" then
+        local t = tick() * 0.2
+        local h1 = t % 1
+        local h2 = (t + 0.33) % 1
+        local h3 = (t + 0.66) % 1
+        return ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromHSV(h1, 0.85, 1)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromHSV(h2, 0.85, 1)),
+            ColorSequenceKeypoint.new(1, Color3.fromHSV(h3, 0.85, 1))
+        })
+    else -- "Linear Gradient"
+        return ColorSequence.new({
+            ColorSequenceKeypoint.new(0, col1),
+            ColorSequenceKeypoint.new(1, col2)
+        })
+    end
+end
+
+UI.updateSingleGradient = function(grad)
+    if not grad or not grad.Parent then return end
+    pcall(function()
+        grad.Rotation = getGradientAngle(State.S.ThemeGradientAngle)
+        grad.Color = UI.getGradientSequence(State.currentThemeColor, State.currentThemeGradientColor, State.S.ThemeGradientStyle)
+    end)
+end
+
+UI.updateAllGradients = function()
+    for i = #themeGradientsList, 1, -1 do
+        local grad = themeGradientsList[i]
+        if grad and grad.Parent then
+            UI.updateSingleGradient(grad)
+        else
+            table.remove(themeGradientsList, i)
+        end
+    end
+end
+
+local function addHeaderGradient(obj)
+    if not obj then return end
+    local grad = obj:FindFirstChildOfClass("UIGradient")
+    if not grad then
+        grad = Instance.new("UIGradient")
+        grad.Parent = obj
+    end
+    if not table.find(themeGradientsList, grad) then
+        table.insert(themeGradientsList, grad)
+    end
+    UI.updateSingleGradient(grad)
+    return grad
+end
+
+UI.parseHexColor = function(hexStr)
+    if not hexStr or typeof(hexStr) ~= "string" then return nil end
+    hexStr = hexStr:gsub("#", ""):gsub("%s+", "")
+    if #hexStr == 6 then
+        local r = tonumber(hexStr:sub(1, 2), 16)
+        local g = tonumber(hexStr:sub(3, 4), 16)
+        local b = tonumber(hexStr:sub(5, 6), 16)
+        if r and g and b then
+            return Color3.fromRGB(r, g, b)
+        end
+    end
+    local ok, col = pcall(function() return Color3.fromHex(hexStr) end)
+    if ok and col then return col end
+    return nil
+end
+
+local function getGalaxyBgColor()
+    local S = State.S
+    local style = S.GalaxyBgStyle or "Deep Space (Black)"
+    if style == "Dark Purple Nebula" then
+        return Color3.fromRGB(24, 8, 40)
+    elseif style == "Midnight Blue" then
+        return Color3.fromRGB(6, 14, 35)
+    elseif style == "Cosmic Crimson" then
+        return Color3.fromRGB(35, 6, 18)
+    elseif style == "Custom Hex" then
+        return UI.parseHexColor(S.GalaxyCustomBgHex) or Color3.fromRGB(0, 0, 0)
+    else -- "Deep Space (Black)"
+        return Color3.fromRGB(0, 0, 0)
+    end
+end
+
+local galaxyContainers = {}
+local galaxyStars = {}
+local galaxyActive = false
+
+local function initGalaxyBackground()
+    galaxyContainers = {}
+    galaxyStars = {}
+    
+    local starColors = {
+        Color3.fromRGB(255, 255, 255),
+        Color3.fromRGB(220, 240, 255),
+        Color3.fromRGB(200, 160, 255),
+        Color3.fromRGB(160, 230, 255),
+        Color3.fromRGB(255, 220, 180)
+    }
+    
+    local targets = {}
+    if topBar then table.insert(targets, topBar) end
+    for _, headerObj in ipairs(themeHeaders) do
+        if headerObj and headerObj.Parent and headerObj.Size.Y.Offset >= 20 then
+            if not table.find(targets, headerObj) then
+                table.insert(targets, headerObj)
+            end
+        end
+    end
+    
+    local bgCol = getGalaxyBgColor()
+    for _, parentObj in ipairs(targets) do
+        local c = parentObj:FindFirstChild("GalaxyStarContainer")
+        if not c then
+            c = Instance.new("Frame")
+            c.Name = "GalaxyStarContainer"
+            c.Size = UDim2.new(1, 0, 1, 0)
+            c.BackgroundColor3 = bgCol
+            c.BackgroundTransparency = 0
+            c.BorderSizePixel = 0
+            c.ClipsDescendants = true
+            c.ZIndex = 1
+            c.Parent = parentObj
+        else
+            c.ZIndex = 1
+            c.BackgroundColor3 = bgCol
+            c.BackgroundTransparency = 0
+            c.Visible = true
+            for _, ch in ipairs(c:GetChildren()) do
+                if ch:IsA("Frame") and ch.Name == "Star" then
+                    ch:Destroy()
+                end
+            end
+        end
+        local parentCorner = parentObj:FindFirstChildOfClass("UICorner")
+        if parentCorner and not c:FindFirstChildOfClass("UICorner") then
+            local cCorner = Instance.new("UICorner")
+            cCorner.CornerRadius = parentCorner.CornerRadius
+            cCorner.Parent = c
+        end
+        local owner = parentObj.Parent or parentObj
+        for _, child in ipairs(owner:GetChildren()) do
+            if child:IsA("TextLabel") or child:IsA("TextButton") then
+                if child.Name ~= "GalaxyStarContainer" and child.Name ~= "HeaderVisual" then
+                    child.ZIndex = 5
+                end
+            end
+        end
+        for _, child in ipairs(parentObj:GetChildren()) do
+            if child:IsA("TextLabel") or child:IsA("TextButton") then
+                if child.Name ~= "GalaxyStarContainer" and child.Name ~= "HeaderVisual" then
+                    child.ZIndex = 5
+                end
+            end
+        end
+        table.insert(galaxyContainers, c)
+        
+        for i = 1, 6 do
+            local sz = math.random(1, 2)
+            local star = Instance.new("Frame")
+            star.Name = "Star"
+            star.Size = UDim2.new(0, sz, 0, sz)
+            local startX = math.random()
+            local startY = math.random()
+            star.Position = UDim2.new(startX, 0, startY, 0)
+            star.BackgroundColor3 = starColors[math.random(1, #starColors)]
+            star.BorderSizePixel = 0
+            star.BackgroundTransparency = 0.2 + math.random() * 0.5
+            
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(1, 0)
+            corner.Parent = star
+            star.Parent = c
+            
+            table.insert(galaxyStars, {
+                frame = star,
+                x = startX,
+                y = startY,
+                speed = 0.005 + math.random() * 0.012,
+                drift = (math.random() - 0.5) * 0.005,
+                twinkleSpeed = 2 + math.random() * 3,
+                seed = math.random() * 10
+            })
+        end
+    end
+end
+
+local function setGalaxyContainersVisible(vis)
+    local bgCol = getGalaxyBgColor()
+    for _, c in ipairs(galaxyContainers) do
+        if c and c.Parent then
+            c.Visible = vis
+            if vis then
+                c.BackgroundColor3 = bgCol
+                c.BackgroundTransparency = 0
+            end
+        end
+    end
+end
+
+local function startGalaxyCycle()
+    if galaxyActive then return end
+    galaxyActive = true
+    task.spawn(function()
+        initGalaxyBackground()
+        setGalaxyContainersVisible(true)
+        while State.S.ThemeColor == "Galaxy" and State.uiRunning do
+            task.wait(0.04)
+            setGalaxyContainersVisible(State.uiVisible)
+            local now = tick()
+            for _, s in ipairs(galaxyStars) do
+                if s.frame and s.frame.Parent then
+                    s.y = (s.y - s.speed)
+                    if s.y < 0 then s.y = 1; s.x = math.random() end
+                    s.x = (s.x + s.drift) % 1
+                    local alpha = 0.2 + 0.5 * math.abs(math.sin(now * s.twinkleSpeed + s.seed))
+                    pcall(function()
+                        s.frame.Position = UDim2.new(s.x, 0, s.y, 0)
+                        s.frame.BackgroundTransparency = alpha
+                    end)
+                end
+            end
+        end
+        setGalaxyContainersVisible(false)
+        galaxyActive = false
+    end)
+end
+
+local textAnimActive = false
+local function startTextAnimationLoop()
+    if textAnimActive then return end
+    textAnimActive = true
+    task.spawn(function()
+        while State.uiRunning do
+            task.wait(0.04)
+            local style = State.S.TextAnimationStyle or "Static"
+            if style ~= "Static" and State.uiVisible then
+                local now = tick()
+                local idx = 0
+                for catName, winData in pairs(UI.windows) do
+                    idx = idx + 1
+                    local label = winData.TitleLabel
+                    if label then
+                        if style == "Jumping Gummy" then
+                            local bounce = math.abs(math.sin(now * 6 + idx * 0.5)) * 3.5
+                            label.Position = UDim2.new(0, 8, 0, -bounce)
+                        elseif style == "Wave" then
+                            local wave = math.sin(now * 4 + idx * 0.5) * 3
+                            label.Position = UDim2.new(0, 8 + wave, 0, 0)
+                        elseif style == "Pulse" then
+                            local pulse = 0.75 + 0.25 * math.sin(now * 6)
+                            label.TextTransparency = 1 - pulse
+                        end
+                    end
+                end
+            else
+                for catName, winData in pairs(UI.windows) do
+                    local label = winData.TitleLabel
+                    if label then
+                        label.Position = UDim2.new(0, 8, 0, 0)
+                        label.TextTransparency = 0
+                    end
+                end
+            end
+        end
+        textAnimActive = false
+    end)
 end
 
 local rainbowActive = false
@@ -270,17 +640,22 @@ local function startRainbowCycle()
     rainbowActive = true
     task.spawn(function()
         local hue = 0
-        while State.S.ThemeColor == "Rainbow" and State.uiRunning do
+        while (State.S.ThemeColor == "Rainbow" or State.S.ThemeGradientStyle == "Rainbow Animated") and State.uiRunning do
             task.wait(0.03)
             hue = (hue + 1) % 360
-            local col = Color3.fromHSV(hue / 360, 0.8, 0.9)
-            State.currentThemeColor = col
-            for _, obj in ipairs(themeHeaders) do pcall(function() obj.BackgroundColor3 = col end) end
-            for _, obj in ipairs(themeTexts) do pcall(function() obj.TextColor3 = col end) end
-            for _, obj in ipairs(themeFills) do pcall(function() obj.BackgroundColor3 = col end) end
+            local col1 = Color3.fromHSV(hue / 360, 0.8, 0.9)
+            local col2 = Color3.fromHSV(((hue + 120) % 360) / 360, 0.8, 0.9)
+            State.currentThemeColor = col1
+            State.currentThemeGradientColor = col2
+            for _, obj in ipairs(themeHeaders) do pcall(function() obj.BackgroundColor3 = Color3.fromRGB(255, 255, 255) end) end
+            for _, obj in ipairs(themeTexts) do pcall(function() obj.TextColor3 = Color3.fromRGB(245, 245, 245) end) end
+            for _, obj in ipairs(themeFills) do pcall(function() obj.BackgroundColor3 = col1 end) end
+            for _, obj in ipairs(themeLeftCornerFills) do pcall(function() obj.BackgroundColor3 = col1 end) end
+            for _, obj in ipairs(themeRightCornerFills) do pcall(function() obj.BackgroundColor3 = col2 end) end
             for _, updateFunc in ipairs(themeToggles) do pcall(updateFunc) end
-            for name, btn in pairs(UI.tabButtons) do if name == activeTab then btn.TextColor3 = col end end
-            if hudWatermark then hudWatermark.TextColor3 = col end
+            for name, btn in pairs(UI.tabButtons) do if name == activeTab then btn.TextColor3 = Color3.fromRGB(255, 255, 255) end end
+            if hudWatermark then hudWatermark.TextColor3 = col1 end
+            UI.updateAllGradients()
         end
         rainbowActive = false
     end)
@@ -288,37 +663,110 @@ end
 
 UI.applyThemeColor = function(colorName)
     local S = State.S
-    S.ThemeColor = colorName
-    if colorName == "Rainbow" then
-        startRainbowCycle()
-        return
+    if colorName then S.ThemeColor = colorName end
+    colorName = S.ThemeColor or "Galaxy"
+    
+    local col1, col2
+    if colorName == "Custom" then
+        col1 = UI.parseHexColor(S.CustomThemeHex) or Color3.fromRGB(141, 47, 196)
+        col2 = Color3.fromRGB(math.clamp(math.round(col1.R * 255 * 0.6), 0, 255), math.clamp(math.round(col1.G * 255 * 0.6), 0, 255), math.clamp(math.round(col1.B * 255 * 0.6), 0, 255))
+        UI.themeColors["Custom"] = col1
+        UI.themeGradients["Custom"] = {col1, col2}
+    else
+        col1 = UI.themeColors[colorName] or UI.themeColors["Galaxy"] or UI.themeColors["Purple"]
+        local pair = UI.themeGradients[colorName] or UI.themeGradients["Galaxy"] or UI.themeGradients["Purple"]
+        col2 = pair and pair[2] or col1
     end
     
-    local col = UI.themeColors[colorName] or UI.themeColors["Purple"]
-    State.currentThemeColor = col
-    for _, obj in ipairs(themeHeaders) do pcall(function() obj.BackgroundColor3 = col end) end
-    for _, obj in ipairs(themeTexts) do pcall(function() obj.TextColor3 = col end) end
-    for _, obj in ipairs(themeFills) do pcall(function() obj.BackgroundColor3 = col end) end
+    State.currentThemeColor = col1
+    State.currentThemeGradientColor = col2
+    
+    if colorName == "Galaxy" then
+        initGalaxyBackground()
+        local bgCol = getGalaxyBgColor()
+        for _, c in ipairs(galaxyContainers) do
+            if c and c.Parent then c.BackgroundColor3 = bgCol; c.BackgroundTransparency = 0 end
+        end
+        for _, obj in ipairs(themeHeaders) do pcall(function() obj.BackgroundColor3 = bgCol end) end
+        for _, obj in ipairs(themeLeftCornerFills) do pcall(function() obj.BackgroundColor3 = bgCol end) end
+        for _, obj in ipairs(themeRightCornerFills) do pcall(function() obj.BackgroundColor3 = bgCol end) end
+        setGalaxyContainersVisible(true)
+        task.spawn(startGalaxyCycle)
+    else
+        for _, obj in ipairs(themeHeaders) do pcall(function() obj.BackgroundColor3 = Color3.fromRGB(255, 255, 255) end) end
+        local rightCol = (S.ThemeGradientStyle == "Solid Color" or S.ThemeGradientStyle == "Glow Accent") and col1 or col2
+        for _, obj in ipairs(themeLeftCornerFills) do pcall(function() obj.BackgroundColor3 = col1 end) end
+        for _, obj in ipairs(themeRightCornerFills) do pcall(function() obj.BackgroundColor3 = rightCol end) end
+        setGalaxyContainersVisible(false)
+    end
+    
+    if colorName == "Rainbow" or S.ThemeGradientStyle == "Rainbow Animated" then
+        task.spawn(startRainbowCycle)
+    end
+    
+    for _, obj in ipairs(themeTexts) do pcall(function() obj.TextColor3 = Color3.fromRGB(245, 245, 245) end) end
+    for _, obj in ipairs(themeFills) do pcall(function() obj.BackgroundColor3 = col1 end) end
     for _, updateFunc in ipairs(themeToggles) do pcall(updateFunc) end
-    for name, btn in pairs(UI.tabButtons) do if name == activeTab then btn.TextColor3 = col end end
-    if hudWatermark then hudWatermark.TextColor3 = col end
+    for name, btn in pairs(UI.tabButtons) do
+        if name == activeTab then
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        else
+            btn.TextColor3 = Color3.fromRGB(210, 210, 210)
+        end
+    end
+    if hudWatermark then hudWatermark.TextColor3 = col1 end
+    
+    UI.updateAllGradients()
+    
     task.defer(UI.updateHUDArrayList); task.defer(VH.Utils.updateLocalNametag)
 end
 
-local function makeDraggable(frame, handle)
-    local dragging = false; local dragInput, dragStart, startPos
-    local function update(input)
-        local delta = input.Position - dragStart
-        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+local function makeDraggable(frame, handle, onDragEnd)
+    local dragging = false
+    local dragStart = Vector3.zero
+    local startPos = UDim2.new()
+    local scaleFactor = 1
+    
+    local function getScale()
+        if State.S and State.S.UIScale then
+            return State.S.UIScale
+        end
+        local uiScale = screenGui and (screenGui:FindFirstChildOfClass("UIScale") or screenGui:FindFirstChild("VoidUIScale"))
+        return (uiScale and uiScale.Scale > 0) and uiScale.Scale or 1
     end
+
+    local dragConn = nil
+    local endConn = nil
+
     handle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true; dragStart = input.Position; startPos = frame.Position
-            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            scaleFactor = getScale()
+            
+            if dragConn then dragConn:Disconnect(); dragConn = nil end
+            if endConn then endConn:Disconnect(); endConn = nil end
+            
+            dragConn = Services.UserInputService.InputChanged:Connect(function(moveInput)
+                if dragging and (moveInput.UserInputType == Enum.UserInputType.MouseMovement or moveInput.UserInputType == Enum.UserInputType.Touch) then
+                    local delta = moveInput.Position - dragStart
+                    local dx = delta.X / scaleFactor
+                    local dy = delta.Y / scaleFactor
+                    frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + dx, startPos.Y.Scale, startPos.Y.Offset + dy)
+                end
+            end)
+            
+            endConn = Services.UserInputService.InputEnded:Connect(function(endInput)
+                if endInput.UserInputType == Enum.UserInputType.MouseButton1 or endInput.UserInputType == Enum.UserInputType.Touch then
+                    dragging = false
+                    if dragConn then dragConn:Disconnect(); dragConn = nil end
+                    if endConn then endConn:Disconnect(); endConn = nil end
+                    if onDragEnd then onDragEnd(frame.Position) end
+                end
+            end)
         end
     end)
-    handle.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
-    table.insert(State.S.Connections, Services.UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then update(input) end end))
 end
 
 local function formatVal(val)
@@ -331,20 +779,52 @@ local function formatVal(val)
 end
 
 local function makeResizable(frame, handle)
-    local dragging = false; local dragStart, startSize
-    local function update(input)
-        local delta = input.Position - dragStart
-        local newWidth = math.max(120, startSize.X.Offset + delta.X)
-        local newHeight = math.max(50, startSize.Y.Offset + delta.Y)
-        frame.Size = UDim2.new(0, newWidth, 0, newHeight)
+    local resizing = false
+    local resizeStart = Vector3.zero
+    local startSize = UDim2.new()
+    local scaleFactor = 1
+    
+    local function getScale()
+        if State.S and State.S.UIScale then
+            return State.S.UIScale
+        end
+        local uiScale = screenGui and (screenGui:FindFirstChildOfClass("UIScale") or screenGui:FindFirstChild("VoidUIScale"))
+        return (uiScale and uiScale.Scale > 0) and uiScale.Scale or 1
     end
+
+    local moveConn = nil
+    local endConn = nil
+
     handle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true; dragStart = input.Position; startSize = frame.Size
-            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+            resizing = true
+            resizeStart = input.Position
+            startSize = frame.Size
+            scaleFactor = getScale()
+            
+            if moveConn then moveConn:Disconnect(); moveConn = nil end
+            if endConn then endConn:Disconnect(); endConn = nil end
+            
+            moveConn = Services.UserInputService.InputChanged:Connect(function(moveInput)
+                if resizing and (moveInput.UserInputType == Enum.UserInputType.MouseMovement or moveInput.UserInputType == Enum.UserInputType.Touch) then
+                    local delta = moveInput.Position - resizeStart
+                    local dx = delta.X / scaleFactor
+                    local dy = delta.Y / scaleFactor
+                    local newWidth = math.max(120, startSize.X.Offset + dx)
+                    local newHeight = math.max(50, startSize.Y.Offset + dy)
+                    frame.Size = UDim2.new(0, newWidth, 0, newHeight)
+                end
+            end)
+            
+            endConn = Services.UserInputService.InputEnded:Connect(function(endInput)
+                if endInput.UserInputType == Enum.UserInputType.MouseButton1 or endInput.UserInputType == Enum.UserInputType.Touch then
+                    resizing = false
+                    if moveConn then moveConn:Disconnect(); moveConn = nil end
+                    if endConn then endConn:Disconnect(); endConn = nil end
+                end
+            end)
         end
     end)
-    table.insert(State.S.Connections, Services.UserInputService.InputChanged:Connect(function(input) if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then update(input) end end))
 end
 
 local function findWindowFrame(obj)
@@ -417,17 +897,11 @@ local function adjustWindowSizeToContent(winFrame, contentFrame)
     winFrame:SetAttribute("BaseWidth", width); winFrame:SetAttribute("BaseHeight", finalHeight)
 end
 
-local function addHeaderGradient(obj)
-    local grad = Instance.new("UIGradient")
-    grad.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 160, 160))})
-    grad.Rotation = 90; grad.Parent = obj
-end
-
 
 UI.addToggleOption = function(parent, name, defaultVal, callback)
     local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 18); row.BackgroundTransparency = 1; row.Parent = parent
     local label = Instance.new("TextLabel"); label.Size = UDim2.new(1, -34, 1, 0); label.Position = UDim2.new(0, 4, 0, 0)
-    label.BackgroundTransparency = 1; label.Font = Enum.Font.Gotham; label.TextSize = 10; label.TextColor3 = Color3.fromRGB(180, 180, 180)
+    label.BackgroundTransparency = 1; label.Font = Enum.Font.GothamMedium; label.TextSize = 10; label.TextColor3 = Color3.fromRGB(225, 225, 225)
     label.TextXAlignment = Enum.TextXAlignment.Left; label.Text = name; label.Parent = row
     local btn = Instance.new("TextButton"); btn.Size = UDim2.new(0, 26, 0, 14); btn.Position = UDim2.new(1, -30, 0.5, -7)
     btn.BackgroundColor3 = defaultVal and State.currentThemeColor or Color3.fromRGB(55, 55, 55); btn.BorderSizePixel = 0; btn.Text = ""; btn.Parent = row
@@ -457,11 +931,11 @@ end
 UI.addSliderOption = function(parent, name, min, max, defaultVal, callback, defaultDotVal)
     local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 24); row.BackgroundTransparency = 1; row.Parent = parent
     local label = Instance.new("TextLabel"); label.Size = UDim2.new(0.65, 0, 0, 12); label.Position = UDim2.new(0, 4, 0, 0)
-    label.BackgroundTransparency = 1; label.Font = Enum.Font.Gotham; label.TextSize = 10; label.TextColor3 = Color3.fromRGB(180, 180, 180)
+    label.BackgroundTransparency = 1; label.Font = Enum.Font.GothamMedium; label.TextSize = 10; label.TextColor3 = Color3.fromRGB(225, 225, 225)
     label.TextXAlignment = Enum.TextXAlignment.Left; label.Text = name; label.Parent = row
     local valLabel = Instance.new("TextLabel"); valLabel.Size = UDim2.new(0.35, 0, 0, 12); valLabel.Position = UDim2.new(0.65, -4, 0, 0)
-    valLabel.BackgroundTransparency = 1; valLabel.Font = Enum.Font.GothamBold; valLabel.TextSize = 10; valLabel.TextColor3 = State.currentThemeColor
-    valLabel.TextXAlignment = Enum.TextXAlignment.Right; valLabel.Text = formatVal(defaultVal); valLabel.Parent = row; table.insert(themeTexts, valLabel)
+    valLabel.BackgroundTransparency = 1; valLabel.Font = Enum.Font.GothamBold; valLabel.TextSize = 10; valLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    valLabel.TextXAlignment = Enum.TextXAlignment.Right; valLabel.Text = formatVal(defaultVal); valLabel.Parent = row
     local slideBg = Instance.new("Frame"); slideBg.Size = UDim2.new(1, -8, 0, 5); slideBg.Position = UDim2.new(0, 4, 0, 15)
     slideBg.BackgroundColor3 = Color3.fromRGB(50, 50, 50); slideBg.BorderSizePixel = 0; slideBg.Parent = row
     local bgCorner = Instance.new("UICorner"); bgCorner.CornerRadius = UDim.new(0, 2.5); bgCorner.Parent = slideBg
@@ -527,39 +1001,45 @@ UI.addSliderOption = function(parent, name, min, max, defaultVal, callback, defa
 end
 
 UI.addDropdownOption = function(parent, name, optionsList, defaultValIndex, callback)
-    local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 30); row.BackgroundTransparency = 1; row.Parent = parent
+    local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 32); row.BackgroundTransparency = 1; row.Parent = parent
     local label = Instance.new("TextLabel"); label.Size = UDim2.new(1, 0, 0, 12); label.Position = UDim2.new(0, 4, 0, 0)
-    label.BackgroundTransparency = 1; label.Font = Enum.Font.Gotham; label.TextSize = 10; label.TextColor3 = Color3.fromRGB(180, 180, 180)
+    label.BackgroundTransparency = 1; label.Font = Enum.Font.GothamMedium; label.TextSize = 10; label.TextColor3 = Color3.fromRGB(225, 225, 225)
     label.TextXAlignment = Enum.TextXAlignment.Left; label.Text = name; label.Parent = row
-    local dropBtn = Instance.new("TextButton"); dropBtn.Size = UDim2.new(1, -8, 0, 14); dropBtn.Position = UDim2.new(0, 4, 0, 12)
-    dropBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30); dropBtn.BorderSizePixel = 0; dropBtn.Font = Enum.Font.GothamBold; dropBtn.TextSize = 9
-    dropBtn.TextColor3 = Color3.fromRGB(240, 240, 240); dropBtn.Text = optionsList[defaultValIndex] or "(none)"; dropBtn.Parent = row
+    local dropBtn = Instance.new("TextButton"); dropBtn.Size = UDim2.new(1, -8, 0, 16); dropBtn.Position = UDim2.new(0, 4, 0, 14)
+    dropBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 38); dropBtn.BorderSizePixel = 0; dropBtn.Font = Enum.Font.GothamBold; dropBtn.TextSize = 9
+    dropBtn.TextColor3 = Color3.fromRGB(255, 255, 255); dropBtn.Text = optionsList[defaultValIndex] or "(none)"; dropBtn.Parent = row
     local dropCorner = Instance.new("UICorner"); dropCorner.CornerRadius = UDim.new(0, 4); dropCorner.Parent = dropBtn
-    local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(50, 50, 50); stroke.Parent = dropBtn
-    addHeaderGradient(dropBtn); local open = false; local listContainer = nil
+    local stroke = Instance.new("UIStroke"); stroke.Color = State.currentThemeColor; stroke.Thickness = 1; stroke.Parent = dropBtn
+    table.insert(themeToggles, function() stroke.Color = State.currentThemeColor end)
+    
+    dropBtn.MouseEnter:Connect(function() dropBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55) end)
+    dropBtn.MouseLeave:Connect(function() dropBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 38) end)
+    local open = false; local listContainer = nil
     
     local function toggleDropdown()
         open = not open; local scale = 1.0; local winFrame = findWindowFrame(row)
         if winFrame then local baseW = winFrame:GetAttribute("BaseWidth") or winFrame.Size.X.Offset; if baseW > 0 then scale = winFrame.Size.X.Offset / baseW end end
         if open then
-            listContainer = Instance.new("Frame"); listContainer.Size = UDim2.new(1, 0, 0, #optionsList * 14 * scale)
-            listContainer:SetAttribute("BaseSize", UDim2.new(1, 0, 0, #optionsList * 14)); listContainer:SetAttribute("BasePos", UDim2.new(0, 0, 1, 0))
-            listContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 25); listContainer.BorderSizePixel = 0; listContainer.ZIndex = 20; listContainer.Parent = dropBtn
+            listContainer = Instance.new("Frame"); listContainer.Size = UDim2.new(1, 0, 0, #optionsList * 16 * scale)
+            listContainer:SetAttribute("BaseSize", UDim2.new(1, 0, 0, #optionsList * 16)); listContainer:SetAttribute("BasePos", UDim2.new(0, 0, 1, 2))
+            listContainer.Position = UDim2.new(0, 0, 1, 2); listContainer.BackgroundColor3 = Color3.fromRGB(24, 24, 28); listContainer.BorderSizePixel = 0; listContainer.ZIndex = 25; listContainer.Parent = dropBtn
             local listCorner = Instance.new("UICorner"); listCorner.CornerRadius = UDim.new(0, 4); listCorner.Parent = listContainer
-            local listStroke = Instance.new("UIStroke"); listStroke.Color = Color3.fromRGB(45, 45, 45); listStroke.Parent = listContainer
+            local listStroke = Instance.new("UIStroke"); listStroke.Color = State.currentThemeColor; listStroke.Thickness = 1; listStroke.Parent = listContainer
             local layout = Instance.new("UIListLayout"); layout.Parent = listContainer
             for i, opt in ipairs(optionsList) do
-                local btn = Instance.new("TextButton"); btn.Size = UDim2.new(1, 0, 0, 14 * scale); btn:SetAttribute("BaseSize", UDim2.new(1, 0, 0, 14))
-                btn:SetAttribute("BasePos", UDim2.new(0, 0, 0, 0)); btn:SetAttribute("BaseTextSize", 7); btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-                btn.BorderSizePixel = 0; btn.Font = Enum.Font.Gotham; btn.TextSize = math.clamp(math.round(7 * scale), 7, 24)
-                btn.TextColor3 = Color3.fromRGB(200, 200, 200); btn.Text = opt; btn.ZIndex = 20; btn.Parent = listContainer
+                local btn = Instance.new("TextButton"); btn.Size = UDim2.new(1, 0, 0, 16 * scale); btn:SetAttribute("BaseSize", UDim2.new(1, 0, 0, 16))
+                btn:SetAttribute("BasePos", UDim2.new(0, 0, 0, 0)); btn:SetAttribute("BaseTextSize", 8); btn.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+                btn.BorderSizePixel = 0; btn.Font = Enum.Font.GothamMedium; btn.TextSize = math.clamp(math.round(8 * scale), 8, 24)
+                btn.TextColor3 = Color3.fromRGB(240, 240, 240); btn.Text = opt; btn.ZIndex = 25; btn.Parent = listContainer
                 local itemCorner = Instance.new("UICorner"); itemCorner.CornerRadius = UDim.new(0, 3); itemCorner.Parent = btn
+                btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50); btn.TextColor3 = Color3.fromRGB(255, 255, 255) end)
+                btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(24, 24, 28); btn.TextColor3 = Color3.fromRGB(240, 240, 240) end)
                 btn.MouseButton1Click:Connect(function() dropBtn.Text = opt; callback(i, opt); toggleDropdown() end)
             end
-            row.Size = UDim2.new(1, 0, 0, (30 + #optionsList * 14) * scale); row:SetAttribute("BaseSize", UDim2.new(1, 0, 0, 30 + #optionsList * 14))
+            row.Size = UDim2.new(1, 0, 0, (32 + #optionsList * 16) * scale); row:SetAttribute("BaseSize", UDim2.new(1, 0, 0, 32 + #optionsList * 16))
         else
             if listContainer then listContainer:Destroy(); listContainer = nil end
-            row.Size = UDim2.new(1, 0, 0, 30 * scale); row:SetAttribute("BaseSize", UDim2.new(1, 0, 0, 30))
+            row.Size = UDim2.new(1, 0, 0, 32 * scale); row:SetAttribute("BaseSize", UDim2.new(1, 0, 0, 32))
         end
     end
     dropBtn.MouseButton1Click:Connect(toggleDropdown)
@@ -568,16 +1048,18 @@ end
 
 local keybindRegistry = {}
 UI.addKeybindOption = function(parent, name, defaultKey, callback)
-    local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 18); row.BackgroundTransparency = 1; row.Parent = parent
-    local label = Instance.new("TextLabel"); label.Size = UDim2.new(1, -60, 1, 0); label.Position = UDim2.new(0, 4, 0, 0)
-    label.BackgroundTransparency = 1; label.Font = Enum.Font.Gotham; label.TextSize = 10; label.TextColor3 = Color3.fromRGB(180, 180, 180)
+    local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 20); row.BackgroundTransparency = 1; row.Parent = parent
+    local label = Instance.new("TextLabel"); label.Size = UDim2.new(1, -65, 1, 0); label.Position = UDim2.new(0, 4, 0, 0)
+    label.BackgroundTransparency = 1; label.Font = Enum.Font.GothamMedium; label.TextSize = 10; label.TextColor3 = Color3.fromRGB(225, 225, 225)
     label.TextXAlignment = Enum.TextXAlignment.Left; label.Text = name; label.Parent = row
-    local bindBtn = Instance.new("TextButton"); bindBtn.Size = UDim2.new(0, 50, 0, 14); bindBtn.Position = UDim2.new(1, -54, 0.5, -7)
-    bindBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30); bindBtn.BorderSizePixel = 0; bindBtn.Font = Enum.Font.GothamBold; bindBtn.TextSize = 9
-    bindBtn.TextColor3 = State.currentThemeColor; bindBtn.Text = (defaultKey and defaultKey ~= Enum.KeyCode.Unknown) and defaultKey.Name or "[none]"
-    bindBtn.Parent = row; table.insert(themeTexts, bindBtn)
+    local bindBtn = Instance.new("TextButton"); bindBtn.Size = UDim2.new(0, 55, 0, 16); bindBtn.Position = UDim2.new(1, -59, 0.5, -8)
+    bindBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 38); bindBtn.BorderSizePixel = 0; bindBtn.Font = Enum.Font.GothamBold; bindBtn.TextSize = 9
+    bindBtn.TextColor3 = Color3.fromRGB(255, 255, 255); bindBtn.Text = (defaultKey and defaultKey ~= Enum.KeyCode.Unknown) and defaultKey.Name or "[none]"; bindBtn.Parent = row
     local btnCorner = Instance.new("UICorner"); btnCorner.CornerRadius = UDim.new(0, 4); btnCorner.Parent = bindBtn
-    local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(50, 50, 50); stroke.Parent = bindBtn; addHeaderGradient(bindBtn)
+    local stroke = Instance.new("UIStroke"); stroke.Color = State.currentThemeColor; stroke.Thickness = 1; stroke.Parent = bindBtn
+    table.insert(themeToggles, function() stroke.Color = State.currentThemeColor end)
+    bindBtn.MouseEnter:Connect(function() bindBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55) end)
+    bindBtn.MouseLeave:Connect(function() bindBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 38) end)
     local currentKey = defaultKey; local listening = false
     
     local optObj = {
@@ -616,11 +1098,11 @@ end
 UI.addTextboxOption = function(parent, name, placeholder, callback)
     local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 30); row.BackgroundTransparency = 1; row.Parent = parent
     local label = Instance.new("TextLabel"); label.Size = UDim2.new(1, 0, 0, 12); label.Position = UDim2.new(0, 4, 0, 0)
-    label.BackgroundTransparency = 1; label.Font = Enum.Font.Gotham; label.TextSize = 10; label.TextColor3 = Color3.fromRGB(180, 180, 180)
+    label.BackgroundTransparency = 1; label.Font = Enum.Font.GothamMedium; label.TextSize = 10; label.TextColor3 = Color3.fromRGB(225, 225, 225)
     label.TextXAlignment = Enum.TextXAlignment.Left; label.Text = name; label.Parent = row
     local box = Instance.new("TextBox"); box.Size = UDim2.new(1, -8, 0, 14); box.Position = UDim2.new(0, 4, 0, 12)
     box.BackgroundColor3 = Color3.fromRGB(30, 30, 30); box.BorderSizePixel = 0; box.Font = Enum.Font.Gotham; box.TextSize = 9
-    box.TextColor3 = Color3.fromRGB(240, 240, 240); box.PlaceholderText = placeholder; box.Text = ""; box.ClearTextOnFocus = false; box.Parent = row
+    box.TextColor3 = Color3.fromRGB(255, 255, 255); box.PlaceholderText = placeholder; box.Text = ""; box.ClearTextOnFocus = false; box.Parent = row
     local boxCorner = Instance.new("UICorner"); boxCorner.CornerRadius = UDim.new(0, 4); boxCorner.Parent = box
     local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(50, 50, 50); stroke.Parent = box
     box.FocusLost:Connect(function() callback(box.Text) end)
@@ -628,35 +1110,38 @@ UI.addTextboxOption = function(parent, name, placeholder, callback)
 end
 
 UI.addButtonOption = function(parent, name, callback)
-    local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 18); row.BackgroundTransparency = 1; row.Parent = parent
-    local btn = Instance.new("TextButton"); btn.Size = UDim2.new(1, -8, 0, 14); btn.Position = UDim2.new(0, 4, 0.5, -7)
-    btn.BackgroundColor3 = State.currentThemeColor; btn.BorderSizePixel = 0; btn.Font = Enum.Font.GothamBold; btn.TextSize = 9
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255); btn.Text = name; btn.Parent = row; table.insert(themeHeaders, btn)
+    local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 22); row.BackgroundTransparency = 1; row.Parent = parent
+    local btn = Instance.new("TextButton"); btn.Size = UDim2.new(1, -8, 0, 18); btn.Position = UDim2.new(0, 4, 0.5, -9)
+    btn.BackgroundColor3 = Color3.fromRGB(32, 32, 38); btn.BorderSizePixel = 0; btn.Font = Enum.Font.GothamBold; btn.TextSize = 10
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255); btn.Text = name; btn.Parent = row
     local btnCorner = Instance.new("UICorner"); btnCorner.CornerRadius = UDim.new(0, 4); btnCorner.Parent = btn
-    local btnStroke = Instance.new("UIStroke"); btnStroke.Color = Color3.fromRGB(255, 255, 255); btnStroke.Transparency = 0.85; btnStroke.Parent = btn
-    addHeaderGradient(btn); btn.MouseButton1Click:Connect(callback)
+    local btnStroke = Instance.new("UIStroke"); btnStroke.Color = State.currentThemeColor; btnStroke.Thickness = 1; btnStroke.Parent = btn
+    table.insert(themeToggles, function() btnStroke.Color = State.currentThemeColor end)
+    btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55) end)
+    btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(32, 32, 38) end)
+    btn.MouseButton1Click:Connect(callback)
 end
 
 UI.addSectionHeader = function(parent, title)
     local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 22); row.BackgroundTransparency = 1; row.Parent = parent
     local text = Instance.new("TextLabel"); text.Size = UDim2.new(1, -8, 1, 0); text.Position = UDim2.new(0, 4, 0, 0)
-    text.BackgroundTransparency = 1; text.Font = Enum.Font.GothamBold; text.TextSize = 10; text.TextColor3 = State.currentThemeColor
-    text.TextXAlignment = Enum.TextXAlignment.Left; text.Text = "── " .. title:upper() .. " ──"; text.Parent = row; table.insert(themeTexts, text)
+    text.BackgroundTransparency = 1; text.Font = Enum.Font.GothamBold; text.TextSize = 10; text.TextColor3 = Color3.fromRGB(255, 255, 255)
+    text.TextXAlignment = Enum.TextXAlignment.Left; text.Text = "── " .. title:upper() .. " ──"; text.Parent = row
 end
 
 UI.addInfoRowOption = function(parent, name, initialValue)
     local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 16); row.BackgroundTransparency = 1; row.Parent = parent
     local label = Instance.new("TextLabel"); label.Size = UDim2.new(0.5, 0, 1, 0); label.Position = UDim2.new(0, 4, 0, 0)
-    label.BackgroundTransparency = 1; label.Font = Enum.Font.Gotham; label.TextSize = 10; label.TextColor3 = Color3.fromRGB(180, 180, 180)
+    label.BackgroundTransparency = 1; label.Font = Enum.Font.GothamMedium; label.TextSize = 10; label.TextColor3 = Color3.fromRGB(225, 225, 225)
     label.TextXAlignment = Enum.TextXAlignment.Left; label.Text = name; label.Parent = row
     local valLabel = Instance.new("TextLabel"); valLabel.Size = UDim2.new(0.5, -8, 1, 0); valLabel.Position = UDim2.new(0.5, 4, 0, 0)
-    valLabel.BackgroundTransparency = 1; valLabel.Font = Enum.Font.GothamBold; valLabel.TextSize = 10; valLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+    valLabel.BackgroundTransparency = 1; valLabel.Font = Enum.Font.GothamBold; valLabel.TextSize = 10; valLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     valLabel.TextXAlignment = Enum.TextXAlignment.Right; valLabel.Text = initialValue; valLabel.Parent = row
     return { Label = valLabel, SetValue = function(self, val) valLabel.Text = tostring(val) end, SetColor = function(self, color) valLabel.TextColor3 = color end }
 end
 
 UI.addCustomFrameOption = function(parent, height)
-    local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, height); row.BackgroundTransparency = 1; row.Parent = parent
+    local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, height); row.BackgroundColor3 = Color3.fromRGB(20, 20, 20); row.BackgroundTransparency = 1; row.BorderSizePixel = 0; row.Parent = parent
     return row
 end
 
@@ -692,26 +1177,82 @@ end
 local catPositions = { ["Combat"] = 20, ["Player"] = 210, ["Movement"] = 400, ["Render"] = 590, ["World"] = 780, ["Misc"] = 970, ["Search"] = 1160 }
 UI.getOrCreateWindow = function(catName, defaultX, defaultY)
     if UI.windows[catName] then return UI.windows[catName] end
-    local x = catPositions[catName] or defaultX; local y = defaultY
+    local x = catPositions[catName] or defaultX or 20; local y = defaultY or 75
+    if not defaultY or defaultY == 50 then y = 75 end
     local win = Instance.new("Frame"); win.Size = UDim2.new(0, 180, 0, 22); win.AutomaticSize = Enum.AutomaticSize.Y
     win.Position = UDim2.new(0, x, 0, y); win.BackgroundColor3 = Color3.fromRGB(20, 20, 20); win.BorderSizePixel = 0
     win.ClipsDescendants = true; win.Parent = mainUIContainer
     local winCorner = Instance.new("UICorner"); winCorner.CornerRadius = UDim.new(0, 6); winCorner.Parent = win
-    local header = Instance.new("TextButton"); header.Size = UDim2.new(1, 0, 0, 22); header.BackgroundColor3 = State.currentThemeColor
-    header.BorderSizePixel = 0; header.Font = Enum.Font.GothamBold; header.TextSize = 10; header.TextColor3 = Color3.fromRGB(255, 255, 255)
-    header.TextXAlignment = Enum.TextXAlignment.Left; header.Text = "  " .. catName; header.Parent = win; table.insert(themeHeaders, header); addHeaderGradient(header)
-    local collapseBtn = Instance.new("TextLabel"); collapseBtn.Size = UDim2.new(0, 22, 0, 22); collapseBtn.Position = UDim2.new(1, -22, 0, 0)
+    
+    local header = Instance.new("TextButton")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 22)
+    header.BackgroundColor3 = (State.S.ThemeColor == "Galaxy") and getGalaxyBgColor() or Color3.fromRGB(255, 255, 255)
+    header.BorderSizePixel = 0
+    header.AutoButtonColor = false
+    header.Text = ""
+    header.ClipsDescendants = true
+    header.ZIndex = 2
+    header.Parent = win
+    table.insert(themeHeaders, header)
+    addHeaderGradient(header)
+    local headerCorner = Instance.new("UICorner"); headerCorner.CornerRadius = UDim.new(0, 6); headerCorner.Parent = header
+    
+    local fillL = Instance.new("Frame")
+    fillL.Name = "FillL"
+    fillL.Size = UDim2.new(0, 6, 0, 6)
+    fillL.Position = UDim2.new(0, 0, 1, -6)
+    fillL.BackgroundColor3 = (State.S.ThemeColor == "Galaxy") and getGalaxyBgColor() or State.currentThemeColor
+    fillL.BorderSizePixel = 0
+    fillL.ZIndex = 1
+    fillL.Parent = header
+    table.insert(themeLeftCornerFills, fillL)
+    
+    local rightFillCol = (State.S.ThemeGradientStyle == "Solid Color" or State.S.ThemeGradientStyle == "Glow Accent") and State.currentThemeColor or State.currentThemeGradientColor
+    local fillR = Instance.new("Frame")
+    fillR.Name = "FillR"
+    fillR.Size = UDim2.new(0, 6, 0, 6)
+    fillR.Position = UDim2.new(1, -6, 1, -6)
+    fillR.BackgroundColor3 = (State.S.ThemeColor == "Galaxy") and getGalaxyBgColor() or rightFillCol
+    fillR.BorderSizePixel = 0
+    fillR.ZIndex = 1
+    fillR.Parent = header
+    table.insert(themeRightCornerFills, fillR)
+    
+    local titleLbl = Instance.new("TextLabel"); titleLbl.Size = UDim2.new(1, -30, 1, 0); titleLbl.Position = UDim2.new(0, 8, 0, 0); titleLbl.ZIndex = 5
+    titleLbl.BackgroundTransparency = 1; titleLbl.Font = Enum.Font.GothamBold; titleLbl.TextSize = 10; titleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.Text = catName; titleLbl.Parent = header
+    local collapseBtn = Instance.new("TextLabel"); collapseBtn.Size = UDim2.new(0, 22, 0, 22); collapseBtn.Position = UDim2.new(1, -22, 0, 0); collapseBtn.ZIndex = 5
     collapseBtn.BackgroundTransparency = 1; collapseBtn.Font = Enum.Font.GothamBold; collapseBtn.TextSize = 9
     collapseBtn.TextColor3 = Color3.fromRGB(255, 255, 255); collapseBtn.Text = "▼"; collapseBtn.Parent = header
+    
     local list = Instance.new("Frame"); list.Size = UDim2.new(1, 0, 0, 0); list.AutomaticSize = Enum.AutomaticSize.Y
-    list.Position = UDim2.new(0, 0, 0, 22); list.BackgroundColor3 = Color3.fromRGB(20, 20, 20); list.BackgroundTransparency = 0.15
-    list.BorderSizePixel = 0; list.Parent = win
+    list.Position = UDim2.new(0, 0, 0, 22); list.BackgroundTransparency = 1; list.BorderSizePixel = 0; list.Parent = win
+    local listPadding = Instance.new("UIPadding")
+    listPadding.PaddingTop = UDim.new(0, 0); listPadding.PaddingBottom = UDim.new(0, 4)
+    listPadding.PaddingLeft = UDim.new(0, 0); listPadding.PaddingRight = UDim.new(0, 0)
+    listPadding.Parent = list
     local listLayout = Instance.new("UIListLayout"); listLayout.Padding = UDim.new(0, 1); listLayout.Parent = list
-    local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(30, 30, 30); stroke.Parent = win
+    local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(35, 35, 40); stroke.Thickness = 1; stroke.Parent = win
+    
     makeDraggable(win, header); local collapsed = false
-    local function toggleCollapse() collapsed = not collapsed; list.Visible = not collapsed; collapseBtn.Text = collapsed and "▲" or "▼" end
+    local function toggleCollapse()
+        collapsed = not collapsed
+        list.Visible = not collapsed
+        fillL.Visible = not collapsed
+        fillR.Visible = not collapsed
+        if collapsed then
+            win.AutomaticSize = Enum.AutomaticSize.None
+            win.Size = UDim2.new(0, 180, 0, 22)
+        else
+            win.AutomaticSize = Enum.AutomaticSize.Y
+            win.Size = UDim2.new(0, 180, 0, 22)
+        end
+        collapseBtn.Text = collapsed and "▲" or "▼"
+        if UI.windows[catName] then UI.windows[catName].Collapsed = collapsed end
+    end
     header.MouseButton1Click:Connect(toggleCollapse)
-    UI.windows[catName] = { Frame = win, List = list, Layout = listLayout }; return UI.windows[catName]
+    UI.windows[catName] = { Frame = win, Header = header, TitleLabel = titleLbl, List = list, Layout = listLayout, FillL = fillL, FillR = fillR, Collapsed = false }; return UI.windows[catName]
 end
 
 UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
@@ -719,31 +1260,78 @@ UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
     win.BackgroundColor3 = Color3.fromRGB(20, 20, 20); win.BorderSizePixel = 0; win.ClipsDescendants = true; win.Visible = false
     win.ZIndex = 5; win.Parent = mainUIContainer
     local winCorner = Instance.new("UICorner"); winCorner.CornerRadius = UDim.new(0, 6); winCorner.Parent = win
-    local header = Instance.new("TextButton"); header.Size = UDim2.new(1, 0, 0, 22); header.BackgroundColor3 = State.currentThemeColor
-    header.BorderSizePixel = 0; header.Font = Enum.Font.GothamBold; header.TextSize = 10; header.TextColor3 = Color3.fromRGB(255, 255, 255)
-    header.TextXAlignment = Enum.TextXAlignment.Left; header.Text = "  " .. title; header.Parent = win; table.insert(themeHeaders, header); addHeaderGradient(header)
+    
+    local header = Instance.new("TextButton")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 22)
+    header.BackgroundColor3 = (State.S.ThemeColor == "Galaxy") and getGalaxyBgColor() or Color3.fromRGB(255, 255, 255)
+    header.BorderSizePixel = 0
+    header.AutoButtonColor = false
+    header.Text = ""
+    header.ClipsDescendants = true
+    header.ZIndex = 2
+    header.Parent = win
+    table.insert(themeHeaders, header)
+    addHeaderGradient(header)
+    local headerCorner = Instance.new("UICorner"); headerCorner.CornerRadius = UDim.new(0, 6); headerCorner.Parent = header
+    
+    local fillL = Instance.new("Frame")
+    fillL.Name = "FillL"
+    fillL.Size = UDim2.new(0, 6, 0, 6)
+    fillL.Position = UDim2.new(0, 0, 1, -6)
+    fillL.BackgroundColor3 = (State.S.ThemeColor == "Galaxy") and getGalaxyBgColor() or State.currentThemeColor
+    fillL.BorderSizePixel = 0
+    fillL.ZIndex = 1
+    fillL.Parent = header
+    table.insert(themeLeftCornerFills, fillL)
+    
+    local rightFillCol = (State.S.ThemeGradientStyle == "Solid Color" or State.S.ThemeGradientStyle == "Glow Accent") and State.currentThemeColor or State.currentThemeGradientColor
+    local fillR = Instance.new("Frame")
+    fillR.Name = "FillR"
+    fillR.Size = UDim2.new(0, 6, 0, 6)
+    fillR.Position = UDim2.new(1, -6, 1, -6)
+    fillR.BackgroundColor3 = (State.S.ThemeColor == "Galaxy") and getGalaxyBgColor() or rightFillCol
+    fillR.BorderSizePixel = 0
+    fillR.ZIndex = 1
+    fillR.Parent = header
+    table.insert(themeRightCornerFills, fillR)
+    
+    local titleLbl = Instance.new("TextLabel"); titleLbl.Size = UDim2.new(1, -48, 1, 0); titleLbl.Position = UDim2.new(0, 8, 0, 0); titleLbl.ZIndex = 5
+    titleLbl.BackgroundTransparency = 1; titleLbl.Font = Enum.Font.GothamBold; titleLbl.TextSize = 10; titleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.Text = title; titleLbl.Parent = header
     local collapsed = false; local baseHeight = height
-    local collapseBtn = Instance.new("TextButton"); collapseBtn.Size = UDim2.new(0, 22, 0, 22); collapseBtn.Position = UDim2.new(1, -44, 0, 0)
-    collapseBtn.BackgroundTransparency = 1; collapseBtn.Font = Enum.Font.GothamBold; collapseBtn.TextSize = 10
+    local collapseBtn = Instance.new("TextButton"); collapseBtn.Size = UDim2.new(0, 22, 0, 22); collapseBtn.Position = UDim2.new(1, -44, 0, 0); collapseBtn.ZIndex = 5
+    collapseBtn.BackgroundTransparency = 1; collapseBtn.AutoButtonColor = false; collapseBtn.Font = Enum.Font.GothamBold; collapseBtn.TextSize = 10
     collapseBtn.TextColor3 = Color3.fromRGB(255, 255, 255); collapseBtn.Text = "-"; collapseBtn.Parent = header
-    local closeBtn = Instance.new("TextButton"); closeBtn.Size = UDim2.new(0, 22, 0, 22); closeBtn.Position = UDim2.new(1, -22, 0, 0)
-    closeBtn.BackgroundTransparency = 1; closeBtn.Font = Enum.Font.GothamBold; closeBtn.TextSize = 10
+    local closeBtn = Instance.new("TextButton"); closeBtn.Size = UDim2.new(0, 22, 0, 22); closeBtn.Position = UDim2.new(1, -22, 0, 0); closeBtn.ZIndex = 5
+    closeBtn.BackgroundTransparency = 1; closeBtn.AutoButtonColor = false; closeBtn.Font = Enum.Font.GothamBold; closeBtn.TextSize = 10
     closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255); closeBtn.Text = "X"; closeBtn.Parent = header
     closeBtn.MouseButton1Click:Connect(function() win.Visible = false; win:SetAttribute("UserOpen", false) end)
+    
+    if State.S.ThemeColor == "Galaxy" then
+        initGalaxyBackground()
+    else
+        local grad1 = header:FindFirstChildOfClass("UIGradient")
+        if grad1 then UI.updateSingleGradient(grad1) end
+    end
     local content = Instance.new("ScrollingFrame"); content.Name = "content"; content.Size = UDim2.new(1, 0, 1, -22)
-    content.Position = UDim2.new(0, 0, 0, 22); content.BackgroundColor3 = Color3.fromRGB(20, 20, 20); content.BackgroundTransparency = 0.15
+    content.Position = UDim2.new(0, 0, 0, 22); content.BackgroundColor3 = Color3.fromRGB(20, 20, 20); content.BackgroundTransparency = 1
     content.BorderSizePixel = 0; content.ScrollBarThickness = 2; content.CanvasSize = UDim2.new(0, 0, 0, 0)
     content.AutomaticCanvasSize = Enum.AutomaticSize.Y; content.Parent = win
     local listLayout = Instance.new("UIListLayout"); listLayout.Padding = UDim.new(0, 4); listLayout.Parent = content
-    local padding = Instance.new("UIPadding"); padding.PaddingTop = UDim.new(0, 6); padding.PaddingBottom = UDim.new(0, 6)
-    padding.PaddingLeft = UDim.new(0, 6); padding.PaddingRight = UDim.new(0, 6); padding.Parent = content
-    local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(40, 40, 40); stroke.Thickness = 1.2; stroke.Parent = win
+    local padding = Instance.new("UIPadding"); padding.PaddingTop = UDim.new(0, 4); padding.PaddingBottom = UDim.new(0, 4)
+    padding.PaddingLeft = UDim.new(0, 4); padding.PaddingRight = UDim.new(0, 4); padding.Parent = content
+    local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(35, 35, 40); stroke.Thickness = 1.2; stroke.Parent = win
     local resizeHandle = Instance.new("Frame"); resizeHandle.Name = "resizeHandle"; resizeHandle.Size = UDim2.new(0, 6, 0, 6)
     resizeHandle.Position = UDim2.new(1, -6, 1, -6); resizeHandle.BackgroundColor3 = State.currentThemeColor; resizeHandle.BackgroundTransparency = 0.3
     resizeHandle.BorderSizePixel = 0; resizeHandle.ZIndex = 10; resizeHandle.Parent = win; table.insert(themeFills, resizeHandle)
     makeResizable(win, resizeHandle)
     collapseBtn.MouseButton1Click:Connect(function()
-        collapsed = not collapsed; content.Visible = not collapsed; resizeHandle.Visible = not collapsed
+        collapsed = not collapsed
+        content.Visible = not collapsed
+        fillL.Visible = not collapsed
+        fillR.Visible = not collapsed
+        resizeHandle.Visible = not collapsed
         if collapsed then baseHeight = win.Size.Y.Offset; win.Size = UDim2.new(0, win.Size.X.Offset, 0, 22); collapseBtn.Text = "+"
         else win.Size = UDim2.new(0, win.Size.X.Offset, 0, baseHeight); collapseBtn.Text = "-" end
     end)
@@ -759,8 +1347,8 @@ UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
                 if child:IsA("Frame") and child.Name ~= "resizeHandle" then totalContentHeight = totalContentHeight + child.Size.Y.Offset; count = count + 1 end
             end
             local lL = content:FindFirstChildOfClass("UIListLayout"); local pV = lL and lL.Padding.Offset or (4 * scale)
-            local uP = content:FindFirstChildOfClass("UIPadding"); local pT = uP and uP.PaddingTop.Offset or (6 * scale)
-            local pB = uP and uP.PaddingBottom.Offset or (6 * scale)
+            local uP = content:FindFirstChildOfClass("UIPadding"); local pT = uP and uP.PaddingTop.Offset or (4 * scale)
+            local pB = uP and uP.PaddingBottom.Offset or (4 * scale)
             local contentHeight = pT + pB + totalContentHeight + math.max(0, count - 1) * pV + 2 * scale
             local finalHeight = math.clamp((22 * scale) + contentHeight, 50 * scale, 400 * scale)
             win.Size = UDim2.new(0, currentWidth, 0, finalHeight)
@@ -773,17 +1361,20 @@ end
 UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaultState, callback, populateOptionsFunc, useSeparateWindow, winWidth, winHeight)
     local win = UI.getOrCreateWindow(catName, defaultX, defaultY)
     local container = Instance.new("Frame"); container.Name = "Mod_" .. name; container.Size = UDim2.new(1, 0, 0, 20)
-    container.AutomaticSize = Enum.AutomaticSize.Y; container.BackgroundTransparency = 1; container.BorderSizePixel = 0; container.Parent = win.List
+    container.AutomaticSize = Enum.AutomaticSize.Y; container.BackgroundColor3 = Color3.fromRGB(24, 24, 28); container.BackgroundTransparency = 1; container.BorderSizePixel = 0; container.Parent = win.List
     local btn = Instance.new("TextButton"); btn.Size = UDim2.new(1, 0, 0, 20); btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    btn.BackgroundTransparency = 0.5; btn.BorderSizePixel = 0; btn.Font = Enum.Font.Gotham; btn.TextSize = 9
+    btn.BackgroundTransparency = 0.5; btn.BorderSizePixel = 0; btn.Text = ""; btn.Parent = container
     local inactiveColor = Color3.fromRGB(200, 200, 200)
     if name == "No Recoil" or name == "Silent Aim" or name == "Instant Respawn" then
         inactiveColor = Color3.fromRGB(255, 120, 120)
     elseif name == "God Mode" or name == "UI Name Spoof" then
         inactiveColor = Color3.fromRGB(255, 180, 100)
     end
-    btn.TextColor3 = (isToggle and defaultState) and Color3.fromRGB(100, 240, 100) or inactiveColor
-    btn.Text = "  " .. name; btn.TextXAlignment = Enum.TextXAlignment.Left; btn.Parent = container
+    local modTextLabel = Instance.new("TextLabel"); modTextLabel.Name = "ModTextLabel"; modTextLabel.Size = UDim2.new(1, -20, 1, 0)
+    modTextLabel.Position = UDim2.new(0, 6, 0, 0); modTextLabel.BackgroundTransparency = 1; modTextLabel.Font = Enum.Font.Gotham; modTextLabel.TextSize = 9
+    modTextLabel.TextColor3 = (isToggle and defaultState) and Color3.fromRGB(100, 240, 100) or inactiveColor
+    modTextLabel.TextXAlignment = Enum.TextXAlignment.Left; modTextLabel.Text = name; modTextLabel.ZIndex = 5; modTextLabel.Parent = btn
+    btn.TextColor3 = modTextLabel.TextColor3
     local active = defaultState
     
     local function updateColor()
@@ -793,7 +1384,9 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         elseif name == "God Mode" or name == "UI Name Spoof" then
             currentInactiveColor = Color3.fromRGB(255, 180, 100)
         end
-        btn.TextColor3 = (isToggle and active) and Color3.fromRGB(100, 240, 100) or currentInactiveColor
+        local c = (isToggle and active) and Color3.fromRGB(100, 240, 100) or currentInactiveColor
+        btn.TextColor3 = c
+        modTextLabel.TextColor3 = c
         task.defer(UI.updateHUDArrayList)
     end
     
@@ -801,9 +1394,31 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     local function updateBg()
         local isOpened = false
         if useSeparateWindow and floatingWin then isOpened = floatingWin.Visible elseif drawer then isOpened = drawer.Visible end
-        if isOpened then btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45); btn.BackgroundTransparency = 0.3
-        else btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30); btn.BackgroundTransparency = 0.5 end
+        if isOpened then
+            btn.BackgroundColor3 = Color3.fromRGB(42, 42, 48)
+            btn.BackgroundTransparency = 0
+            container.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
+            container.BackgroundTransparency = 0
+            if not useSeparateWindow and drawer then
+                drawer.BackgroundTransparency = 0
+            end
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            btn.BackgroundTransparency = 0.5
+            container.BackgroundTransparency = 1
+        end
     end
+    
+    btn.MouseEnter:Connect(function()
+        local isOpened = (useSeparateWindow and floatingWin and floatingWin.Visible) or (drawer and drawer.Visible)
+        if not isOpened then
+            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+            btn.BackgroundTransparency = 0.3
+        end
+    end)
+    btn.MouseLeave:Connect(function()
+        updateBg()
+    end)
     
     local function toggleMenu()
         if useSeparateWindow then
@@ -818,11 +1433,11 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
             if not drawer then
                 drawer = Instance.new("Frame"); drawer.Name = "drawer"; drawer.Size = UDim2.new(1, 0, 0, 0)
                 drawer.Position = UDim2.new(0, 0, 0, 20)
-                drawer.AutomaticSize = Enum.AutomaticSize.Y; drawer.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-                drawer.BorderSizePixel = 0; drawer.Visible = false; drawer.Parent = container
+                drawer.AutomaticSize = Enum.AutomaticSize.Y; drawer.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+                drawer.BackgroundTransparency = 0; drawer.BorderSizePixel = 0; drawer.Visible = false; drawer.Parent = container
                 local layout = Instance.new("UIListLayout"); layout.Padding = UDim.new(0, 2); layout.Parent = drawer
                 local pad = Instance.new("UIPadding"); pad.PaddingTop = UDim.new(0, 4); pad.PaddingBottom = UDim.new(0, 4); pad.PaddingLeft = UDim.new(0, 4); pad.PaddingRight = UDim.new(0, 4); pad.Parent = drawer
-                local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(35, 35, 35); stroke.Parent = drawer
+                local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(48, 48, 56); stroke.Thickness = 1; stroke.Parent = drawer
                 if populateOptionsFunc then populateOptionsFunc(drawer) end
             end
             drawer.Visible = not drawer.Visible; updateBg()
@@ -843,6 +1458,8 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     end)
     
     local itemObj = {
+        Button = btn,
+        TextLabel = modTextLabel,
         SetActive = function(val)
             if isToggle and active ~= val then
                 active = val
@@ -863,9 +1480,9 @@ local function selectTab(tabName)
     activeTab = tabName
     for name, btn in pairs(UI.tabButtons) do
         if name == tabName then
-            btn.TextColor3 = State.currentThemeColor; btn.Font = Enum.Font.GothamBold
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255); btn.Font = Enum.Font.GothamBold
         else
-            btn.TextColor3 = Color3.fromRGB(200, 200, 200); btn.Font = Enum.Font.Gotham
+            btn.TextColor3 = Color3.fromRGB(210, 210, 210); btn.Font = Enum.Font.Gotham
         end
     end
     UI.updateMenuBlur()
@@ -912,21 +1529,53 @@ local function createPanel(title, width, height)
     local win = Instance.new("Frame"); win.Size = UDim2.new(0, width, 0, height); win.Position = UDim2.new(0.5, -width/2, 0.5, -height/2)
     win.BackgroundColor3 = Color3.fromRGB(20, 20, 20); win.BorderSizePixel = 0; win.ClipsDescendants = true; win.Visible = false; win.Parent = mainUIContainer
     local winCorner = Instance.new("UICorner"); winCorner.CornerRadius = UDim.new(0, 6); winCorner.Parent = win
-    local header = Instance.new("Frame"); header.Size = UDim2.new(1, 0, 0, 22); header.BackgroundColor3 = State.currentThemeColor; header.BorderSizePixel = 0; header.Parent = win
-    table.insert(themeHeaders, header); addHeaderGradient(header)
-    local titleLbl = Instance.new("TextLabel"); titleLbl.Size = UDim2.new(1, -30, 1, 0); titleLbl.Position = UDim2.new(0, 10, 0, 0)
+    
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 22)
+    header.BackgroundColor3 = (State.S.ThemeColor == "Galaxy") and getGalaxyBgColor() or Color3.fromRGB(255, 255, 255)
+    header.BorderSizePixel = 0
+    header.ClipsDescendants = true
+    header.ZIndex = 2
+    header.Parent = win
+    table.insert(themeHeaders, header)
+    addHeaderGradient(header)
+    local headerCorner = Instance.new("UICorner"); headerCorner.CornerRadius = UDim.new(0, 6); headerCorner.Parent = header
+    
+    local fillL = Instance.new("Frame")
+    fillL.Name = "FillL"
+    fillL.Size = UDim2.new(0, 6, 0, 6)
+    fillL.Position = UDim2.new(0, 0, 1, -6)
+    fillL.BackgroundColor3 = (State.S.ThemeColor == "Galaxy") and getGalaxyBgColor() or State.currentThemeColor
+    fillL.BorderSizePixel = 0
+    fillL.ZIndex = 1
+    fillL.Parent = header
+    table.insert(themeLeftCornerFills, fillL)
+    
+    local rightFillCol = (State.S.ThemeGradientStyle == "Solid Color" or State.S.ThemeGradientStyle == "Glow Accent") and State.currentThemeColor or State.currentThemeGradientColor
+    local fillR = Instance.new("Frame")
+    fillR.Name = "FillR"
+    fillR.Size = UDim2.new(0, 6, 0, 6)
+    fillR.Position = UDim2.new(1, -6, 1, -6)
+    fillR.BackgroundColor3 = (State.S.ThemeColor == "Galaxy") and getGalaxyBgColor() or rightFillCol
+    fillR.BorderSizePixel = 0
+    fillR.ZIndex = 1
+    fillR.Parent = header
+    table.insert(themeRightCornerFills, fillR)
+    
+    local titleLbl = Instance.new("TextLabel"); titleLbl.Size = UDim2.new(1, -30, 1, 0); titleLbl.Position = UDim2.new(0, 10, 0, 0); titleLbl.ZIndex = 5
     titleLbl.BackgroundTransparency = 1; titleLbl.Font = Enum.Font.GothamBold; titleLbl.TextSize = 10; titleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
     titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.Text = title; titleLbl.Parent = header
-    local closeBtn = Instance.new("TextButton"); closeBtn.Size = UDim2.new(0, 22, 0, 22); closeBtn.Position = UDim2.new(1, -22, 0, 0)
+    local closeBtn = Instance.new("TextButton"); closeBtn.Size = UDim2.new(0, 22, 0, 22); closeBtn.Position = UDim2.new(1, -22, 0, 0); closeBtn.ZIndex = 5
     closeBtn.BackgroundTransparency = 1; closeBtn.Font = Enum.Font.GothamBold; closeBtn.TextSize = 10; closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     closeBtn.Text = "X"; closeBtn.Parent = header; closeBtn.MouseButton1Click:Connect(function() win.Visible = false; selectTab("Modules") end)
     local content = Instance.new("ScrollingFrame"); content.Name = "content"; content.Size = UDim2.new(1, 0, 1, -22); content.Position = UDim2.new(0, 0, 0, 22)
-    content.BackgroundColor3 = Color3.fromRGB(20, 20, 20); content.BackgroundTransparency = 0.15; content.BorderSizePixel = 0
+    content.BackgroundColor3 = Color3.fromRGB(20, 20, 20); content.BackgroundTransparency = 1; content.BorderSizePixel = 0
     content.ScrollBarThickness = 2; content.CanvasSize = UDim2.new(0, 0, 0, 0); content.AutomaticCanvasSize = Enum.AutomaticSize.Y; content.Parent = win
     local listLayout = Instance.new("UIListLayout"); listLayout.Padding = UDim.new(0, 4); listLayout.Parent = content
     local padding = Instance.new("UIPadding"); padding.PaddingTop = UDim.new(0, 6); padding.PaddingBottom = UDim.new(0, 6)
     padding.PaddingLeft = UDim.new(0, 6); padding.PaddingRight = UDim.new(0, 6); padding.Parent = content
-    local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(40, 40, 40); stroke.Thickness = 1.2; stroke.Parent = win
+    local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(35, 35, 40); stroke.Thickness = 1.2; stroke.Parent = win
     makeDraggable(win, header)
     return win, content
 end
@@ -944,10 +1593,9 @@ UI.InitializeUI = function()
     mainUIContainer.BackgroundTransparency = 1; mainUIContainer.BorderSizePixel = 0
     mainUIContainer.Visible = true; mainUIContainer.Parent = screenGui
     
-    State.currentThemeColor = UI.themeColors[S.ThemeColor or "Purple"] or UI.themeColors["Purple"]
-    if S.ThemeColor == "Rainbow" then
-        task.spawn(startRainbowCycle)
-    end
+    UI.applyThemeColor(S.ThemeColor or "Purple")
+    task.spawn(startTextAnimationLoop)
+    task.spawn(startToastCleanupWatcher)
     
     menuBlur = Services.Lighting:FindFirstChild("WeAreSkiddingBlur")
     if not menuBlur then menuBlur = Instance.new("BlurEffect"); menuBlur.Name = "WeAreSkiddingBlur"; menuBlur.Size = 0; menuBlur.Enabled = false; menuBlur.Parent = Services.Lighting end
@@ -965,23 +1613,11 @@ UI.InitializeUI = function()
     arrayLayout.VerticalAlignment = Enum.VerticalAlignment.Top; arrayLayout.Padding = UDim.new(0, 2); arrayLayout.Parent = hudArrayListFrame
     
     
-    local arrayDragging, arrayDragStart, arrayStartPos = false, nil, nil
-    hudArrayListFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            arrayDragging = true; arrayDragStart = input.Position; arrayStartPos = hudArrayListFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    arrayDragging = false; S.HUDArrayListX = hudArrayListFrame.Position.X.Offset; S.HUDArrayListY = hudArrayListFrame.Position.Y.Offset; VH.Config.saveConfig()
-                end
-            end)
-        end
+    makeDraggable(hudArrayListFrame, hudArrayListFrame, function(pos)
+        S.HUDArrayListX = pos.X.Offset
+        S.HUDArrayListY = pos.Y.Offset
+        VH.Config.saveConfig()
     end)
-    table.insert(S.Connections, Services.UserInputService.InputChanged:Connect(function(input)
-        if arrayDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - arrayDragStart
-            hudArrayListFrame.Position = UDim2.new(arrayStartPos.X.Scale, arrayStartPos.X.Offset + delta.X, arrayStartPos.Y.Scale, arrayStartPos.Y.Offset + delta.Y)
-        end
-    end))
     
     
     task.spawn(function() while State.uiRunning do task.wait(0.2); pcall(UI.updateHUDArrayList) end end)
@@ -999,14 +1635,14 @@ UI.InitializeUI = function()
     
     local topTitle = Instance.new("TextLabel")
     topTitle.Size = UDim2.new(0, 450, 1, 0); topTitle.Position = UDim2.new(0, 10, 0, 0); topTitle.BackgroundTransparency = 1
-    topTitle.Font = Enum.Font.GothamBold; topTitle.TextSize = 11; topTitle.TextColor3 = State.currentThemeColor
+    topTitle.Font = Enum.Font.GothamBold; topTitle.TextSize = 11; topTitle.TextColor3 = Color3.fromRGB(255, 255, 255); topTitle.ZIndex = 5
     topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.Text = "WeAreSkidding <font color='#ffffff'>On Roblox v3.0</font> <font color='#888888'>(" .. executorName .. ")</font>"
-    topTitle.RichText = true; topTitle.Parent = topBar; table.insert(themeTexts, topTitle)
+    topTitle.Text = "<font color='#ffffff'>WeAreSkidding</font> <font color='#e0e0e0'>On Roblox v3.2</font> <font color='#aaaaaa'>(" .. executorName .. ")</font>"
+    topTitle.RichText = true; topTitle.Parent = topBar
     
     local hudTextLabel = Instance.new("TextLabel")
     hudTextLabel.Size = UDim2.new(0, 300, 1, 0); hudTextLabel.Position = UDim2.new(1, -330, 0, 0); hudTextLabel.BackgroundTransparency = 1
-    hudTextLabel.Font = Enum.Font.Code; hudTextLabel.TextSize = 10; hudTextLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    hudTextLabel.Font = Enum.Font.Code; hudTextLabel.TextSize = 10; hudTextLabel.TextColor3 = Color3.fromRGB(220, 220, 220); hudTextLabel.ZIndex = 5
     hudTextLabel.TextXAlignment = Enum.TextXAlignment.Right; hudTextLabel.Text = "FPS: -- | PING: --"; hudTextLabel.Parent = topBar
     UI.HUDLabel = hudTextLabel
     
@@ -1015,7 +1651,8 @@ UI.InitializeUI = function()
     refreshBtn.Position = UDim2.new(1, -22, 0.5, -6)
     refreshBtn.BackgroundTransparency = 1
     refreshBtn.Image = "rbxassetid://114496992333593"
-    refreshBtn.ImageColor3 = Color3.fromRGB(180, 180, 180)
+    refreshBtn.ImageColor3 = Color3.fromRGB(220, 220, 220)
+    refreshBtn.ZIndex = 5
     refreshBtn.Parent = topBar
     
     refreshBtn.MouseEnter:Connect(function()
@@ -1108,20 +1745,20 @@ UI.InitializeUI = function()
     UI.netHeader = netHeader
     
     hudWatermark = Instance.new("TextLabel")
-    hudWatermark.Size = UDim2.new(0, 200, 0, 14); hudWatermark.Position = UDim2.new(0, 10, 0, 30); hudWatermark.BackgroundTransparency = 1
+    hudWatermark.Size = UDim2.new(0, 200, 0, 14); hudWatermark.Position = UDim2.new(0, 10, 0, 26); hudWatermark.BackgroundTransparency = 1
     hudWatermark.Font = Enum.Font.GothamBold; hudWatermark.TextSize = 10; hudWatermark.TextColor3 = State.currentThemeColor
-    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 3.0"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
+    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 3.2"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
+    table.insert(themeTexts, hudWatermark)
     
     hudCoords = Instance.new("TextLabel")
-    hudCoords.Size = UDim2.new(0, 250, 0, 14); hudCoords.Position = UDim2.new(0, 10, 0, 44); hudCoords.BackgroundTransparency = 1
-    hudCoords.Font = Enum.Font.Code; hudCoords.TextSize = 9; hudCoords.TextColor3 = Color3.fromRGB(200, 200, 200)
+    hudCoords.Size = UDim2.new(0, 250, 0, 14); hudCoords.Position = UDim2.new(0, 10, 0, 40); hudCoords.BackgroundTransparency = 1
+    hudCoords.Font = Enum.Font.Code; hudCoords.TextSize = 9; hudCoords.TextColor3 = Color3.fromRGB(220, 220, 220)
     hudCoords.TextXAlignment = Enum.TextXAlignment.Left; hudCoords.Text = "XYZ: 0.0, 0.0, 0.0"; hudCoords.Visible = S.HUDCoords; hudCoords.Parent = screenGui
     
     hudServerAge = Instance.new("TextLabel")
-    hudServerAge.Size = UDim2.new(0, 250, 0, 14); hudServerAge.Position = UDim2.new(0, 10, 0, 58); hudServerAge.BackgroundTransparency = 1
-    hudServerAge.Font = Enum.Font.Code; hudServerAge.TextSize = 9; hudServerAge.TextColor3 = Color3.fromRGB(150, 150, 150)
-    hudServerAge.TextXAlignment = Enum.TextXAlignment.Left; hudServerAge.Text = "Server Age: 0h 0m 0s"; hudServerAge.Visible = S.ServerAgeHUD; hudServerAge.Parent = screenGui
-    
+    hudServerAge.Size = UDim2.new(0, 250, 0, 14); hudServerAge.Position = UDim2.new(0, 10, 0, 54); hudServerAge.BackgroundTransparency = 1
+    hudServerAge.Font = Enum.Font.Code; hudServerAge.TextSize = 9; hudServerAge.TextColor3 = Color3.fromRGB(200, 200, 200)
+    hudServerAge.TextXAlignment = Enum.TextXAlignment.Left; hudServerAge.Text = "AGE: 0m 0s"; hudServerAge.Visible = S.HUDServerAge; hudServerAge.Parent = screenGui
     
     settingsPanel, settingsContent = createPanel("Client Settings", 460, 320)
     settingsContent.Visible = false
@@ -1167,7 +1804,7 @@ UI.InitializeUI = function()
         
         local padding = Instance.new("UIPadding")
         padding.PaddingTop = UDim.new(0, 8)
-        padding.PaddingBottom = UDim.new(0, 8)
+padding.PaddingBottom = UDim.new(0, 8)
         padding.PaddingLeft = UDim.new(0, 8)
         padding.PaddingRight = UDim.new(0, 8)
         padding.Parent = page
@@ -1177,13 +1814,15 @@ UI.InitializeUI = function()
     
     local pageProfiles = createTabPage()
     local pageUI = createTabPage()
+    local pageHUD = createTabPage()
     local pageInput = createTabPage()
     local pageConfig = createTabPage()
     
     local currentSelectedSettingsTabName = "Profiles"
     local tabPages = {
         ["Profiles"] = pageProfiles,
-        ["UI & HUD"] = pageUI,
+        ["UI Customization"] = pageUI,
+        ["HUD Settings"] = pageHUD,
         ["Input & Macros"] = pageInput,
         ["System & Config"] = pageConfig
     }
@@ -1221,6 +1860,19 @@ UI.InitializeUI = function()
         corner.CornerRadius = UDim.new(0, 4)
         corner.Parent = btn
         
+        btn.MouseEnter:Connect(function()
+            if currentSelectedSettingsTabName ~= tabName then
+                btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+                btn.TextColor3 = State.currentThemeColor
+            end
+        end)
+        btn.MouseLeave:Connect(function()
+            if currentSelectedSettingsTabName ~= tabName then
+                btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+                btn.TextColor3 = Color3.fromRGB(160, 160, 160)
+            end
+        end)
+        
         btn.MouseButton1Click:Connect(function()
             selectSettingsTab(tabName)
         end)
@@ -1229,7 +1881,8 @@ UI.InitializeUI = function()
     end
     
     createSidebarButton("Profiles")
-    createSidebarButton("UI & HUD")
+    createSidebarButton("UI Customization")
+    createSidebarButton("HUD Settings")
     createSidebarButton("Input & Macros")
     createSidebarButton("System & Config")
     
@@ -1276,15 +1929,110 @@ UI.InitializeUI = function()
         VH.Config.saveConfig(); VH.Utils.notify("Rage profile applied!", Color3.fromRGB(218, 38, 38))
     end)
     
-    -- PAGE: UI & HUD
-    UI.addSectionHeader(pageUI, "Visual Theme & Customization")
-    UI.addDropdownOption(pageUI, "Interface Theme Color", {"Purple", "Red", "Green", "Blue", "Yellow", "Cyan", "Pink", "Orange", "Rainbow"}, table.find({"Purple", "Red", "Green", "Blue", "Yellow", "Cyan", "Pink", "Orange", "Rainbow"}, S.ThemeColor) or 1, function(_, opt) UI.applyThemeColor(opt); VH.Config.saveConfig() end)
+    -- PAGE: UI CUSTOMIZATION
+    UI.addSectionHeader(pageUI, "Active UI Theme & Galaxy Config")
+    local allThemes = {"Galaxy", "Purple", "Red", "Green", "Blue", "Yellow", "Cyan", "Pink", "Orange", "Sunset", "Emerald", "Midnight", "Gold Rush", "Rainbow", "Custom"}
+    UI.addDropdownOption(pageUI, "Select Active Theme", allThemes, table.find(allThemes, S.ThemeColor or "Galaxy") or 1, function(_, opt)
+        UI.applyThemeColor(opt)
+        VH.Config.saveConfig()
+    end)
+    
+    local galaxyBgStyles = {"Deep Space (Black)", "Dark Purple Nebula", "Midnight Blue", "Cosmic Crimson", "Custom Hex"}
+    UI.addDropdownOption(pageUI, "Galaxy Background Style", galaxyBgStyles, table.find(galaxyBgStyles, S.GalaxyBgStyle or "Deep Space (Black)") or 1, function(_, opt)
+        S.GalaxyBgStyle = opt
+        if S.ThemeColor == "Galaxy" then UI.applyThemeColor("Galaxy") end
+        VH.Config.saveConfig()
+    end)
+    
+    UI.addTextboxOption(pageUI, "Galaxy Custom Hex BG", S.GalaxyCustomBgHex or "#080810", function(hexText)
+        local parsed = UI.parseHexColor(hexText)
+        if parsed then
+            S.GalaxyCustomBgHex = hexText
+            S.GalaxyBgStyle = "Custom Hex"
+            if S.ThemeColor == "Galaxy" then UI.applyThemeColor("Galaxy") end
+            VH.Config.saveConfig()
+            VH.Utils.notify("Galaxy background color updated!", Color3.fromRGB(50, 195, 75))
+        end
+    end)
+    
+    UI.addSectionHeader(pageUI, "Gradient & Angle Styling")
+    local gradientStyles = {"Linear Gradient", "Glow Accent", "Solid Color", "Rainbow Animated"}
+    UI.addDropdownOption(pageUI, "Theme Gradient Style", gradientStyles, table.find(gradientStyles, S.ThemeGradientStyle or "Linear Gradient") or 1, function(_, opt)
+        S.ThemeGradientStyle = opt
+        UI.applyThemeColor(S.ThemeColor)
+        VH.Config.saveConfig()
+    end)
+    
+    local gradientAngles = {"Horizontal (0°)", "Diagonal (45°)", "Vertical (90°)", "Reverse Diagonal (135°)"}
+    UI.addDropdownOption(pageUI, "Theme Gradient Angle", gradientAngles, table.find(gradientAngles, S.ThemeGradientAngle or "Horizontal (0°)") or 1, function(_, opt)
+        S.ThemeGradientAngle = opt
+        UI.applyThemeColor(S.ThemeColor)
+        VH.Config.saveConfig()
+    end)
+    
+    UI.addSectionHeader(pageUI, "Custom Color Mode (Hex & RGB)")
+    UI.addButtonOption(pageUI, "Enable Custom Color Mode", function()
+        UI.applyThemeColor("Custom")
+        VH.Config.saveConfig()
+        VH.Utils.notify("Custom Theme Color mode active!", Color3.fromRGB(50, 195, 75))
+    end)
+    
+    UI.addTextboxOption(pageUI, "Custom Hex Code (#RRGGBB)", S.CustomThemeHex or "#8D2FC4", function(hexText)
+        local parsed = UI.parseHexColor(hexText)
+        if parsed then
+            S.CustomThemeHex = hexText
+            if S.ThemeColor == "Custom" then
+                UI.applyThemeColor("Custom")
+                VH.Config.saveConfig()
+                VH.Utils.notify("Custom Hex Theme Color applied!", Color3.fromRGB(50, 195, 75))
+            else
+                VH.Utils.notify("Custom Hex saved! Click 'Enable Custom Color Mode' to activate.", Color3.fromRGB(241, 196, 15))
+            end
+        else
+            VH.Utils.notify("Invalid Hex code! Example format: #FF007F", Color3.fromRGB(218, 38, 38))
+        end
+    end)
+    
+    local initialCustomCol = UI.parseHexColor(S.CustomThemeHex) or Color3.fromRGB(141, 47, 196)
+    UI.addSliderOption(pageUI, "Custom Red Channel (0-255)", 0, 255, math.round(initialCustomCol.R * 255), function(rVal)
+        local cur = UI.parseHexColor(S.CustomThemeHex) or Color3.fromRGB(141, 47, 196)
+        S.CustomThemeHex = string.format("#%02X%02X%02X", rVal, math.round(cur.G * 255), math.round(cur.B * 255))
+        if S.ThemeColor == "Custom" then
+            UI.applyThemeColor("Custom")
+            VH.Config.saveConfig()
+        end
+    end)
+    
+    UI.addSliderOption(pageUI, "Custom Green Channel (0-255)", 0, 255, math.round(initialCustomCol.G * 255), function(gVal)
+        local cur = UI.parseHexColor(S.CustomThemeHex) or Color3.fromRGB(141, 47, 196)
+        S.CustomThemeHex = string.format("#%02X%02X%02X", math.round(cur.R * 255), gVal, math.round(cur.B * 255))
+        if S.ThemeColor == "Custom" then
+            UI.applyThemeColor("Custom")
+            VH.Config.saveConfig()
+        end
+    end)
+    
+    UI.addSliderOption(pageUI, "Custom Blue Channel (0-255)", 0, 255, math.round(initialCustomCol.B * 255), function(bVal)
+        local cur = UI.parseHexColor(S.CustomThemeHex) or Color3.fromRGB(141, 47, 196)
+        S.CustomThemeHex = string.format("#%02X%02X%02X", math.round(cur.R * 255), math.round(cur.G * 255), bVal)
+        if S.ThemeColor == "Custom" then
+            UI.applyThemeColor("Custom")
+            VH.Config.saveConfig()
+        end
+    end)
+    
+    UI.addSectionHeader(pageUI, "Text Animations & Font Sizing")
+    local textAnimStyles = {"Static", "Jumping Gummy", "Wave", "Pulse"}
+    UI.addDropdownOption(pageUI, "Module Text Animation", textAnimStyles, table.find(textAnimStyles, S.TextAnimationStyle or "Static") or 1, function(_, opt)
+        S.TextAnimationStyle = opt
+        VH.Config.saveConfig()
+    end)
     
     local fontsList = {"Gotham", "GothamBold", "SourceSans", "SourceSansBold", "Roboto", "RobotoBold", "Ubuntu", "Arcade", "Code", "FredokaOne"}
     UI.addDropdownOption(pageUI, "Interface Font Style", fontsList, table.find(fontsList, S.UIFont or "Gotham") or 1, function(_, opt)
         UI.applyUIFont(opt)
         VH.Config.saveConfig()
-        VH.Utils.notify("[WASOR 3.0] UI Font set to: " .. opt, Color3.fromRGB(50, 195, 75))
+        VH.Utils.notify("UI Font set to: " .. opt, Color3.fromRGB(50, 195, 75))
     end)
     
     UI.addSliderOption(pageUI, "UI Scale Sizing (%)", 70, 150, math.round((S.UIScale or 1.0) * 100), function(v)
@@ -1296,12 +2044,27 @@ UI.InitializeUI = function()
     UI.addKeybindOption(pageUI, "Menu Toggle Keybind", S.UIToggleKey or Enum.KeyCode.RightControl, function(k) S.UIToggleKey = k; VH.Config.saveConfig(); VH.Utils.notify("UI Toggle Keybind set to: " .. k.Name, Color3.fromRGB(50, 195, 75)) end)
     UI.addToggleOption(pageUI, "Show Toasts Enabled", S.ToastEnabled, function(v) S.ToastEnabled = v; VH.Config.saveConfig() end)
     
-    UI.addSectionHeader(pageUI, "Heads Up Display (HUD)")
-    UI.addToggleOption(pageUI, "Display Client Watermark", S.HUDWatermark, function(v) S.HUDWatermark = v; hudWatermark.Visible = v; VH.Config.saveConfig() end)
-    UI.addToggleOption(pageUI, "Display Player Coordinates", S.HUDCoords, function(v) S.HUDCoords = v; hudCoords.Visible = v; VH.Config.saveConfig() end)
-    UI.addToggleOption(pageUI, "Display Server Age HUD", S.ServerAgeHUD, function(v) S.ServerAgeHUD = v; hudServerAge.Visible = v; VH.Config.saveConfig() end)
-    UI.addToggleOption(pageUI, "Display Active ArrayList", S.HUDArrayList, function(v) S.HUDArrayList = v; UI.updateHUDArrayList(); VH.Config.saveConfig() end)
-    UI.addToggleOption(pageUI, "Display active mods when outside of the main UI", S.HUDArrayListOutside, function(v) S.HUDArrayListOutside = v; UI.updateHUDArrayList(); VH.Config.saveConfig() end)
+    UI.addSectionHeader(pageUI, "Visual Theme Reset")
+    UI.addButtonOption(pageUI, "Reset Visual Theme Defaults", function()
+        S.ThemeColor = "Galaxy"
+        S.ThemeGradientStyle = "Linear Gradient"
+        S.ThemeGradientAngle = "Horizontal (0°)"
+        S.CustomThemeHex = "#8D2FC4"
+        S.GalaxyBgStyle = "Deep Space (Black)"
+        S.GalaxyCustomBgHex = "#080810"
+        S.TextAnimationStyle = "Static"
+        UI.applyThemeColor("Galaxy")
+        VH.Config.saveConfig()
+        VH.Utils.notify("Visual theme reset to Galaxy defaults!", Color3.fromRGB(218, 38, 38))
+    end)
+    
+    -- PAGE: HUD SETTINGS
+    UI.addSectionHeader(pageHUD, "Heads Up Display (HUD)")
+    UI.addToggleOption(pageHUD, "Display Client Watermark", S.HUDWatermark, function(v) S.HUDWatermark = v; hudWatermark.Visible = v; VH.Config.saveConfig() end)
+    UI.addToggleOption(pageHUD, "Display Player Coordinates", S.HUDCoords, function(v) S.HUDCoords = v; hudCoords.Visible = v; VH.Config.saveConfig() end)
+    UI.addToggleOption(pageHUD, "Display Server Age HUD", S.ServerAgeHUD, function(v) S.ServerAgeHUD = v; hudServerAge.Visible = v; VH.Config.saveConfig() end)
+    UI.addToggleOption(pageHUD, "Display Active ArrayList", S.HUDArrayList, function(v) S.HUDArrayList = v; UI.updateHUDArrayList(); VH.Config.saveConfig() end)
+    UI.addToggleOption(pageHUD, "Display active mods when outside of the main UI", S.HUDArrayListOutside, function(v) S.HUDArrayListOutside = v; UI.updateHUDArrayList(); VH.Config.saveConfig() end)
     
     -- PAGE: INPUT & MACROS
     UI.addSectionHeader(pageInput, "Target Locker & Friends")
@@ -1344,6 +2107,7 @@ UI.InitializeUI = function()
     navBar.Size = UDim2.new(0, 600, 1, 0)
     navBar.Position = UDim2.new(0.5, -300, 0, 0)
     navBar.BackgroundTransparency = 1
+    navBar.ZIndex = 5
     navBar.Parent = topBar
     
     local navLayout = Instance.new("UIListLayout")
@@ -1360,12 +2124,13 @@ UI.InitializeUI = function()
         btn.BackgroundTransparency = 1
         btn.Font = Enum.Font.Gotham
         btn.TextSize = 12
-        btn.TextColor3 = (tabName == activeTab) and State.currentThemeColor or Color3.fromRGB(200, 200, 200)
+        btn.TextColor3 = (tabName == activeTab) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(210, 210, 210)
         if tabName == activeTab then btn.Font = Enum.Font.GothamBold end
         btn.Text = tabName
+        btn.ZIndex = 5
         btn.Parent = navBar
-        btn.MouseEnter:Connect(function() if activeTab ~= tabName then btn.TextColor3 = Color3.fromRGB(255, 255, 255) end end)
-        btn.MouseLeave:Connect(function() if activeTab ~= tabName then btn.TextColor3 = Color3.fromRGB(200, 200, 200) end end)
+        btn.MouseEnter:Connect(function() if activeTab ~= tabName then btn.TextColor3 = State.currentThemeColor end end)
+        btn.MouseLeave:Connect(function() if activeTab ~= tabName then btn.TextColor3 = Color3.fromRGB(210, 210, 210) end end)
         btn.MouseButton1Click:Connect(function() selectTab(tabName) end)
         UI.tabButtons[tabName] = btn
     end
@@ -1373,15 +2138,16 @@ UI.InitializeUI = function()
     searchBox = Instance.new("TextBox")
     searchBox.Name = "SearchBox"
     searchBox.Size = UDim2.new(0, 110, 0, 16)
-    searchBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    searchBox.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     searchBox.BorderSizePixel = 0
     searchBox.Font = Enum.Font.Gotham
     searchBox.TextSize = 9
-    searchBox.TextColor3 = Color3.fromRGB(240, 240, 240)
-    searchBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
+    searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    searchBox.PlaceholderColor3 = Color3.fromRGB(180, 180, 180)
     searchBox.PlaceholderText = "Search..."
     searchBox.Text = ""
     searchBox.ClearTextOnFocus = false
+    searchBox.ZIndex = 5
     searchBox.Parent = navBar
 
     local searchCorner = Instance.new("UICorner")
@@ -1433,7 +2199,7 @@ UI.InitializeUI = function()
     catPositions = { ["Combat"] = 20, ["Player"] = 210, ["Movement"] = 400, ["Render"] = 590, ["World"] = 780, ["Misc"] = 970, ["Search"] = 1160 }
     
     selectTab("Modules")
-    UI.applyThemeColor(S.ThemeColor or "Purple")
+    UI.applyThemeColor(S.ThemeColor or "Galaxy")
     UI.applyUIFont(S.UIFont or "Gotham")
     UI.applyUIScale(S.UIScale or 1.0)
     
@@ -1457,7 +2223,7 @@ UI.InitializeUI = function()
                 if writefile then
                     pcall(function() writefile("utility_hub_visited.txt", "true") end)
                 end
-                UI.showToast("Welcome to WASOR 3.0!", State.currentThemeColor)
+                UI.showToast("Welcome to WASOR 3.2!", State.currentThemeColor)
                 task.wait(2.2)
                 UI.showToast("Toggle UI with [Right Control]", State.currentThemeColor)
                 task.wait(2.2)
