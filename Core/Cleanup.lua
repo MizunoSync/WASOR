@@ -4,25 +4,80 @@ local Cleanup = {}
 local Services = VH.Services
 local State = VH.State
 
-Cleanup.destroyESP = function(p)
+local function getGuiContainers()
+    local containers = {}
+    pcall(function()
+        if gethui then
+            local h = gethui()
+            if h and not table.find(containers, h) then table.insert(containers, h) end
+        end
+        if get_hidden_gui then
+            local hg = get_hidden_gui()
+            if hg and not table.find(containers, hg) then table.insert(containers, hg) end
+        end
+        if Services.CoreGui and not table.find(containers, Services.CoreGui) then
+            table.insert(containers, Services.CoreGui)
+        end
+        if Services.LP then
+            local pg = Services.LP:FindFirstChild("PlayerGui")
+            if pg and not table.find(containers, pg) then table.insert(containers, pg) end
+        end
+    end)
+    return containers
+end
+
+Cleanup.hideESP = function(p)
     local S = State.S
-    local pool = S.ESPPool[p]
+    local pool = S.ESPPool and S.ESPPool[p]
     if pool then
-        pcall(function() pool.boxOutline.Visible = false; pool.boxOutline:Remove() end)
-        pcall(function() pool.boxFill.Visible = false; pool.boxFill:Remove() end)
-        pcall(function() pool.tracer.Visible = false; pool.tracer:Remove() end)
-        pcall(function() pool.nameTag.Visible = false; pool.nameTag:Remove() end)
-        pcall(function() pool.healthText.Visible = false; pool.healthText:Remove() end)
-        pcall(function() pool.distText.Visible = false; pool.distText:Remove() end)
-        pcall(function() pool.healthBarOutline.Visible = false; pool.healthBarOutline:Remove() end)
-        pcall(function() pool.healthBarFill.Visible = false; pool.healthBarFill:Remove() end)
-        pcall(function() if pool.losLine then pool.losLine.Visible = false; pool.losLine:Remove() end end)
-        pcall(function() if pool.indicator then pool.indicator.Visible = false; pool.indicator:Remove() end end)
+        if pool.boxOutline then pcall(function() pool.boxOutline.Visible = false end) end
+        if pool.boxFill then pcall(function() pool.boxFill.Visible = false end) end
+        if pool.tracer then pcall(function() pool.tracer.Visible = false end) end
+        if pool.nameTag then pcall(function() pool.nameTag.Visible = false end) end
+        if pool.healthText then pcall(function() pool.healthText.Visible = false end) end
+        if pool.distText then pcall(function() pool.distText.Visible = false end) end
+        if pool.healthBarOutline then pcall(function() pool.healthBarOutline.Visible = false end) end
+        if pool.healthBarFill then pcall(function() pool.healthBarFill.Visible = false end) end
+        if pool.losLine then pcall(function() pool.losLine.Visible = false end) end
+        if pool.indicator then pcall(function() pool.indicator.Visible = false end) end
         if pool.skeleton then
-            for _, line in ipairs(pool.skeleton) do pcall(function() line.Visible = false; line:Remove() end) end
+            for _, line in ipairs(pool.skeleton) do pcall(function() line.Visible = false end) end
         end
         if pool.corners then
-            for _, line in ipairs(pool.corners) do pcall(function() line.Visible = false; line:Remove() end) end
+            for _, line in ipairs(pool.corners) do pcall(function() line.Visible = false end) end
+        end
+    end
+end
+
+Cleanup.hideAllESP = function()
+    local S = State.S
+    if S.ESPPool then
+        for p, _ in pairs(S.ESPPool) do
+            Cleanup.hideESP(p)
+        end
+    end
+end
+
+Cleanup.destroyESP = function(p)
+    local S = State.S
+    local pool = S.ESPPool and S.ESPPool[p]
+    if pool then
+        Cleanup.hideESP(p)
+        pcall(function() if pool.boxOutline then pool.boxOutline:Remove() end end)
+        pcall(function() if pool.boxFill then pool.boxFill:Remove() end end)
+        pcall(function() if pool.tracer then pool.tracer:Remove() end end)
+        pcall(function() if pool.nameTag then pool.nameTag:Remove() end end)
+        pcall(function() if pool.healthText then pool.healthText:Remove() end end)
+        pcall(function() if pool.distText then pool.distText:Remove() end end)
+        pcall(function() if pool.healthBarOutline then pool.healthBarOutline:Remove() end end)
+        pcall(function() if pool.healthBarFill then pool.healthBarFill:Remove() end end)
+        pcall(function() if pool.losLine then pool.losLine:Remove() end end)
+        pcall(function() if pool.indicator then pool.indicator:Remove() end end)
+        if pool.skeleton then
+            for _, line in ipairs(pool.skeleton) do pcall(function() line:Remove() end) end
+        end
+        if pool.corners then
+            for _, line in ipairs(pool.corners) do pcall(function() line:Remove() end) end
         end
         S.ESPPool[p] = nil
     end
@@ -30,29 +85,34 @@ end
 
 Cleanup.cleanupAll = function()
     local S = State.S
+    State.uiRunning = false
+    State.networkTagsRunning = false
+    State.networkTagsLoopActive = false
+    
     pcall(function()
-        for _, child in ipairs(Services.CoreGui:GetChildren()) do
-            if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" then
-                pcall(function() child:Destroy() end)
-            end
+        if _G.WASOR_ScreenGui and _G.WASOR_ScreenGui.Parent then
+            pcall(function() _G.WASOR_ScreenGui:Destroy() end)
+            _G.WASOR_ScreenGui = nil
         end
-        local pg = Services.LP:FindFirstChild("PlayerGui")
-        if pg then 
-            for _, child in ipairs(pg:GetChildren()) do
-                if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" then
-                    pcall(function() child:Destroy() end)
+        local containers = getGuiContainers()
+        for _, parent in ipairs(containers) do
+            pcall(function()
+                for _, child in ipairs(parent:GetChildren()) do
+                    if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "NetworkUserTag" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
+                        pcall(function() child:Destroy() end)
+                    end
                 end
-            end
+            end)
         end
         if State.clearNetworkTags then pcall(State.clearNetworkTags) end
-        State.networkTagsRunning = false
-        State.networkTagsLoopActive = false
-        State.uiRunning = false
     end)
     
     for _, c in ipairs(S.Connections) do pcall(function() c:Disconnect() end) end
     S.Connections = {}
     pcall(function() Services.RunService:UnbindFromRenderStep("VoidESPUpdate") end)
+    pcall(function() Services.RunService:UnbindFromRenderStep("VoidAimbotUpdate") end)
+    pcall(function() Services.RunService:UnbindFromRenderStep("VoidFlyUpdate") end)
+    pcall(function() Services.RunService:UnbindFromRenderStep("VoidFreecamUpdate") end)
     
     if S.GodModeConn then pcall(function() S.GodModeConn:Disconnect() end) S.GodModeConn = nil end
     if S.TallRunningConn then pcall(function() S.TallRunningConn:Disconnect() end) S.TallRunningConn = nil end
@@ -78,6 +138,14 @@ Cleanup.cleanupAll = function()
     if S.FloatBody then pcall(function() S.FloatBody:Destroy() end) S.FloatBody = nil end
     if S.WaterPlat then pcall(function() S.WaterPlat:Destroy() end) S.WaterPlat = nil end
     if State.UI_CirclePart then pcall(function() State.UI_CirclePart:Destroy() end) State.UI_CirclePart = nil end
+    
+    pcall(function()
+        for _, obj in ipairs(Services.Workspace:GetChildren()) do
+            if obj.Name == "UltraInstinctCircle" or obj.Name == "VoidWaterPlat" or obj.Name == "VoidAirWalkPlatform" or obj.Name == "GhostDummy" then
+                pcall(function() obj:Destroy() end)
+            end
+        end
+    end)
     
     if State.playerCards then
         for p, item in pairs(State.playerCards) do
