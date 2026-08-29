@@ -1,15 +1,46 @@
-
-if _G.VoidHubLoading then return end
-_G.VoidHubLoading = true
-
 if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
     pcall(_G.VoidHub.Cleanup.cleanupAll)
 end
 
+pcall(function()
+    local RunService = game:GetService("RunService")
+    RunService:UnbindFromRenderStep("VoidESPUpdate")
+    RunService:UnbindFromRenderStep("VoidAimbotUpdate")
+    RunService:UnbindFromRenderStep("VoidFlyUpdate")
+    RunService:UnbindFromRenderStep("VoidFreecamUpdate")
+end)
+
+pcall(function()
+    if _G.WASOR_ScreenGui and _G.WASOR_ScreenGui.Parent then
+        pcall(function() _G.WASOR_ScreenGui:Destroy() end)
+        _G.WASOR_ScreenGui = nil
+    end
+    local containers = {}
+    if gethui then pcall(function() table.insert(containers, gethui()) end) end
+    if get_hidden_gui then pcall(function() table.insert(containers, get_hidden_gui()) end) end
+    pcall(function()
+        local CoreGui = game:GetService("CoreGui")
+        if CoreGui then table.insert(containers, CoreGui) end
+    end)
+    pcall(function()
+        local Players = game:GetService("Players")
+        if Players.LocalPlayer and Players.LocalPlayer:FindFirstChild("PlayerGui") then
+            table.insert(containers, Players.LocalPlayer.PlayerGui)
+        end
+    end)
+    for _, parent in ipairs(containers) do
+        pcall(function()
+            for _, child in ipairs(parent:GetChildren()) do
+                if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
+                    pcall(function() child:Destroy() end)
+                end
+            end
+        end)
+    end
+end)
+
 _G.VoidHub = {}
-
 local VH = _G.VoidHub
-
 
 local CoreModules = {
     "Core/Services",
@@ -20,7 +51,6 @@ local CoreModules = {
     "Core/Cleanup",
     "Core/UI"
 }
-
 
 local function logInitCrash(context, err, stack)
     if VH.Logger and VH.Logger.logCrash then
@@ -74,9 +104,7 @@ local function runFile(path)
     end
 end
 
-
 local Modules = {
-    -- Combat
     "Modules/Combat/GodMode",
     "Modules/Combat/AutoplayBot",
     "Modules/Combat/KillAura",
@@ -90,7 +118,6 @@ local Modules = {
     "Modules/Combat/FlingAll",
     "Modules/Combat/WalkFling",
 
-    -- Player
     "Modules/Player/ResetCharacter",
     "Modules/Player/InstantRespawn",
     "Modules/Player/NametagCustomizer",
@@ -105,7 +132,6 @@ local Modules = {
     "Modules/Player/AutoRejoin",
     "Modules/Player/SpectateFreecam",
 
-    -- Movement
     "Modules/Movement/SpeedModification",
     "Modules/Movement/SprintSpeedBoost",
     "Modules/Movement/JumpHackStrength",
@@ -131,7 +157,6 @@ local Modules = {
     "Modules/Movement/HeadSit",
     "Modules/Movement/AirSwim",
 
-    -- Render
     "Modules/Render/ESPBoxOutlines",
     "Modules/Render/ESPTracerLines",
     "Modules/Render/ShowPlayerNames",
@@ -153,7 +178,6 @@ local Modules = {
     "Modules/Render/OutOfViewIndicators",
     "Modules/Render/Minimap",
 
-    -- World
     "Modules/World/InstantPrompts",
     "Modules/World/FireAllPrompts",
     "Modules/World/FireCDDetectors",
@@ -168,7 +192,6 @@ local Modules = {
     "Modules/World/AntiVoidNet",
     "Modules/World/FireTouchinterests",
 
-    -- Misc
     "Modules/Misc/ServerControls",
     "Modules/Misc/FavoritesManager",
     "Modules/Misc/OnlineFriends",
@@ -196,8 +219,6 @@ local success, err = pcall(function()
 
     runFile("Core/Runtime")
 end)
-
-_G.VoidHubLoading = nil
 
 if not success then
     warn("[WASOR Loader] Initialization error: " .. tostring(err))
