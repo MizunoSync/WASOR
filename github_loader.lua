@@ -1,12 +1,45 @@
-if _G.VoidHubLoading then return end
-_G.VoidHubLoading = true
-
 if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
     pcall(_G.VoidHub.Cleanup.cleanupAll)
 end
 
+pcall(function()
+    local RunService = game:GetService("RunService")
+    RunService:UnbindFromRenderStep("VoidESPUpdate")
+    RunService:UnbindFromRenderStep("VoidAimbotUpdate")
+    RunService:UnbindFromRenderStep("VoidFlyUpdate")
+    RunService:UnbindFromRenderStep("VoidFreecamUpdate")
+end)
+
+pcall(function()
+    if _G.WASOR_ScreenGui and _G.WASOR_ScreenGui.Parent then
+        pcall(function() _G.WASOR_ScreenGui:Destroy() end)
+        _G.WASOR_ScreenGui = nil
+    end
+    local containers = {}
+    if gethui then pcall(function() table.insert(containers, gethui()) end) end
+    if get_hidden_gui then pcall(function() table.insert(containers, get_hidden_gui()) end) end
+    pcall(function()
+        local CoreGui = game:GetService("CoreGui")
+        if CoreGui then table.insert(containers, CoreGui) end
+    end)
+    pcall(function()
+        local Players = game:GetService("Players")
+        if Players.LocalPlayer and Players.LocalPlayer:FindFirstChild("PlayerGui") then
+            table.insert(containers, Players.LocalPlayer.PlayerGui)
+        end
+    end)
+    for _, parent in ipairs(containers) do
+        pcall(function()
+            for _, child in ipairs(parent:GetChildren()) do
+                if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
+                    pcall(function() child:Destroy() end)
+                end
+            end
+        end)
+    end
+end)
+
 _G.VoidHub = {}
---- xz
 
 local GITHUB_USERNAME = "MizunoSync"
 local GITHUB_REPO = "WASOR"
@@ -25,7 +58,6 @@ local CoreModules = {
 }
 
 local Modules = {
-    -- Combat
     "Modules/Combat/GodMode",
     "Modules/Combat/AutoplayBot",
     "Modules/Combat/KillAura",
@@ -39,7 +71,6 @@ local Modules = {
     "Modules/Combat/FlingAll",
     "Modules/Combat/WalkFling",
 
-    -- Player
     "Modules/Player/ResetCharacter",
     "Modules/Player/InstantRespawn",
     "Modules/Player/NametagCustomizer",
@@ -54,7 +85,6 @@ local Modules = {
     "Modules/Player/AutoRejoin",
     "Modules/Player/SpectateFreecam",
 
-    -- Movement
     "Modules/Movement/SpeedModification",
     "Modules/Movement/SprintSpeedBoost",
     "Modules/Movement/JumpHackStrength",
@@ -80,7 +110,6 @@ local Modules = {
     "Modules/Movement/HeadSit",
     "Modules/Movement/AirSwim",
 
-    -- Render
     "Modules/Render/ESPBoxOutlines",
     "Modules/Render/ESPTracerLines",
     "Modules/Render/ShowPlayerNames",
@@ -102,7 +131,6 @@ local Modules = {
     "Modules/Render/OutOfViewIndicators",
     "Modules/Render/Minimap",
 
-    -- World
     "Modules/World/InstantPrompts",
     "Modules/World/FireAllPrompts",
     "Modules/World/FireCDDetectors",
@@ -117,7 +145,6 @@ local Modules = {
     "Modules/World/AntiVoidNet",
     "Modules/World/FireTouchinterests",
 
-    -- Misc
     "Modules/Misc/ServerControls",
     "Modules/Misc/FavoritesManager",
     "Modules/Misc/OnlineFriends",
@@ -130,48 +157,33 @@ local Modules = {
     "Modules/Misc/SaveGame"
 }
 
-local hasFileSystem = isfile and readfile and writefile and makefolder
+local hasFileSystem = (writefile and readfile and isfile and makefolder and isfolder)
 
-local function createFolders()
-    pcall(makefolder, "WASOR_cache")
-    pcall(makefolder, "WASOR_cache/Core")
-    pcall(makefolder, "WASOR_cache/Modules")
-    pcall(makefolder, "WASOR_cache/Modules/Combat")
-    pcall(makefolder, "WASOR_cache/Modules/Player")
-    pcall(makefolder, "WASOR_cache/Modules/Movement")
-    pcall(makefolder, "WASOR_cache/Modules/Render")
-    pcall(makefolder, "WASOR_cache/Modules/World")
-    pcall(makefolder, "WASOR_cache/Modules/Misc")
-end
-
--- Get latest commit SHA from GitHub API
-local latestSHA = nil
-if hasFileSystem then
-    local success, response = pcall(game.HttpGet, game, string.format("https://api.github.com/repos/%s/%s/commits/%s", GITHUB_USERNAME, GITHUB_REPO, GITHUB_BRANCH))
+local function getLatestCommitSHA()
+    local apiUrl = string.format("https://api.github.com/repos/%s/%s/commits/%s", GITHUB_USERNAME, GITHUB_REPO, GITHUB_BRANCH)
+    local success, response = pcall(game.HttpGet, game, apiUrl)
     if success and response then
-        latestSHA = response:match('"sha"%s*:%s*"([^"]+)"')
+        local sha = response:match('"sha"%s*:%s*"([^"]+)"')
+        return sha
     end
+    return nil
 end
 
+local cachedSHA = nil
+local latestSHA = nil
 local useCache = false
-if hasFileSystem and latestSHA then
-    local cacheSHAPath = "WASOR_cache/commit_sha.txt"
-    if isfile(cacheSHAPath) then
-        local localSHA = readfile(cacheSHAPath)
-        if localSHA == latestSHA then
-            useCache = true
-        end
-    end
-end
 
-if useCache then
-    print("[WASOR Loader] Loading WASOR from local cache (Commit: " .. latestSHA:sub(1, 7) .. ")")
-else
-    if hasFileSystem and latestSHA then
-        print("[WASOR Loader] Changes detected or first run. Downloading WASOR from GitHub...")
-        createFolders()
-    else
-        print("[WASOR Loader] Running in fallback network mode.")
+if hasFileSystem then
+    if not isfolder("WASOR_Cache") then
+        pcall(makefolder, "WASOR_Cache")
+    end
+    if isfile("WASOR_Cache/commit_sha.txt") then
+        local success, val = pcall(readfile, "WASOR_Cache/commit_sha.txt")
+        if success then cachedSHA = val end
+    end
+    latestSHA = getLatestCommitSHA()
+    if latestSHA and cachedSHA and latestSHA == cachedSHA then
+        useCache = true
     end
 end
 
@@ -179,16 +191,25 @@ local downloadFailed = false
 
 local function runFile(path)
     local content = nil
-    local cachePath = "WASOR_cache/" .. path .. ".lua"
+    local cachePath = "WASOR_Cache/" .. path .. ".lua"
     
-    if useCache and isfile(cachePath) then
-        content = readfile(cachePath)
-    else
-        local url = BASE_URL .. path .. ".lua?t=" .. tostring(os.time())
+    if useCache and hasFileSystem and isfile(cachePath) then
+        local success, cachedCode = pcall(readfile, cachePath)
+        if success and cachedCode and #cachedCode > 0 then
+            content = cachedCode
+        end
+    end
+    
+    if not content then
+        local url = BASE_URL .. path .. ".lua"
         local success, result = pcall(game.HttpGet, game, url)
-        if success and result then
+        if success and result and #result > 0 then
             content = result
             if hasFileSystem and latestSHA then
+                local folderPath = cachePath:match("(.+)/[^/]+$")
+                if folderPath and not isfolder(folderPath) then
+                    pcall(makefolder, folderPath)
+                end
                 pcall(writefile, cachePath, result)
             end
         else
@@ -215,7 +236,9 @@ for _, modulePath in ipairs(CoreModules) do
     runFile(modulePath)
 end
 
-_G.VoidHub.UI.InitializeUI()
+if _G.VoidHub and _G.VoidHub.UI and _G.VoidHub.UI.InitializeUI then
+    _G.VoidHub.UI.InitializeUI()
+end
 
 for _, modulePath in ipairs(Modules) do
     runFile(modulePath)
@@ -224,8 +247,5 @@ end
 runFile("Core/Runtime")
 
 if not useCache and hasFileSystem and latestSHA and not downloadFailed then
-    pcall(writefile, "WASOR_cache/commit_sha.txt", latestSHA)
-    print("[WASOR] 모든 파일이 다운로드되었습니다. 해당 커밋에 대한 캐시가 업데이트되었습니다.: " .. latestSHA:sub(1, 7))
+    pcall(writefile, "WASOR_Cache/commit_sha.txt", latestSHA)
 end
-
-_G.VoidHubLoading = nil
