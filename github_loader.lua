@@ -111,6 +111,8 @@ local Modules = {
     "Modules/Movement/AirSwim",
 
     "Modules/Render/ESPBoxOutlines",
+    "Modules/Render/ESPPreview",
+    "Modules/Render/PaperDollHUD",
     "Modules/Render/ESPTracerLines",
     "Modules/Render/ShowPlayerNames",
     "Modules/Render/ShowHealthText",
@@ -159,16 +161,38 @@ local Modules = {
 
 local hasFileSystem = (writefile and readfile and isfile and makefolder and isfolder)
 
+local function httpRequest(url)
+    local reqFn = (syn and syn.request) or (http and http.request) or http_request or request
+    if reqFn then
+        local ok, res = pcall(reqFn, {
+            Url = url,
+            Method = "GET",
+            Headers = {
+                ["User-Agent"] = "WASOR-Loader"
+            }
+        })
+        if ok and res and (res.StatusCode == 200 or res.Status == 200) and res.Body then
+            return res.Body
+        end
+    end
+    local ok, res = pcall(game.HttpGet, game, url)
+    if ok and res then
+        return res
+    end
+    return nil
+end
+
 local function getLatestCommitSHA()
     local apiUrl = string.format("https://api.github.com/repos/%s/%s/commits/%s", GITHUB_USERNAME, GITHUB_REPO, GITHUB_BRANCH)
-    local success, response = pcall(game.HttpGet, game, apiUrl)
-    if success and response then
+    local response = httpRequest(apiUrl)
+    if response then
         local sha = response:match('"sha"%s*:%s*"([^"]+)"')
         return sha
     end
     return nil
 end
 
+local forceUpdate = (_G.WASOR_FORCE_UPDATE == true or _G.WASOR_NO_CACHE == true)
 local cachedSHA = nil
 local latestSHA = nil
 local useCache = false
@@ -177,13 +201,17 @@ if hasFileSystem then
     if not isfolder("WASOR_Cache") then
         pcall(makefolder, "WASOR_Cache")
     end
-    if isfile("WASOR_Cache/commit_sha.txt") then
+    if forceUpdate then
+        pcall(delfile, "WASOR_Cache/commit_sha.txt")
+    elseif isfile("WASOR_Cache/commit_sha.txt") then
         local success, val = pcall(readfile, "WASOR_Cache/commit_sha.txt")
         if success then cachedSHA = val end
     end
-    latestSHA = getLatestCommitSHA()
-    if latestSHA and cachedSHA and latestSHA == cachedSHA then
-        useCache = true
+    if not forceUpdate then
+        latestSHA = getLatestCommitSHA()
+        if latestSHA and cachedSHA and latestSHA == cachedSHA then
+            useCache = true
+        end
     end
 end
 
@@ -202,8 +230,8 @@ local function runFile(path)
     
     if not content then
         local url = BASE_URL .. path .. ".lua"
-        local success, result = pcall(game.HttpGet, game, url)
-        if success and result and #result > 0 then
+        local result = httpRequest(url)
+        if result and #result > 0 then
             content = result
             if hasFileSystem and latestSHA then
                 local folderPath = cachePath:match("(.+)/[^/]+$")
