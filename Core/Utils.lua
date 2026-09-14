@@ -332,7 +332,7 @@ Utils.setupAutoRejoin = function()
             local errMsg = ""
             pcall(function() errMsg = Services.GuiService:GetErrorMessage() end)
             if errMsg:lower():find("teleport") and not errMsg:lower():find("disconnected") then
-                Utils.notify("[WASOR 3.5] Teleport message: " .. errMsg .. " (UI preserved)", Color3.fromRGB(218, 170, 42))
+                Utils.notify("[WASOR 3.7] Teleport message: " .. errMsg .. " (UI preserved)", Color3.fromRGB(218, 170, 42))
                 return
             end
             pcall(function()
@@ -351,7 +351,7 @@ Utils.setupAutoRejoin = function()
     end)
     pcall(function()
         local tpFailConn = Services.TeleportService.TeleportInitFailed:Connect(function(_, result, err)
-            Utils.notify("[WASOR 3.5] Teleport Failed: " .. tostring(err or result) .. " (UI preserved)", Color3.fromRGB(218, 38, 38))
+            Utils.notify("[WASOR 3.7] Teleport Failed: " .. tostring(err or result) .. " (UI preserved)", Color3.fromRGB(218, 38, 38))
         end)
         table.insert(S.Connections, tpFailConn)
     end)
@@ -362,11 +362,11 @@ Utils.setupAutoReinject = function()
     local code = [[ 
         repeat task.wait() until game:IsLoaded() 
         local success, err = pcall(function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/github_loader.lua"))() 
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/main/github_loader.lua"))() 
         end)
         if not success then
             pcall(function()
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/github_loader.lua"))() 
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/main/WASOR_bundled.lua"))() 
             end)
         end
     ]]
