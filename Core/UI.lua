@@ -8,6 +8,11 @@ UI.tabButtons = {}
 UI.windows = {}
 UI.moduleButtons = {}
 UI.floatingWindows = {}
+UI.moduleCategories = {}
+UI.moduleContainers = {}
+UI.moduleLabels = {}
+UI.moduleButtonsRaw = {}
+UI.moduleGears = {}
 UI.themeColors = {
     ["Purple"] = Color3.fromRGB(141, 47, 196), ["Red"] = Color3.fromRGB(218, 38, 38),
     ["Green"] = Color3.fromRGB(46, 204, 113), ["Blue"] = Color3.fromRGB(41, 128, 185),
@@ -56,6 +61,93 @@ local navBar = nil
 local settingsPanel = nil
 local settingsContent = nil
 local searchBox = nil
+
+UI.isModuleDisabled = function(name)
+    if not name then return false end
+    if UI.moduleCategories and UI.moduleCategories[name] == "Misc" then return false end
+    return (State.S.DisabledModules and State.S.DisabledModules[name] == true)
+end
+
+UI.updateModuleVisual = function(name)
+    local container = UI.moduleContainers and UI.moduleContainers[name]
+    local btn = UI.moduleButtonsRaw and UI.moduleButtonsRaw[name]
+    local label = UI.moduleLabels and UI.moduleLabels[name]
+    local gear = UI.moduleGears and UI.moduleGears[name]
+    local itemObj = UI.moduleButtons and UI.moduleButtons[name]
+    if not container or not btn or not label then return end
+
+    local cat = UI.moduleCategories and UI.moduleCategories[name]
+    if cat == "Misc" then
+        container.Visible = true
+        return
+    end
+
+    local isDisabled = UI.isModuleDisabled(name)
+    local isSelectMode = (State.S.ModuleDisableMode == true)
+    local style = State.S.DisabledModuleStyle or "Greyish"
+
+    if isDisabled then
+        if style == "Invisible" and not isSelectMode then
+            container.Visible = false
+        else
+            container.Visible = true
+            btn.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+            btn.BackgroundTransparency = 0.2
+            label.TextColor3 = Color3.fromRGB(100, 100, 105)
+            label.Text = (isSelectMode and "[DISABLED] " or "") .. name
+            btn.TextColor3 = label.TextColor3
+            if gear then gear.Visible = false end
+        end
+    else
+        container.Visible = true
+        local isAct = itemObj and itemObj.IsActive and itemObj.IsActive()
+        local c = isAct and Color3.fromRGB(100, 240, 100) or Color3.fromRGB(200, 200, 200)
+        label.TextColor3 = c
+        btn.TextColor3 = c
+        label.Text = (isSelectMode and "[ACTIVE] " or "") .. name
+        if gear then gear.Visible = true end
+    end
+end
+
+UI.updateAllModuleVisuals = function()
+    for name, _ in pairs(UI.moduleButtons) do
+        pcall(function() UI.updateModuleVisual(name) end)
+    end
+    if UI.refreshDisabledModulesList then
+        pcall(UI.refreshDisabledModulesList)
+    end
+end
+
+UI.setModuleDisabled = function(name, disabled)
+    if not name then return false end
+    if UI.moduleCategories and UI.moduleCategories[name] == "Misc" then
+        UI.showToast("Cannot disable modules in the Misc tab!", Color3.fromRGB(218, 38, 38))
+        return false
+    end
+    State.S.DisabledModules = State.S.DisabledModules or {}
+    if disabled then
+        State.S.DisabledModules[name] = true
+        local item = UI.moduleButtons[name]
+        if item and item.IsActive and item.IsActive() then
+            item.SetActive(false)
+        end
+    else
+        State.S.DisabledModules[name] = nil
+    end
+    UI.updateModuleVisual(name)
+    VH.Config.saveConfig()
+    if UI.refreshDisabledModulesList then
+        pcall(UI.refreshDisabledModulesList)
+    end
+    return true
+end
+
+UI.revertAllDisabled = function()
+    State.S.DisabledModules = {}
+    UI.updateAllModuleVisuals()
+    VH.Config.saveConfig()
+    UI.showToast("All disabled modules have been reverted!", Color3.fromRGB(46, 204, 113))
+end
 
 UI.showToast = function(message, color)
     local S = State.S
@@ -1120,6 +1212,7 @@ UI.addButtonOption = function(parent, name, callback)
     btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55) end)
     btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(32, 32, 38) end)
     btn.MouseButton1Click:Connect(callback)
+    return { Button = btn, SetText = function(str) btn.Text = str end }
 end
 
 UI.addSectionHeader = function(parent, title)
@@ -1375,6 +1468,11 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     modTextLabel.TextColor3 = (isToggle and defaultState) and Color3.fromRGB(100, 240, 100) or inactiveColor
     modTextLabel.TextXAlignment = Enum.TextXAlignment.Left; modTextLabel.Text = name; modTextLabel.ZIndex = 5; modTextLabel.Parent = btn
     btn.TextColor3 = modTextLabel.TextColor3
+    
+    UI.moduleCategories[name] = catName
+    UI.moduleContainers[name] = container
+    UI.moduleLabels[name] = modTextLabel
+    UI.moduleButtonsRaw[name] = btn
     local active = defaultState
     
     local function updateColor()
@@ -1451,9 +1549,26 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         gear.MouseButton1Click:Connect(toggleMenu)
         gear.MouseEnter:Connect(function() gear.TextColor3 = State.currentThemeColor end)
         gear.MouseLeave:Connect(function() gear.TextColor3 = Color3.fromRGB(130, 130, 130) end)
+        UI.moduleGears[name] = gear
     end
     
     btn.MouseButton1Click:Connect(function()
+        if State.S.ModuleDisableMode then
+            if catName == "Misc" then
+                UI.showToast("Cannot disable modules in the Misc tab!", Color3.fromRGB(218, 38, 38))
+                return
+            end
+            local nowDisabled = not UI.isModuleDisabled(name)
+            UI.setModuleDisabled(name, nowDisabled)
+            UI.showToast((nowDisabled and "Disabled module: " or "Re-enabled module: ") .. name, nowDisabled and Color3.fromRGB(241, 196, 15) or Color3.fromRGB(46, 204, 113))
+            return
+        end
+
+        if UI.isModuleDisabled(name) then
+            UI.showToast("'" .. name .. "' is disabled in Module Manager", Color3.fromRGB(160, 160, 165))
+            return
+        end
+
         if isToggle then active = not active; updateColor(); if callback then callback(active) end else if callback then callback() end end
     end)
     
@@ -1461,6 +1576,7 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         Button = btn,
         TextLabel = modTextLabel,
         SetActive = function(val)
+            if UI.isModuleDisabled(name) and val == true then return end
             if isToggle and active ~= val then
                 active = val
                 updateColor()
@@ -1473,6 +1589,9 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         ToggleMenu = toggleMenu
     }
     UI.moduleButtons[name] = itemObj
+    task.defer(function()
+        UI.updateModuleVisual(name)
+    end)
     return itemObj
 end
 
@@ -1494,9 +1613,13 @@ local function selectTab(tabName)
             for _, child in ipairs(win.List:GetChildren()) do
                 if child:IsA("Frame") and child.Name:sub(1, 4) == "Mod_" then
                     local modName = child.Name:sub(5)
+                    local isDisabled = UI.isModuleDisabled(modName)
+                    local isSelectMode = (State.S.ModuleDisableMode == true)
+                    local style = State.S.DisabledModuleStyle or "Greyish"
+                    local hiddenByDisable = (isDisabled and style == "Invisible" and not isSelectMode)
                     local matches = (query == "") or (modName:lower():find(query, 1, true) ~= nil)
-                    child.Visible = matches
-                    if matches then
+                    child.Visible = matches and not hiddenByDisable
+                    if child.Visible then
                         hasVisibleModule = true
                     end
                 end
@@ -1637,7 +1760,7 @@ UI.InitializeUI = function()
     topTitle.Size = UDim2.new(0, 450, 1, 0); topTitle.Position = UDim2.new(0, 10, 0, 0); topTitle.BackgroundTransparency = 1
     topTitle.Font = Enum.Font.GothamBold; topTitle.TextSize = 11; topTitle.TextColor3 = Color3.fromRGB(255, 255, 255); topTitle.ZIndex = 5
     topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.Text = "<font color='#ffffff'>WeAreSkidding</font> <font color='#e0e0e0'>On Roblox v3.5</font> <font color='#aaaaaa'>(" .. executorName .. ")</font>"
+    topTitle.Text = "<font color='#ffffff'>WeAreSkidding</font> <font color='#e0e0e0'>On Roblox v3.7</font> <font color='#aaaaaa'>(" .. executorName .. ")</font>"
     topTitle.RichText = true; topTitle.Parent = topBar
     
     local hudTextLabel = Instance.new("TextLabel")
@@ -1747,7 +1870,7 @@ UI.InitializeUI = function()
     hudWatermark = Instance.new("TextLabel")
     hudWatermark.Size = UDim2.new(0, 200, 0, 14); hudWatermark.Position = UDim2.new(0, 10, 0, 26); hudWatermark.BackgroundTransparency = 1
     hudWatermark.Font = Enum.Font.GothamBold; hudWatermark.TextSize = 10; hudWatermark.TextColor3 = State.currentThemeColor
-    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 3.5"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
+    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 3.7"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
     table.insert(themeTexts, hudWatermark)
     
     hudCoords = Instance.new("TextLabel")
@@ -1804,7 +1927,7 @@ UI.InitializeUI = function()
         
         local padding = Instance.new("UIPadding")
         padding.PaddingTop = UDim.new(0, 8)
-padding.PaddingBottom = UDim.new(0, 8)
+        padding.PaddingBottom = UDim.new(0, 8)
         padding.PaddingLeft = UDim.new(0, 8)
         padding.PaddingRight = UDim.new(0, 8)
         padding.Parent = page
@@ -1817,6 +1940,7 @@ padding.PaddingBottom = UDim.new(0, 8)
     local pageHUD = createTabPage()
     local pageInput = createTabPage()
     local pageConfig = createTabPage()
+    local pageModules = createTabPage()
     
     local currentSelectedSettingsTabName = "Profiles"
     local tabPages = {
@@ -1824,7 +1948,8 @@ padding.PaddingBottom = UDim.new(0, 8)
         ["UI Customization"] = pageUI,
         ["HUD Settings"] = pageHUD,
         ["Input & Macros"] = pageInput,
-        ["System & Config"] = pageConfig
+        ["System & Config"] = pageConfig,
+        ["Module Manager"] = pageModules
     }
     
     local function selectSettingsTab(tabName)
@@ -1842,6 +1967,9 @@ padding.PaddingBottom = UDim.new(0, 8)
                     btn.TextColor3 = Color3.fromRGB(160, 160, 160)
                 end
             end
+        end
+        if tabName == "Module Manager" and UI.refreshDisabledModulesList then
+            pcall(UI.refreshDisabledModulesList)
         end
     end
     
@@ -2102,6 +2230,119 @@ padding.PaddingBottom = UDim.new(0, 8)
     end)
     UI.addButtonOption(pageConfig, "Destruct Client GUI Completely", function() VH.Cleanup.cleanupAll() end)
     
+    UI.addSectionHeader(pageModules, "Module Disabler & Exclusion Mode")
+    UI.addToggleOption(pageModules, "Enable Module Selection Mode", S.ModuleDisableMode, function(v)
+        S.ModuleDisableMode = v
+        if UI.updateDisableModeBtn then UI.updateDisableModeBtn() end
+        UI.updateAllModuleVisuals()
+        UI.showToast(v and "Module Selection Mode Enabled (Click non-Misc modules to disable)" or "Module Selection Mode Disabled", v and Color3.fromRGB(241, 196, 15) or State.currentThemeColor)
+    end)
+    
+    local styleBtn = nil
+    styleBtn = UI.addButtonOption(pageModules, "Disabled Style: " .. (S.DisabledModuleStyle or "Greyish") .. " (Click to Switch)", function()
+        if S.DisabledModuleStyle == "Invisible" then
+            S.DisabledModuleStyle = "Greyish"
+        else
+            S.DisabledModuleStyle = "Invisible"
+        end
+        if styleBtn and styleBtn.SetText then
+            styleBtn.SetText("Disabled Style: " .. S.DisabledModuleStyle .. " (Click to Switch)")
+        end
+        VH.Config.saveConfig()
+        UI.updateAllModuleVisuals()
+        UI.showToast("Disabled modules style set to: " .. S.DisabledModuleStyle, State.currentThemeColor)
+    end)
+    
+    UI.addButtonOption(pageModules, "Revert All Disabled Modules", function()
+        UI.revertAllDisabled()
+    end)
+    
+    UI.addSectionHeader(pageModules, "Disabled Modules List")
+    
+    local disabledListContainer = Instance.new("Frame")
+    disabledListContainer.Name = "DisabledListContainer"
+    disabledListContainer.Size = UDim2.new(1, 0, 0, 0)
+    disabledListContainer.AutomaticSize = Enum.AutomaticSize.Y
+    disabledListContainer.BackgroundTransparency = 1
+    disabledListContainer.Parent = pageModules
+    
+    local dListLayout = Instance.new("UIListLayout")
+    dListLayout.Padding = UDim.new(0, 2)
+    dListLayout.Parent = disabledListContainer
+    
+    local function refreshDisabledList()
+        for _, ch in ipairs(disabledListContainer:GetChildren()) do
+            if ch:IsA("Frame") or ch:IsA("TextLabel") then ch:Destroy() end
+        end
+        local sortedList = {}
+        if S.DisabledModules then
+            for modName, disabled in pairs(S.DisabledModules) do
+                if disabled and (not UI.moduleCategories or UI.moduleCategories[modName] ~= "Misc") then
+                    table.insert(sortedList, modName)
+                end
+            end
+        end
+        table.sort(sortedList)
+        
+        if #sortedList == 0 then
+            local emptyLabel = Instance.new("TextLabel")
+            emptyLabel.Size = UDim2.new(1, 0, 0, 22)
+            emptyLabel.BackgroundTransparency = 1
+            emptyLabel.Font = Enum.Font.Gotham
+            emptyLabel.TextSize = 10
+            emptyLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+            emptyLabel.Text = "No modules are currently disabled."
+            emptyLabel.Parent = disabledListContainer
+        else
+            for _, modName in ipairs(sortedList) do
+                local cat = (UI.moduleCategories and UI.moduleCategories[modName]) or "Module"
+                local row = Instance.new("Frame")
+                row.Size = UDim2.new(1, 0, 0, 22)
+                row.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+                row.BorderSizePixel = 0
+                row.Parent = disabledListContainer
+                
+                local rCorner = Instance.new("UICorner")
+                rCorner.CornerRadius = UDim.new(0, 4)
+                rCorner.Parent = row
+                
+                local lbl = Instance.new("TextLabel")
+                lbl.Size = UDim2.new(1, -70, 1, 0)
+                lbl.Position = UDim2.new(0, 6, 0, 0)
+                lbl.BackgroundTransparency = 1
+                lbl.Font = Enum.Font.GothamMedium
+                lbl.TextSize = 10
+                lbl.TextColor3 = Color3.fromRGB(220, 220, 220)
+                lbl.TextXAlignment = Enum.TextXAlignment.Left
+                lbl.Text = "[" .. cat .. "] " .. modName
+                lbl.Parent = row
+                
+                local revBtn = Instance.new("TextButton")
+                revBtn.Size = UDim2.new(0, 58, 0, 16)
+                revBtn.Position = UDim2.new(1, -62, 0.5, -8)
+                revBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+                revBtn.BorderSizePixel = 0
+                revBtn.Font = Enum.Font.GothamBold
+                revBtn.TextSize = 9
+                revBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                revBtn.Text = "Re-enable"
+                revBtn.Parent = row
+                
+                local revCorner = Instance.new("UICorner")
+                revCorner.CornerRadius = UDim.new(0, 3)
+                revCorner.Parent = revBtn
+                
+                revBtn.Activated:Connect(function()
+                    UI.setModuleDisabled(modName, false)
+                    UI.showToast("Re-enabled: " .. modName, Color3.fromRGB(46, 204, 113))
+                    refreshDisabledList()
+                end)
+            end
+        end
+    end
+    UI.refreshDisabledModulesList = refreshDisabledList
+    refreshDisabledList()
+    
     
     navBar = Instance.new("Frame")
     navBar.Size = UDim2.new(0, 600, 1, 0)
@@ -2134,6 +2375,42 @@ padding.PaddingBottom = UDim.new(0, 8)
         btn.MouseButton1Click:Connect(function() selectTab(tabName) end)
         UI.tabButtons[tabName] = btn
     end
+    
+    local disableModeBtn = Instance.new("TextButton")
+    disableModeBtn.Size = UDim2.new(0, 110, 0, 16)
+    disableModeBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    disableModeBtn.BorderSizePixel = 0
+    disableModeBtn.Font = Enum.Font.Gotham
+    disableModeBtn.TextSize = 9
+    disableModeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    disableModeBtn.Text = "Disable Mode: OFF"
+    disableModeBtn.ZIndex = 5
+    disableModeBtn.Parent = navBar
+    
+    local disCorner = Instance.new("UICorner")
+    disCorner.CornerRadius = UDim.new(0, 4)
+    disCorner.Parent = disableModeBtn
+    
+    local disStroke = Instance.new("UIStroke")
+    disStroke.Color = Color3.fromRGB(45, 45, 45)
+    disStroke.Thickness = 1
+    disStroke.Parent = disableModeBtn
+    
+    local function updateDisableModeBtn()
+        local on = (State.S.ModuleDisableMode == true)
+        disableModeBtn.Text = on and "Disable Mode: ON" or "Disable Mode: OFF"
+        disableModeBtn.BackgroundColor3 = on and Color3.fromRGB(180, 80, 30) or Color3.fromRGB(35, 35, 35)
+        disableModeBtn.TextColor3 = on and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 200)
+        disStroke.Color = on and Color3.fromRGB(220, 100, 40) or Color3.fromRGB(45, 45, 45)
+    end
+    disableModeBtn.Activated:Connect(function()
+        State.S.ModuleDisableMode = not State.S.ModuleDisableMode
+        updateDisableModeBtn()
+        UI.updateAllModuleVisuals()
+        UI.showToast(State.S.ModuleDisableMode and "Module Selection Mode Enabled (Click non-Misc modules to disable)" or "Module Selection Mode Disabled", State.S.ModuleDisableMode and Color3.fromRGB(241, 196, 15) or State.currentThemeColor)
+    end)
+    UI.updateDisableModeBtn = updateDisableModeBtn
+    updateDisableModeBtn()
     
     searchBox = Instance.new("TextBox")
     searchBox.Name = "SearchBox"
@@ -2178,9 +2455,13 @@ padding.PaddingBottom = UDim.new(0, 8)
             for _, child in ipairs(win.List:GetChildren()) do
                 if child:IsA("Frame") and child.Name:sub(1, 4) == "Mod_" then
                     local modName = child.Name:sub(5)
+                    local isDisabled = UI.isModuleDisabled(modName)
+                    local isSelectMode = (State.S.ModuleDisableMode == true)
+                    local style = State.S.DisabledModuleStyle or "Greyish"
+                    local hiddenByDisable = (isDisabled and style == "Invisible" and not isSelectMode)
                     local matches = (query == "") or (modName:lower():find(query, 1, true) ~= nil)
-                    child.Visible = matches
-                    if matches then
+                    child.Visible = matches and not hiddenByDisable
+                    if child.Visible then
                         hasVisibleModule = true
                     end
                 end
@@ -2223,7 +2504,7 @@ padding.PaddingBottom = UDim.new(0, 8)
                 if writefile then
                     pcall(function() writefile("utility_hub_visited.txt", "true") end)
                 end
-                UI.showToast("Welcome to WASOR 3.5!", State.currentThemeColor)
+                UI.showToast("Welcome to WASOR 3.7!", State.currentThemeColor)
                 task.wait(2.2)
                 UI.showToast("Toggle UI with [Right Control]", State.currentThemeColor)
                 task.wait(2.2)
