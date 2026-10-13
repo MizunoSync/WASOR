@@ -31,7 +31,7 @@ pcall(function()
     for _, parent in ipairs(containers) do
         pcall(function()
             for _, child in ipairs(parent:GetChildren()) do
-                if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
+                if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child.Name == "TranscendingViewportGui" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
                     pcall(function() child:Destroy() end)
                 end
             end
@@ -131,6 +131,8 @@ local Modules = {
     "Modules/Player/AntiAFK",
     "Modules/Player/AutoRejoin",
     "Modules/Player/SpectateFreecam",
+    "Modules/Player/HatDrop",
+    "Modules/Player/ReturnByDeath",
 
     "Modules/Movement/SpeedModification",
     "Modules/Movement/SprintSpeedBoost",
@@ -180,6 +182,8 @@ local Modules = {
     "Modules/Render/OutOfViewIndicators",
     "Modules/Render/Minimap",
     "Modules/Render/SkyboxChanger",
+    "Modules/Render/AudioVisualizer",
+    "Modules/Render/ViewportESP",
 
     "Modules/World/InstantPrompts",
     "Modules/World/FireAllPrompts",
@@ -203,6 +207,7 @@ local Modules = {
     "Modules/Misc/UNCcomplianceAudits",
     "Modules/Misc/ConsoleLogViewer",
     "Modules/Misc/SettingsKeybinds",
+    "Modules/Misc/HideLoadingScreen",
     "Modules/Misc/NetworkChatHub",
     "Modules/Misc/SaveGame"
 }

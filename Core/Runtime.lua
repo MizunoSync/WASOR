@@ -1378,6 +1378,13 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
         if not isModDisabled("Autoplay Bot") then
             S.AutoplayBot = not S.AutoplayBot; notify("Autoplay Bot " .. (S.AutoplayBot and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Autoplay Bot"]; if mod then mod.SetActive(S.AutoplayBot) end
         end
+    elseif S.ViewportESPKey and S.ViewportESPKey ~= Enum.KeyCode.Unknown and k == S.ViewportESPKey then
+        if not isModDisabled("Viewport ESP") then
+            S.ViewportESP = not S.ViewportESP
+            notify("Viewport ESP " .. (S.ViewportESP and "ON" or "OFF"), Color3.fromRGB(218, 170, 42))
+            local mod = moduleButtons["Viewport ESP"]
+            if mod and mod.SetActive then mod.SetActive(S.ViewportESP) end
+        end
     end
 end))
 

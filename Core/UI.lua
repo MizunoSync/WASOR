@@ -1760,7 +1760,7 @@ UI.InitializeUI = function()
     topTitle.Size = UDim2.new(0, 450, 1, 0); topTitle.Position = UDim2.new(0, 10, 0, 0); topTitle.BackgroundTransparency = 1
     topTitle.Font = Enum.Font.GothamBold; topTitle.TextSize = 11; topTitle.TextColor3 = Color3.fromRGB(255, 255, 255); topTitle.ZIndex = 5
     topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.Text = "<font color='#ffffff'>WeAreSkidding</font> <font color='#e0e0e0'>On Roblox v3.7</font> <font color='#aaaaaa'>(" .. executorName .. ")</font>"
+    topTitle.Text = "<font color='#ffffff'>WeAreSkidding</font> <font color='#e0e0e0'>On Roblox v4.0</font> <font color='#aaaaaa'>(" .. executorName .. ")</font>"
     topTitle.RichText = true; topTitle.Parent = topBar
     
     local hudTextLabel = Instance.new("TextLabel")
@@ -1870,7 +1870,7 @@ UI.InitializeUI = function()
     hudWatermark = Instance.new("TextLabel")
     hudWatermark.Size = UDim2.new(0, 200, 0, 14); hudWatermark.Position = UDim2.new(0, 10, 0, 26); hudWatermark.BackgroundTransparency = 1
     hudWatermark.Font = Enum.Font.GothamBold; hudWatermark.TextSize = 10; hudWatermark.TextColor3 = State.currentThemeColor
-    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 3.7"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
+    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 4.0"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
     table.insert(themeTexts, hudWatermark)
     
     hudCoords = Instance.new("TextLabel")
@@ -2504,7 +2504,7 @@ UI.InitializeUI = function()
                 if writefile then
                     pcall(function() writefile("utility_hub_visited.txt", "true") end)
                 end
-                UI.showToast("Welcome to WASOR 3.7!", State.currentThemeColor)
+                UI.showToast("Welcome to WASOR 4.0!", State.currentThemeColor)
                 task.wait(2.2)
                 UI.showToast("Toggle UI with [Right Control]", State.currentThemeColor)
                 task.wait(2.2)
