@@ -120,4 +120,3 @@ registerModule("Misc", "Favorite games", 720, 50, false, false, nil, function(dr
 
     rebuildFavorites(scroll)
 end, true, 200, 200)
-

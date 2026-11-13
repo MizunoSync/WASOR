@@ -1,3 +1,19 @@
+if _G.WASOR_Reloading then return end
+if _G.VoidHub or _G.WASOR_Loaded or _G.WASOR_Loading then
+    _G.WASOR_Reloading = true
+    pcall(function()
+        if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
+            _G.VoidHub.Cleanup.cleanupAll()
+        end
+    end)
+    _G.VoidHub = nil
+    _G.WASOR_Loading = nil
+    _G.WASOR_Loaded = nil
+    _G.WASOR_Reloading = nil
+    print("[WASOR 4.5] Existing instance detected. Cleaned up and reloading...")
+end
+_G.WASOR_Loading = true
+
 if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
     pcall(_G.VoidHub.Cleanup.cleanupAll)
 end
@@ -8,6 +24,9 @@ pcall(function()
     RunService:UnbindFromRenderStep("VoidAimbotUpdate")
     RunService:UnbindFromRenderStep("VoidFlyUpdate")
     RunService:UnbindFromRenderStep("VoidFreecamUpdate")
+    pcall(function() RunService:UnbindFromRenderStep("WallWalkCameraRenderUpdate") end)
+    pcall(function() RunService:UnbindFromRenderStep("WallWalkControlStep") end)
+    pcall(function() RunService:UnbindFromRenderStep("WallWalkGravityStep") end)
 end)
 
 pcall(function()
@@ -31,7 +50,7 @@ pcall(function()
     for _, parent in ipairs(containers) do
         pcall(function()
             for _, child in ipairs(parent:GetChildren()) do
-                if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child.Name == "TranscendingViewportGui" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
+                if child.Name == "MeteorRobloxGUI" or child.Name == "WallWalkToggleUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child.Name == "TranscendingViewportGui" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
                     pcall(function() child:Destroy() end)
                 end
             end
@@ -139,6 +158,7 @@ local Modules = {
     "Modules/Movement/JumpHackStrength",
     "Modules/Movement/Climb",
     "Modules/Movement/WallRun",
+    "Modules/Movement/WallWalk",
     "Modules/Movement/FlyMode",
     "Modules/Movement/FlyBypass",
     "Modules/Movement/InfiniteJump",
@@ -233,3 +253,6 @@ if not success then
 else
     print("[WASOR] Loader: FileBuild")
 end
+
+_G.WASOR_Loading = nil
+_G.WASOR_Loaded = true

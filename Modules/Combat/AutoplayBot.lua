@@ -621,7 +621,7 @@ local function startAutoplay()
                     Camera.CFrame = Camera.CFrame:Lerp(goalCF, 0.22)
 
                     if hasLOS then
-                        -- Fire mouse simulation directly (same as Triggerbot)
+
                         local now = tick()
                         if not lastAutoplayShootTime or (now - lastAutoplayShootTime) >= 0.05 then
                             lastAutoplayShootTime = now
