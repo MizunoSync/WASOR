@@ -1,8 +1,8 @@
-local VH = _G.VoidHub
+local VH = _G.VoidHub or {}
 local UI = {}
 
-local Services = VH.Services
-local State = VH.State
+local Services = VH.Services or {}
+local State = VH.State or {}
 
 UI.tabButtons = {}
 UI.windows = {}
@@ -71,6 +71,38 @@ local navBar = nil
 local settingsPanel = nil
 local settingsContent = nil
 local searchBox = nil
+
+local function getGuiContainers()
+    local containers = {}
+    pcall(function()
+        if gethui then
+            local h = gethui()
+            if h and not table.find(containers, h) then table.insert(containers, h) end
+        end
+        if get_hidden_gui then
+            local hg = get_hidden_gui()
+            if hg and not table.find(containers, hg) then table.insert(containers, hg) end
+        end
+        if Services.CoreGui and not table.find(containers, Services.CoreGui) then
+            table.insert(containers, Services.CoreGui)
+        end
+        if Services.LP then
+            local pg = Services.LP:FindFirstChild("PlayerGui")
+            if pg and not table.find(containers, pg) then table.insert(containers, pg) end
+        end
+    end)
+    return containers
+end
+
+local function getGuiParent()
+    local success, core = pcall(function()
+        return (gethui and gethui()) or (get_hidden_gui and get_hidden_gui()) or game:GetService("CoreGui")
+    end)
+    if success and core then
+        return core
+    end
+    return Services.LP:WaitForChild("PlayerGui")
+end
 
 UI.isModuleDisabled = function(name)
     if not name then return false end
@@ -1300,7 +1332,7 @@ end
 
 local catPositions = { ["Combat"] = 20, ["Player"] = 210, ["Movement"] = 400, ["Render"] = 590, ["World"] = 780, ["Misc"] = 970, ["Search"] = 1160 }
 UI.getOrCreateWindow = function(catName, defaultX, defaultY)
-    if UI.windows[catName] then return UI.windows[catName] end
+    if UI.windows[catName] and UI.windows[catName].Frame and UI.windows[catName].Frame.Parent then return UI.windows[catName] end
     local x = catPositions[catName] or defaultX or 20; local y = defaultY or 75
     if not defaultY or defaultY == 50 then y = 75 end
     local win = Instance.new("Frame"); win.Size = UDim2.new(0, 180, 0, 22); win.AutomaticSize = Enum.AutomaticSize.Y
@@ -1484,6 +1516,10 @@ end
 
 UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaultState, callback, populateOptionsFunc, useSeparateWindow, winWidth, winHeight)
     local win = UI.getOrCreateWindow(catName, defaultX, defaultY)
+    local oldContainer = win.List:FindFirstChild("Mod_" .. name)
+    if oldContainer then
+        pcall(function() oldContainer:Destroy() end)
+    end
     local container = Instance.new("Frame"); container.Name = "Mod_" .. name; container.Size = UDim2.new(1, 0, 0, 20)
     container.AutomaticSize = Enum.AutomaticSize.Y; container.BackgroundColor3 = Color3.fromRGB(24, 24, 28); container.BackgroundTransparency = 1; container.BorderSizePixel = 0; container.Parent = win.List
     local btn = Instance.new("TextButton"); btn.Size = UDim2.new(1, 0, 0, 20); btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -1766,17 +1802,54 @@ local function createPanel(title, width, height)
 end
 
 UI.InitializeUI = function()
-    local S = State.S
+    local S = (State and State.S) or (VH.State and VH.State.S) or (_G.VoidHub and _G.VoidHub.State and _G.VoidHub.State.S) or {}
+
+    pcall(function()
+        if _G.WASOR_ScreenGui and _G.WASOR_ScreenGui.Parent then
+            pcall(function() _G.WASOR_ScreenGui:Destroy() end)
+            _G.WASOR_ScreenGui = nil
+        end
+        local containers = getGuiContainers()
+        for _, parent in ipairs(containers) do
+            pcall(function()
+                for _, child in ipairs(parent:GetChildren()) do
+                    if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child.Name == "TranscendingViewportGui" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
+                        pcall(function() child:Destroy() end)
+                    end
+                end
+            end)
+        end
+    end)
+
+    UI.tabButtons = {}
+    UI.windows = {}
+    UI.moduleButtons = {}
+    UI.floatingWindows = {}
+    UI.moduleCategories = {}
+    UI.moduleContainers = {}
+    UI.moduleLabels = {}
+    UI.moduleButtonsRaw = {}
+    UI.moduleGears = {}
+    activeToasts = {}
+
+    local targetParent = getGuiParent()
+
     screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "MeteorRobloxGUI"; screenGui.ResetOnSpawn = false; screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    pcall(function() screenGui.Parent = Services.CoreGui end)
-    if not screenGui.Parent then pcall(function() screenGui.Parent = Services.LP:WaitForChild("PlayerGui") end) end
+    screenGui.Name = "MeteorRobloxGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.DisplayOrder = 999999
+    screenGui.Parent = targetParent
+    _G.WASOR_ScreenGui = screenGui
     protectUIFonts(screenGui)
 
     mainUIContainer = Instance.new("Frame")
-    mainUIContainer.Name = "MainUIContainer"; mainUIContainer.Size = UDim2.new(1, 0, 1, 0)
-    mainUIContainer.BackgroundTransparency = 1; mainUIContainer.BorderSizePixel = 0
-    mainUIContainer.Visible = true; mainUIContainer.Parent = screenGui
+    mainUIContainer.Name = "MainUIContainer"
+    mainUIContainer.Size = UDim2.new(1, 0, 1, 0)
+    mainUIContainer.BackgroundTransparency = 1
+    mainUIContainer.BorderSizePixel = 0
+    mainUIContainer.Visible = true
+    mainUIContainer.Parent = screenGui
 
     UI.applyThemeColor(S.ThemeColor or "Purple")
     task.spawn(startTextAnimationLoop)
@@ -2933,6 +3006,31 @@ end
 
 UI.GetScreenGui = function() return screenGui end
 UI.GetMainContainer = function() return mainUIContainer end
+UI.destroyUI = function()
+    pcall(function()
+        if screenGui and screenGui.Parent then
+            screenGui:Destroy()
+        end
+    end)
+    pcall(function()
+        if _G.WASOR_ScreenGui and _G.WASOR_ScreenGui.Parent then
+            _G.WASOR_ScreenGui:Destroy()
+        end
+    end)
+    _G.WASOR_ScreenGui = nil
+    screenGui = nil
+    mainUIContainer = nil
+    UI.tabButtons = {}
+    UI.windows = {}
+    UI.moduleButtons = {}
+    UI.floatingWindows = {}
+    UI.moduleCategories = {}
+    UI.moduleContainers = {}
+    UI.moduleLabels = {}
+    UI.moduleButtonsRaw = {}
+    UI.moduleGears = {}
+    activeToasts = {}
+end
 
 VH.UI = UI
 return UI

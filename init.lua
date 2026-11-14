@@ -19,6 +19,12 @@ if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.Void
 end
 
 pcall(function()
+    if delfile and isfile and isfile("autoexec/WASOR.lua") then
+        delfile("autoexec/WASOR.lua")
+    end
+end)
+
+pcall(function()
     local RunService = game:GetService("RunService")
     RunService:UnbindFromRenderStep("VoidESPUpdate")
     RunService:UnbindFromRenderStep("VoidAimbotUpdate")
@@ -276,5 +282,5 @@ else
     print("[WASOR] Loader: FileBuild")
 end
 
-_G.WASOR_Loading = nil
+_G.WASOR_Loading = false
 _G.WASOR_Loaded = true

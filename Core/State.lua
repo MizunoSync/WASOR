@@ -1,4 +1,4 @@
-local VH = _G.VoidHub
+local VH = _G.VoidHub or {}
 local State = {}
 
 State.playerCards = {}
@@ -15,9 +15,10 @@ State.freecamInputBeganConn = nil
 State.freecamInputEndedConn = nil
 State.freecamBasePos = nil
 
-State.originalAmbient = VH.Services.Lighting.Ambient
-State.originalOutdoor = VH.Services.Lighting.OutdoorAmbient
-State.originalClockTime = VH.Services.Lighting.ClockTime
+local Lighting = (VH and VH.Services and VH.Services.Lighting) or game:GetService("Lighting")
+State.originalAmbient = Lighting and Lighting.Ambient or Color3.fromRGB(128, 128, 128)
+State.originalOutdoor = Lighting and Lighting.OutdoorAmbient or Color3.fromRGB(128, 128, 128)
+State.originalClockTime = Lighting and Lighting.ClockTime or 14
 State.uiRunning = true
 State.networkTagsLoopActive = false
 State.wasClimbing = false
