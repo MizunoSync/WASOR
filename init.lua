@@ -287,11 +287,11 @@ local success, err = pcall(function()
     end
 end)
 
-_G.WASOR_Loading = false
-_G.WASOR_Loaded = true
-
 if not success then
     warn("[WASOR Loader] Initialization error: " .. tostring(err))
 else
     print("[WASOR] Loader: FileBuild")
 end
+
+_G.WASOR_Loading = false
+_G.WASOR_Loaded = true
