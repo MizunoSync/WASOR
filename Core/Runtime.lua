@@ -109,6 +109,10 @@ local function getNodePosition(char, node)
     if not part then return nil end
     if attachmentName then
         local attach = part:FindFirstChild(attachmentName)
+        if not attach and string.find(attachmentName, "Attachment") then
+            local rigName = string.gsub(attachmentName, "Attachment", "RigAttachment")
+            attach = part:FindFirstChild(rigName)
+        end
         if attach and attach:IsA("Attachment") then
             return attach.WorldPosition
         end
@@ -727,6 +731,9 @@ local function updateESPAndAimbot()
             end)
             if not success then
                 hideESP(p)
+            end
+            if S.OverheadInfo and Utils.createOverhead then
+                pcall(Utils.createOverhead, p)
             end
         end
     else
@@ -1599,7 +1606,27 @@ end
 if LP.Character then onCharSpawn(LP.Character) end
 table.insert(S.Connections, LP.CharacterAdded:Connect(onCharSpawn))
 
+local function hookPlayerCharacter(p)
+    if p == LP or (LP and p.UserId and LP.UserId and p.UserId == LP.UserId) then return end
+    pcall(function()
+        table.insert(S.Connections, p.CharacterRemoving:Connect(function()
+            hideESP(p)
+            if VH.Utils and VH.Utils.removeOverhead then
+                pcall(VH.Utils.removeOverhead, p)
+            end
+        end))
+        table.insert(S.Connections, p.CharacterAdded:Connect(function()
+            hideESP(p)
+        end))
+    end)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do
+    hookPlayerCharacter(p)
+end
+
 table.insert(S.Connections, Players.PlayerAdded:Connect(function(p)
+    hookPlayerCharacter(p)
     if S.JoinLeaveToasts then notify(p.DisplayName .. " joined the server.", Color3.fromRGB(50, 195, 75)) end
 end))
 
@@ -1607,6 +1634,9 @@ table.insert(S.Connections, Players.PlayerRemoving:Connect(function(p)
     if S.JoinLeaveToasts then notify(p.DisplayName .. " left the server.", Color3.fromRGB(218, 38, 38)) end
     pcall(function()
         destroyESP(p)
+        if VH.Utils and VH.Utils.removeOverhead then
+            pcall(VH.Utils.removeOverhead, p)
+        end
         if S.ChatConnections[p] then pcall(function() S.ChatConnections[p]:Disconnect() end); S.ChatConnections[p] = nil end
         if State.playerCards and State.playerCards[p] then
             if State.playerCards[p].HPConn then State.playerCards[p].HPConn:Disconnect() end
@@ -1626,8 +1656,8 @@ pcall(connectChatLogger)
 pcall(function() applyThemeColor(S.ThemeColor or "Purple"); updateHUDArrayList() end)
 
 local toggleKeyName = S.UIToggleKey and S.UIToggleKey.Name or "RCtrl"
-logMessage("System", "WeAreSkidding loaded successfully. Keybind: [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
-notify("WeAreSkidding loaded! [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
+logMessage("System", "WASOR 4.5 loaded successfully. Keybind: [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
+notify("WASOR 4.5 loaded! [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
 print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내리는 것 또한 그중 하나입니다). 그리고 인내심이야말로 우리 삶의 핵심이라는 사실을 기억하십시오.")
 
     local request = (http and http.request) or http_request or (syn and syn.request)
