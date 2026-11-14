@@ -1852,6 +1852,8 @@ UI.InitializeUI = function()
 
             pcall(function()
                 if delfile then
+                    delfile("WASOR_Cache/commit_sha.txt")
+                    delfile("WASOR_Cache/Core/UI.lua")
                     delfile("WASOR_cache/commit_sha.txt")
                     delfile("WASOR_cache/Core/UI.lua")
                 end
