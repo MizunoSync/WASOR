@@ -144,10 +144,22 @@ UI.updateModuleVisual = function(name)
         container.Visible = true
         local isAct = itemObj and itemObj.IsActive and itemObj.IsActive()
         local c = Color3.fromRGB(200, 200, 200)
-        if patchedModules[name:lower()] then
-            c = Color3.fromRGB(255, 60, 60)
+        local isPatched = (patchedModules and patchedModules[name:lower()])
+        if isPatched then
+            c = Color3.fromRGB(235, 75, 75)
+            label.TextTransparency = 0.45
+            btn.BackgroundTransparency = 0.75
+        elseif name:lower() == "hat drop" then
+            c = isAct and Color3.fromRGB(100, 240, 100) or Color3.fromRGB(240, 200, 50)
+            label.TextTransparency = 0
+            btn.BackgroundTransparency = 0.5
         elseif isAct then
             c = Color3.fromRGB(100, 240, 100)
+            label.TextTransparency = 0
+            btn.BackgroundTransparency = 0.5
+        else
+            label.TextTransparency = 0
+            btn.BackgroundTransparency = 0.5
         end
         label.TextColor3 = c
         btn.TextColor3 = c
@@ -1524,15 +1536,24 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     container.AutomaticSize = Enum.AutomaticSize.Y; container.BackgroundColor3 = Color3.fromRGB(24, 24, 28); container.BackgroundTransparency = 1; container.BorderSizePixel = 0; container.Parent = win.List
     local btn = Instance.new("TextButton"); btn.Size = UDim2.new(1, 0, 0, 20); btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     btn.BackgroundTransparency = 0.5; btn.BorderSizePixel = 0; btn.Text = ""; btn.Parent = container
+    local isPatched = (patchedModules and patchedModules[name:lower()])
     local inactiveColor = Color3.fromRGB(200, 200, 200)
-    if name == "No Recoil" or name == "Silent Aim" or name == "Instant Respawn" then
-        inactiveColor = Color3.fromRGB(255, 120, 120)
-    elseif name == "God Mode" or name == "UI Name Spoof" then
+    if isPatched then
+        inactiveColor = Color3.fromRGB(235, 75, 75)
+    elseif name == "UI Name Spoof" then
         inactiveColor = Color3.fromRGB(255, 180, 100)
+    elseif name:lower() == "hat drop" then
+        inactiveColor = Color3.fromRGB(240, 200, 50)
+    end
+    if isPatched then
+        btn.BackgroundTransparency = 0.75
     end
     local modTextLabel = Instance.new("TextLabel"); modTextLabel.Name = "ModTextLabel"; modTextLabel.Size = UDim2.new(1, -20, 1, 0)
     modTextLabel.Position = UDim2.new(0, 6, 0, 0); modTextLabel.BackgroundTransparency = 1; modTextLabel.Font = Enum.Font.Gotham; modTextLabel.TextSize = 9
-    modTextLabel.TextColor3 = (isToggle and defaultState) and Color3.fromRGB(100, 240, 100) or inactiveColor
+    modTextLabel.TextColor3 = (isToggle and defaultState) and ((isPatched and Color3.fromRGB(235, 75, 75)) or Color3.fromRGB(100, 240, 100)) or inactiveColor
+    if isPatched then
+        modTextLabel.TextTransparency = 0.45
+    end
     modTextLabel.TextXAlignment = Enum.TextXAlignment.Left; modTextLabel.Text = name; modTextLabel.ZIndex = 5; modTextLabel.Parent = btn
     btn.TextColor3 = modTextLabel.TextColor3
 
@@ -1544,12 +1565,23 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
 
     local function updateColor()
         local currentInactiveColor = Color3.fromRGB(200, 200, 200)
-        if patchedModules[name:lower()] then
-            currentInactiveColor = Color3.fromRGB(255, 60, 60)
+        if isPatched then
+            currentInactiveColor = Color3.fromRGB(235, 75, 75)
+            modTextLabel.TextTransparency = 0.45
+            btn.BackgroundTransparency = 0.75
         elseif name == "UI Name Spoof" then
             currentInactiveColor = Color3.fromRGB(255, 180, 100)
+            modTextLabel.TextTransparency = 0
+            btn.BackgroundTransparency = 0.5
+        elseif name:lower() == "hat drop" then
+            currentInactiveColor = Color3.fromRGB(240, 200, 50)
+            modTextLabel.TextTransparency = 0
+            btn.BackgroundTransparency = 0.5
+        else
+            modTextLabel.TextTransparency = 0
+            btn.BackgroundTransparency = 0.5
         end
-        local c = (isToggle and active) and ((patchedModules[name:lower()] and Color3.fromRGB(255, 60, 60)) or Color3.fromRGB(100, 240, 100)) or currentInactiveColor
+        local c = (isToggle and active) and ((isPatched and Color3.fromRGB(235, 75, 75)) or Color3.fromRGB(100, 240, 100)) or currentInactiveColor
         btn.TextColor3 = c
         modTextLabel.TextColor3 = c
         task.defer(UI.updateHUDArrayList)
@@ -1569,7 +1601,7 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
             end
         else
             btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-            btn.BackgroundTransparency = 0.5
+            btn.BackgroundTransparency = isPatched and 0.75 or 0.5
             container.BackgroundTransparency = 1
         end
     end
@@ -1578,7 +1610,7 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         local isOpened = (useSeparateWindow and floatingWin and floatingWin.Visible) or (drawer and drawer.Visible)
         if not isOpened then
             btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-            btn.BackgroundTransparency = 0.3
+            btn.BackgroundTransparency = isPatched and 0.65 or 0.3
         end
     end)
     btn.MouseLeave:Connect(function()
@@ -1590,7 +1622,13 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
             if not floatingWin then
                 local w = winWidth or 160; local h = winHeight or 180
                 floatingWin, drawer = UI.createFloatingWindow(name .. " Options", w, h, win.Frame.Position.X.Offset + 190, win.Frame.Position.Y.Offset)
-                if populateOptionsFunc then populateOptionsFunc(drawer) end
+                if isPatched then
+                    local brokenRow = Instance.new("Frame"); brokenRow.Name = "BrokenNotice"; brokenRow.Size = UDim2.new(1, 0, 0, 18); brokenRow.BackgroundTransparency = 1; brokenRow.Parent = drawer
+                    local brokenLabel = Instance.new("TextLabel"); brokenLabel.Size = UDim2.new(1, -8, 1, 0); brokenLabel.Position = UDim2.new(0, 4, 0, 0)
+                    brokenLabel.BackgroundTransparency = 1; brokenLabel.Font = Enum.Font.GothamMedium; brokenLabel.TextSize = 9; brokenLabel.TextColor3 = Color3.fromRGB(255, 90, 90)
+                    brokenLabel.TextXAlignment = Enum.TextXAlignment.Left; brokenLabel.Text = "⚠️ Broken: This module is currently patched"; brokenLabel.Parent = brokenRow
+                end
+                if populateOptionsFunc or isPatched then populateOptionsFunc(drawer) end
                 adjustWindowSizeToContent(floatingWin, drawer)
             end
             floatingWin.Visible = not floatingWin.Visible; floatingWin:SetAttribute("UserOpen", floatingWin.Visible); updateBg()
@@ -1603,13 +1641,19 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
                 local layout = Instance.new("UIListLayout"); layout.Padding = UDim.new(0, 2); layout.Parent = drawer
                 local pad = Instance.new("UIPadding"); pad.PaddingTop = UDim.new(0, 4); pad.PaddingBottom = UDim.new(0, 4); pad.PaddingLeft = UDim.new(0, 4); pad.PaddingRight = UDim.new(0, 4); pad.Parent = drawer
                 local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(48, 48, 56); stroke.Thickness = 1; stroke.Parent = drawer
-                if populateOptionsFunc then populateOptionsFunc(drawer) end
+                if isPatched then
+                    local brokenRow = Instance.new("Frame"); brokenRow.Name = "BrokenNotice"; brokenRow.Size = UDim2.new(1, 0, 0, 18); brokenRow.BackgroundTransparency = 1; brokenRow.Parent = drawer
+                    local brokenLabel = Instance.new("TextLabel"); brokenLabel.Size = UDim2.new(1, -8, 1, 0); brokenLabel.Position = UDim2.new(0, 4, 0, 0)
+                    brokenLabel.BackgroundTransparency = 1; brokenLabel.Font = Enum.Font.GothamMedium; brokenLabel.TextSize = 9; brokenLabel.TextColor3 = Color3.fromRGB(255, 90, 90)
+                    brokenLabel.TextXAlignment = Enum.TextXAlignment.Left; brokenLabel.Text = "⚠️ Broken: This module is currently patched"; brokenLabel.Parent = brokenRow
+                end
+                if populateOptionsFunc or isPatched then populateOptionsFunc(drawer) end
             end
             drawer.Visible = not drawer.Visible; updateBg()
         end
     end
 
-    if populateOptionsFunc then
+    if populateOptionsFunc or isPatched then
         gear = Instance.new("TextButton"); gear.Size = UDim2.new(0, 16, 0, 16); gear.Position = UDim2.new(1, -18, 0.5, -8)
         gear.BackgroundTransparency = 1; gear.Font = Enum.Font.GothamBold; gear.TextSize = 10; gear.TextColor3 = Color3.fromRGB(130, 130, 130)
         gear.Text = "*"; gear.Parent = btn
@@ -1894,7 +1938,7 @@ UI.InitializeUI = function()
     topTitle.Size = UDim2.new(0, 450, 1, 0); topTitle.Position = UDim2.new(0, 10, 0, 0); topTitle.BackgroundTransparency = 1
     topTitle.Font = Enum.Font.GothamBold; topTitle.TextSize = 11; topTitle.TextColor3 = Color3.fromRGB(255, 255, 255); topTitle.ZIndex = 5
     topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.Text = "<font color='#ffffff'>WeAreSkidding</font> <font color='#e0e0e0'>On Roblox v4.5</font> <font color='#aaaaaa'>(" .. executorName .. ")</font>"
+    topTitle.Text = "<font color='#ffffff'>WeAreSkidding</font> <font color='#e0e0e0'>On Roblox v4.6</font> <font color='#aaaaaa'>(" .. executorName .. ")</font>"
     topTitle.RichText = true; topTitle.Parent = topBar
 
     local hudTextLabel = Instance.new("TextLabel")
@@ -2004,7 +2048,7 @@ UI.InitializeUI = function()
     hudWatermark = Instance.new("TextLabel")
     hudWatermark.Size = UDim2.new(0, 200, 0, 14); hudWatermark.Position = UDim2.new(0, 10, 0, 26); hudWatermark.BackgroundTransparency = 1
     hudWatermark.Font = Enum.Font.GothamBold; hudWatermark.TextSize = 10; hudWatermark.TextColor3 = State.currentThemeColor
-    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 4.5"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
+    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 4.6"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
     table.insert(themeTexts, hudWatermark)
 
     hudCoords = Instance.new("TextLabel")
@@ -2810,7 +2854,7 @@ UI.InitializeUI = function()
                 if writefile then
                     pcall(function() writefile("utility_hub_visited.txt", "true") end)
                 end
-                UI.showToast("Welcome to WASOR 4.5!", State.currentThemeColor)
+                UI.showToast("Welcome to WASOR 4.6!", State.currentThemeColor)
                 task.wait(2.2)
                 UI.showToast("Toggle UI with [Right Control]", State.currentThemeColor)
                 task.wait(2.2)
