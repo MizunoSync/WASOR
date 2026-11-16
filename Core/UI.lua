@@ -2074,24 +2074,51 @@ UI.InitializeUI = function()
         S.ChatHideOnModules = v
         VH.Config.saveConfig()
     end)
+    local function launchFastChatHub()
+        if VH.launchNetworkChatHub then
+            pcall(VH.launchNetworkChatHub)
+            return
+        end
+        task.spawn(function()
+            local loaded = false
+            if isfile and readfile and loadstring then
+                local candidates = {"Chathub.lua", "WASOR/Chathub.lua", "WASORCLASSIC/Chathub.lua", "chatroom_cache.lua"}
+                for _, path in ipairs(candidates) do
+                    if isfile(path) then
+                        local code = readfile(path)
+                        if code and #code > 100 then
+                            local fn = loadstring(code, path)
+                            if fn then task.spawn(fn); loaded = true; break end
+                        end
+                    end
+                end
+            end
+            if not loaded then
+                pcall(function()
+                    local remoteCode = game:HttpGet("https://raw.githubusercontent.com/VenezzaX/detection.lua/refs/heads/main/sigma.lua", true)
+                    if remoteCode and #remoteCode > 100 then
+                        pcall(function() if writefile then writefile("chatroom_cache.lua", remoteCode) end end)
+                        local fn = loadstring(remoteCode, "sigma.lua")
+                        if fn then task.spawn(fn) end
+                    end
+                end)
+            end
+        end)
+    end
+
     UI.addToggleOption(chatContent, "Enable Network Chat Hub", S.NetworkChat, function(v)
         S.NetworkChat = v
         VH.Config.saveConfig()
         if v then
-            task.spawn(function()
-                pcall(function()
-                    loadstring(game:HttpGet(('https://raw.githubusercontent.com/VenezzaX/detection.lua/refs/heads/main/sigma.lua'), true))()
-                end)
-            end)
+            task.spawn(launchFastChatHub)
         else
-            local oldChat = game:GetService("CoreGui"):FindFirstChild("DiscordNetworkHub")
+            if _G.ChatHub_Cleanup then pcall(_G.ChatHub_Cleanup) end
+            local oldChat = game:GetService("CoreGui"):FindFirstChild("DiscordNetworkHub") or game:GetService("CoreGui"):FindFirstChild("ChatRoom")
             if oldChat then oldChat:Destroy() end
         end
     end)
     UI.addButtonOption(chatContent, "Launch / Reload External Chat Window", function()
-        pcall(function()
-            loadstring(game:HttpGet(('https://raw.githubusercontent.com/VenezzaX/detection.lua/refs/heads/main/sigma.lua'), true))()
-        end)
+        launchFastChatHub()
         UI.showToast("Network Chat launched!", State.currentThemeColor)
     end)
 
@@ -2136,7 +2163,17 @@ UI.InitializeUI = function()
     netListScroll.Parent = netListFrame
     local netListLayout = Instance.new("UIListLayout"); netListLayout.Padding = UDim.new(0, 3); netListLayout.Parent = netListScroll
 
+    local lastChatPanelUsersSignature = ""
     local function refreshChatPanelUsers()
+        local pool = State.networkTagsPool or {}
+        local names = {}
+        for uname, _ in pairs(pool) do table.insert(names, uname) end
+        table.sort(names)
+        local sig = table.concat(names, ",")
+        if sig == lastChatPanelUsersSignature and #netListScroll:GetChildren() > 1 then
+            return
+        end
+        lastChatPanelUsersSignature = sig
         for _, ch in ipairs(netListScroll:GetChildren()) do
             if ch:IsA("TextLabel") then ch:Destroy() end
         end
