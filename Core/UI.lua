@@ -2014,11 +2014,40 @@ UI.InitializeUI = function()
         refreshBtn.ImageColor3 = Color3.fromRGB(180, 180, 180)
     end)
 
-    refreshBtn.MouseButton1Click:Connect(function()
+    local function triggerReload()
         pcall(function()
-            UI.showToast("Refreshing UI...", State.currentThemeColor)
-            task.wait(0.2)
+            for _, parent in ipairs(getGuiContainers()) do
+                local old = parent:FindFirstChild("WASOR_ReloadWarning")
+                if old then pcall(function() old:Destroy() end) end
+            end
+            local reloadGui = Instance.new("ScreenGui")
+            reloadGui.Name = "WASOR_ReloadWarning"
+            reloadGui.ResetOnSpawn = false
+            reloadGui.IgnoreGuiInset = true
+            reloadGui.DisplayOrder = 2147483647
+            reloadGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+            pcall(function() reloadGui.ScreenInsets = Enum.ScreenInsets.None end)
 
+            local rl = Instance.new("TextLabel")
+            rl.Name = "ReloadWarningText"
+            rl.Size = UDim2.new(1, 0, 0, 50)
+            rl.Position = UDim2.new(0.5, 0, 0.5, 0)
+            rl.AnchorPoint = Vector2.new(0.5, 0.5)
+            rl.BackgroundTransparency = 1
+            rl.BorderSizePixel = 0
+            rl.Text = "W-A-S-O-R Currently reloading... (0%)"
+            rl.TextColor3 = Color3.fromRGB(255, 255, 255)
+            rl.Font = Enum.Font.GothamBold
+            rl.TextSize = 18
+            rl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+            rl.TextStrokeTransparency = 0.3
+            rl.Parent = reloadGui
+
+            local screenParent = getGuiParent()
+            reloadGui.Parent = screenParent
+        end)
+
+        task.spawn(function()
             pcall(function()
                 if delfile then
                     delfile("WASOR_Cache/commit_sha.txt")
@@ -2028,8 +2057,15 @@ UI.InitializeUI = function()
                 end
             end)
 
-            VH.Cleanup.cleanupAll()
-            task.wait(0.1)
+            _G.WASOR_IsReloading = true
+
+            pcall(function()
+                if VH.Cleanup and VH.Cleanup.cleanupAll then
+                    VH.Cleanup.cleanupAll()
+                end
+            end)
+
+            task.wait(0.2)
 
             local success, err = pcall(function()
                 loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/refs/heads/main/github_loader.lua"))()
@@ -2041,7 +2077,10 @@ UI.InitializeUI = function()
                 warn("[WASOR Reload]: Failed to reload from GitHub: " .. tostring(err))
             end
         end)
-    end)
+    end
+
+    refreshBtn.MouseButton1Click:Connect(triggerReload)
+    refreshBtn.Activated:Connect(triggerReload)
 
     toastContainer = Instance.new("Frame")
     toastContainer.Size = UDim2.new(0, 260, 0, 300); toastContainer.Position = UDim2.new(1, -270, 1, -325)
