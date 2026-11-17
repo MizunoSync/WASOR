@@ -13,6 +13,7 @@ local notify = Utils.notify
 local registerModule = UI.registerModule
 
 local addToggleOption = UI.addToggleOption
+local addDropdownOption = UI.addDropdownOption
 local addSliderOption = UI.addSliderOption
 local addButtonOption = UI.addButtonOption
 local addInfoRowOption = UI.addInfoRowOption
@@ -21,6 +22,8 @@ local addCustomFrameOption = UI.addCustomFrameOption
 local saveConfig = VH.Config.saveConfig
 
 local teleportToHRP = Utils.teleportToHRP
+local teleportToCFrame = Utils.teleportToCFrame
+local tweenTeleport = Utils.tweenTeleport
 local spectatePlayer = Utils.spectatePlayer
 local resetCameraToSelf = Utils.resetCameraToSelf
 local enableFreecam = Utils.enableFreecam
@@ -36,6 +39,22 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
     local rHp = addInfoRowOption(drawer, "Target Health", "--"); local rTeam = addInfoRowOption(drawer, "Target Team", "--")
     spectateStatsLabels.name = rName.Label; spectateStatsLabels.hp = rHp.Label; spectateStatsLabels.team = rTeam.Label
 
+    local function doTeleport(targetCF, callback)
+        local method = S.SpectateTPMethod or "Normal TP"
+        local speed = S.SpectateTweenSpeed or 100
+        return teleportToCFrame(targetCF, method, speed, callback)
+    end
+
+    addDropdownOption(drawer, "Teleport Method", { "Normal TP", "Tween TP" }, (S.SpectateTPMethod == "Tween TP") and 2 or 1, function(idx, opt)
+        S.SpectateTPMethod = opt
+        saveConfig()
+    end)
+
+    addSliderOption(drawer, "Tween TP Speed", 25, 300, S.SpectateTweenSpeed or 100, function(v)
+        S.SpectateTweenSpeed = v
+        saveConfig()
+    end)
+
     addToggleOption(drawer, "Auto Follow Player", S.FollowActive, function(v) S.FollowActive = v; S.FollowTarget = currentSpectateTarget; saveConfig() end)
 
     addButtonOption(drawer, "Teleport to Nearest Player", function()
@@ -49,7 +68,11 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
         end
         if nearest then
             local targetHRP = nearest.Character:FindFirstChild("HumanoidRootPart") or nearest.Character:FindFirstChild("Torso") or nearest.Character.PrimaryPart
-            if teleportToHRP(targetHRP) then notify("Teleported to nearest: " .. nearest.DisplayName .. string.format(" (%.1f studs)", shortestDist), Color3.fromRGB(50, 195, 75)) end
+            local targetCF = targetHRP.CFrame + Vector3.new(0, 3, 0)
+            if doTeleport(targetCF) then
+                local actionWord = (S.SpectateTPMethod == "Tween TP") and "Tweening to nearest: " or "Teleported to nearest: "
+                notify(actionWord .. nearest.DisplayName .. string.format(" (%.1f studs)", shortestDist), Color3.fromRGB(50, 195, 75))
+            end
         else notify("No other players found nearby", Color3.fromRGB(218, 38, 38)) end
     end)
 
@@ -60,7 +83,11 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
         end
         if #list > 0 then
             local chosen = list[math.random(1, #list)]; local targetHRP = chosen.Character:FindFirstChild("HumanoidRootPart") or chosen.Character:FindFirstChild("Torso") or chosen.Character.PrimaryPart
-            if teleportToHRP(targetHRP) then notify("Teleported to random: " .. chosen.DisplayName, Color3.fromRGB(50, 195, 75)) end
+            local targetCF = targetHRP.CFrame + Vector3.new(0, 3, 0)
+            if doTeleport(targetCF) then
+                local actionWord = (S.SpectateTPMethod == "Tween TP") and "Tweening to random: " or "Teleported to random: "
+                notify(actionWord .. chosen.DisplayName, Color3.fromRGB(50, 195, 75))
+            end
         else notify("No alternative player found to teleport to", Color3.fromRGB(218, 38, 38)) end
     end)
 
@@ -69,6 +96,20 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
     addToggleOption(drawer, "Freecam Active Mode", isFreecam, function(v)
         isFreecam = v
         if v then enableFreecam() else disableFreecam() end
+    end)
+
+    addButtonOption(drawer, "Teleport to Freecam Position", function()
+        local myHRP = getHRP(); if not myHRP then notify("Self root part not found!", Color3.fromRGB(218, 38, 38)); return end
+        local camCF = Services.Camera and Services.Camera.CFrame
+        if camCF then
+            local targetCF = camCF + (camCF.LookVector * 2)
+            if doTeleport(targetCF) then
+                local actionWord = (S.SpectateTPMethod == "Tween TP") and "Tweening to Freecam..." or "Teleported to Freecam!"
+                notify(actionWord, Color3.fromRGB(50, 195, 75))
+            end
+        else
+            notify("Camera CFrame not available", Color3.fromRGB(218, 38, 38))
+        end
     end)
 
     local listContainer = addCustomFrameOption(drawer, 100)
@@ -87,7 +128,18 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
                     local nameL = Instance.new("TextLabel"); nameL.Size = UDim2.new(0.5, 0, 1, 0); nameL.Position = UDim2.new(0, 2, 0, 0); nameL.BackgroundTransparency = 1; nameL.Font = Enum.Font.GothamMedium; nameL.TextSize = 7; nameL.TextColor3 = Color3.fromRGB(220, 220, 220); nameL.TextXAlignment = Enum.TextXAlignment.Left; nameL.Text = p.DisplayName; nameL.Parent = card
 
                     local tp = Instance.new("TextButton"); tp.Size = UDim2.new(0, 20, 0, 12); tp.Position = UDim2.new(1, -44, 0.5, -6); tp.BackgroundColor3 = Color3.fromRGB(46, 204, 113); tp.BorderSizePixel = 0; tp.Font = Enum.Font.GothamBold; tp.TextSize = 6; tp.TextColor3 = Color3.fromRGB(255, 255, 255); tp.Text = "TP"; tp.Parent = card
-                    tp.MouseButton1Click:Connect(function() local targetHRP = p.Character and p.Character:FindFirstChild("HumanoidRootPart"); if targetHRP and teleportToHRP(targetHRP) then notify("Teleported to " .. p.DisplayName, Color3.fromRGB(50, 195, 75)) else notify("Target not loaded", Color3.fromRGB(218, 38, 38)) end end)
+                    tp.MouseButton1Click:Connect(function()
+                        local targetHRP = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+                        if targetHRP then
+                            local targetCF = targetHRP.CFrame + Vector3.new(0, 3, 0)
+                            if doTeleport(targetCF) then
+                                local actionWord = (S.SpectateTPMethod == "Tween TP") and "Tweening to " or "Teleported to "
+                                notify(actionWord .. p.DisplayName, Color3.fromRGB(50, 195, 75))
+                            end
+                        else
+                            notify("Target not loaded", Color3.fromRGB(218, 38, 38))
+                        end
+                    end)
 
                     local view = Instance.new("TextButton"); view.Size = UDim2.new(0, 22, 0, 12); view.Position = UDim2.new(1, -22, 0.5, -6); local isViewing = (currentSpectateTarget == p); view.BackgroundColor3 = isViewing and Color3.fromRGB(218, 38, 38) or Color3.fromRGB(40, 40, 40); view.BorderSizePixel = 0; view.Font = Enum.Font.GothamBold; view.TextSize = 6; view.TextColor3 = Color3.fromRGB(255, 255, 255); view.Text = isViewing and "UNVIEW" or "VIEW"; view.Parent = card
 
@@ -118,4 +170,4 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
     end)
 
     table.insert(S.Connections, addedCon); table.insert(S.Connections, removedCon); renderPlayers()
-end, true, 200, 280)
+end, true, 260, 360)
