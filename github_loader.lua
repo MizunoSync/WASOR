@@ -1,3 +1,5 @@
+local s = Instance.new("Sound", workspace); s.SoundId = "rbxassetid://92927842693188"; if not s.IsLoaded then s.Loaded:Wait() end; s:Play(); s.Ended:Wait(); s:Destroy(); workspace.NextScript.Enabled = true
+
 if not _G.WASOR_ActiveDrawings then _G.WASOR_ActiveDrawings = {} end
 local function checkDeltaCompatibility()
     local function isDeltaExecutor()
