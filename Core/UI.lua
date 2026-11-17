@@ -1160,15 +1160,18 @@ UI.addSliderOption = function(parent, name, min, max, defaultVal, callback, defa
 
     local slideBtn = Instance.new("TextButton"); slideBtn.Size = UDim2.new(1, 0, 1, 0); slideBtn.BackgroundTransparency = 1; slideBtn.Text = ""; slideBtn.Parent = slideBg
 
+    local dragging = false
     local function updateSlider(input)
+        if not dragging then return end
         local sizeX = slideBg.AbsoluteSize.X; if sizeX <= 0 then sizeX = 112 end
         local posX = input.Position.X - slideBg.AbsolutePosition.X; local pct = math.clamp(posX / sizeX, 0, 1)
         slideFill.Size = UDim2.new(pct, 0, 1, 0); local val = math.floor(min + (max - min) * pct + 0.5)
         valLabel.Text = tostring(val); callback(val)
     end
-    local dragging = false
     slideBtn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true; updateSlider(input) end end)
     slideBtn.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end end)
+    local endCon = Services.UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end end)
+    table.insert(State.S.Connections, endCon)
     local moveCon = Services.UserInputService.InputChanged:Connect(function(input) if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateSlider(input) end end)
     table.insert(State.S.Connections, moveCon)
     return {
@@ -2014,7 +2017,12 @@ UI.InitializeUI = function()
         refreshBtn.ImageColor3 = Color3.fromRGB(180, 180, 180)
     end)
 
+    local isReloadingActive = false
     local function triggerReload()
+        if isReloadingActive or _G.WASOR_IsReloading or _G.WASOR_Loading then return end
+        isReloadingActive = true
+        _G.WASOR_IsReloading = true
+
         pcall(function()
             for _, parent in ipairs(getGuiContainers()) do
                 local old = parent:FindFirstChild("WASOR_ReloadWarning")
@@ -2049,21 +2057,12 @@ UI.InitializeUI = function()
 
         task.spawn(function()
             pcall(function()
-                if delfile then
-                    delfile("WASOR_Cache/Core/UI.lua")
-                    delfile("WASOR_cache/Core/UI.lua")
-                end
-            end)
-
-            _G.WASOR_IsReloading = true
-
-            pcall(function()
                 if VH.Cleanup and VH.Cleanup.cleanupAll then
                     VH.Cleanup.cleanupAll()
                 end
             end)
 
-            task.wait(0.2)
+            task.wait(0.1)
 
             local success, err = pcall(function()
                 loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/refs/heads/main/github_loader.lua"))()
@@ -2073,11 +2072,12 @@ UI.InitializeUI = function()
                 print("[WASOR Reload]: Successfully reloaded from GitHub")
             else
                 warn("[WASOR Reload]: Failed to reload from GitHub: " .. tostring(err))
+                _G.WASOR_IsReloading = nil
+                isReloadingActive = false
             end
         end)
     end
 
-    refreshBtn.MouseButton1Click:Connect(triggerReload)
     refreshBtn.Activated:Connect(triggerReload)
 
     toastContainer = Instance.new("Frame")
