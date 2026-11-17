@@ -1,19 +1,32 @@
-local s = Instance.new("Sound", workspace); s.SoundId = "rbxassetid://92927842693188"; if not s.IsLoaded then s.Loaded:Wait() end; s:Play(); s.Ended:Wait(); s:Destroy(); workspace.NextScript.Enabled = true
+do local s = Instance.new("Sound", workspace); s.SoundId = "rbxassetid://92927842693188"; local t = os.clock(); while not s.IsLoaded and os.clock() - t < 5 do task.wait(0.05) end; if s.IsLoaded then s:Play(); local d = (s.TimeLength > 0 and s.TimeLength or 3) + 1; local p = os.clock(); while s.IsPlaying and os.clock() - p < d do task.wait(0.05) end end; s:Destroy() end
 
-if not _G.WASOR_ActiveDrawings then _G.WASOR_ActiveDrawings = {} end
+local nextScript = workspace:FindFirstChild("NextScript")
+if nextScript and nextScript:IsA("BaseScript") then
+	nextScript.Enabled = true
+end
+
+if not _G.WASOR_ActiveDrawings then
+	_G.WASOR_ActiveDrawings = {}
+end
+
 local function checkDeltaCompatibility()
-    local function isDeltaExecutor()
-        local getExec = identifyexecutor or getexecutorname
-        if type(getExec) == "function" then
-            local success, execName = pcall(getExec)
-            if success and type(execName) == "string" then
-                if string.find(string.lower(execName), "delta", 1, true) then
-                    return true
-                end
-            end
-        end
-        return false
-    end
+	local function isDeltaExecutor()
+		local getExec = identifyexecutor or getexecutorname
+		if type(getExec) == "function" then
+			local success, execName = pcall(getExec)
+			if success and type(execName) == "string" then
+				if string.find(string.lower(execName), "delta", 1, true) then
+					return true
+				end
+			end
+		end
+		return false
+	end
+
+	return isDeltaExecutor()
+end
+
+local isDelta = checkDeltaCompatibility()
 
     local function loadDeltaKeyboard()
         local ok, err = pcall(function()
