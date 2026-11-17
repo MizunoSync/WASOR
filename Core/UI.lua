@@ -394,28 +394,65 @@ local function startToastCleanupWatcher()
     end)
 end
 
+local lastHUDArrayListSig = ""
+local lastHUDThemeColor = nil
 UI.updateHUDArrayList = function()
     if not hudArrayListFrame then return end
-    for _, child in ipairs(hudArrayListFrame:GetChildren()) do if child:IsA("TextLabel") then child:Destroy() end end
     local S = State.S
     local isVisible = S.HUDArrayList
     if not State.uiVisible then isVisible = S.HUDArrayList and S.HUDArrayListOutside end
-    if not isVisible then hudArrayListFrame.Visible = false return end
+    if not isVisible then
+        if hudArrayListFrame.Visible then hudArrayListFrame.Visible = false end
+        lastHUDArrayListSig = ""
+        return
+    end
 
     local activeMods = {}
-    for modName, item in pairs(UI.moduleButtons) do if item.IsActive and item.IsActive() then table.insert(activeMods, modName) end end
-    table.sort(activeMods, function(a, b) return #a > #b end)
-
-    if #activeMods == 0 then hudArrayListFrame.Visible = false
-    else
-        hudArrayListFrame.Visible = isVisible
-        for _, modName in ipairs(activeMods) do
-            local lbl = Instance.new("TextLabel"); lbl.Size = UDim2.new(1, 0, 0, 14); lbl.BackgroundTransparency = 1
-            lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 9; lbl.TextColor3 = State.currentThemeColor
-            lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.Text = "  " .. modName; lbl.Parent = hudArrayListFrame
-            local accent = Instance.new("Frame"); accent.Size = UDim2.new(0, 2, 1, 0); accent.Position = UDim2.new(0, 0, 0, 0)
-            accent.BackgroundColor3 = State.currentThemeColor; accent.BorderSizePixel = 0; accent.Parent = lbl
+    for modName, item in pairs(UI.moduleButtons) do
+        if item.IsActive and item.IsActive() then
+            table.insert(activeMods, modName)
         end
+    end
+
+    if #activeMods == 0 then
+        if hudArrayListFrame.Visible then hudArrayListFrame.Visible = false end
+        lastHUDArrayListSig = ""
+        return
+    end
+
+    table.sort(activeMods, function(a, b) return #a > #b end)
+    local sig = table.concat(activeMods, "\0")
+
+    if sig == lastHUDArrayListSig then
+        if State.currentThemeColor ~= lastHUDThemeColor then
+            lastHUDThemeColor = State.currentThemeColor
+            for _, child in ipairs(hudArrayListFrame:GetChildren()) do
+                if child:IsA("TextLabel") then
+                    child.TextColor3 = State.currentThemeColor
+                    local accent = child:FindFirstChildOfClass("Frame")
+                    if accent then accent.BackgroundColor3 = State.currentThemeColor end
+                end
+            end
+        end
+        return
+    end
+
+    lastHUDArrayListSig = sig
+    lastHUDThemeColor = State.currentThemeColor
+
+    for _, child in ipairs(hudArrayListFrame:GetChildren()) do
+        if child:IsA("TextLabel") then
+            child:Destroy()
+        end
+    end
+
+    hudArrayListFrame.Visible = true
+    for _, modName in ipairs(activeMods) do
+        local lbl = Instance.new("TextLabel"); lbl.Size = UDim2.new(1, 0, 0, 14); lbl.BackgroundTransparency = 1
+        lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 9; lbl.TextColor3 = State.currentThemeColor
+        lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.Text = "  " .. modName; lbl.Parent = hudArrayListFrame
+        local accent = Instance.new("Frame"); accent.Size = UDim2.new(0, 2, 1, 0); accent.Position = UDim2.new(0, 0, 0, 0)
+        accent.BackgroundColor3 = State.currentThemeColor; accent.BorderSizePixel = 0; accent.Parent = lbl
     end
 end
 
@@ -424,12 +461,6 @@ local function protectUIFonts(gui)
         if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
             local targetFont = Enum.Font[State.S.UIFont or "Gotham"] or Enum.Font.Gotham
             pcall(function() obj.Font = targetFont end)
-            obj:GetPropertyChangedSignal("Font"):Connect(function()
-                local fontNow = Enum.Font[State.S.UIFont or "Gotham"] or Enum.Font.Gotham
-                if obj.Font ~= fontNow then
-                    pcall(function() obj.Font = fontNow end)
-                end
-            end)
         end
     end
     for _, desc in ipairs(gui:GetDescendants()) do lockFont(desc) end
@@ -713,20 +744,32 @@ local function startGalaxyCycle()
     task.spawn(function()
         initGalaxyBackground()
         setGalaxyContainersVisible(true)
+        local wasVisible = true
         while State.S.ThemeColor == "Galaxy" and State.uiRunning do
-            task.wait(0.04)
-            setGalaxyContainersVisible(State.uiVisible)
-            local now = tick()
-            for _, s in ipairs(galaxyStars) do
-                if s.frame and s.frame.Parent then
-                    s.y = (s.y - s.speed)
-                    if s.y < 0 then s.y = 1; s.x = math.random() end
-                    s.x = (s.x + s.drift) % 1
-                    local alpha = 0.2 + 0.5 * math.abs(math.sin(now * s.twinkleSpeed + s.seed))
-                    pcall(function()
-                        s.frame.Position = UDim2.new(s.x, 0, s.y, 0)
-                        s.frame.BackgroundTransparency = alpha
-                    end)
+            if not State.uiVisible then
+                if wasVisible then
+                    wasVisible = false
+                    setGalaxyContainersVisible(false)
+                end
+                task.wait(0.2)
+            else
+                if not wasVisible then
+                    wasVisible = true
+                    setGalaxyContainersVisible(true)
+                end
+                task.wait(0.04)
+                local now = tick()
+                for _, s in ipairs(galaxyStars) do
+                    if s.frame and s.frame.Parent then
+                        s.y = (s.y - s.speed)
+                        if s.y < 0 then s.y = 1; s.x = math.random() end
+                        s.x = (s.x + s.drift) % 1
+                        local alpha = 0.2 + 0.5 * math.abs(math.sin(now * s.twinkleSpeed + s.seed))
+                        pcall(function()
+                            s.frame.Position = UDim2.new(s.x, 0, s.y, 0)
+                            s.frame.BackgroundTransparency = alpha
+                        end)
+                    end
                 end
             end
         end
@@ -740,10 +783,12 @@ local function startTextAnimationLoop()
     if textAnimActive then return end
     textAnimActive = true
     task.spawn(function()
+        local wasAnimated = false
         while State.uiRunning do
-            task.wait(0.04)
             local style = State.S.TextAnimationStyle or "Static"
             if style ~= "Static" and State.uiVisible then
+                wasAnimated = true
+                task.wait(0.04)
                 local now = tick()
                 local idx = 0
                 for catName, winData in pairs(UI.windows) do
@@ -763,13 +808,17 @@ local function startTextAnimationLoop()
                     end
                 end
             else
-                for catName, winData in pairs(UI.windows) do
-                    local label = winData.TitleLabel
-                    if label then
-                        label.Position = UDim2.new(0, 8, 0, 0)
-                        label.TextTransparency = 0
+                if wasAnimated then
+                    wasAnimated = false
+                    for catName, winData in pairs(UI.windows) do
+                        local label = winData.TitleLabel
+                        if label then
+                            label.Position = UDim2.new(0, 8, 0, 0)
+                            label.TextTransparency = 0
+                        end
                     end
                 end
+                task.wait(0.2)
             end
         end
         textAnimActive = false
@@ -789,15 +838,17 @@ local function startRainbowCycle()
             local col2 = Color3.fromHSV(((hue + 120) % 360) / 360, 0.8, 0.9)
             State.currentThemeColor = col1
             State.currentThemeGradientColor = col2
-            for _, obj in ipairs(themeHeaders) do pcall(function() obj.BackgroundColor3 = Color3.fromRGB(255, 255, 255) end) end
-            for _, obj in ipairs(themeTexts) do pcall(function() obj.TextColor3 = Color3.fromRGB(245, 245, 245) end) end
-            for _, obj in ipairs(themeFills) do pcall(function() obj.BackgroundColor3 = col1 end) end
-            for _, obj in ipairs(themeLeftCornerFills) do pcall(function() obj.BackgroundColor3 = col1 end) end
-            for _, obj in ipairs(themeRightCornerFills) do pcall(function() obj.BackgroundColor3 = col2 end) end
-            for _, updateFunc in ipairs(themeToggles) do pcall(updateFunc) end
-            for name, btn in pairs(UI.tabButtons) do if name == activeTab then btn.TextColor3 = Color3.fromRGB(255, 255, 255) end end
             if hudWatermark then hudWatermark.TextColor3 = col1 end
-            UI.updateAllGradients()
+            if State.uiVisible then
+                for _, obj in ipairs(themeHeaders) do pcall(function() obj.BackgroundColor3 = Color3.fromRGB(255, 255, 255) end) end
+                for _, obj in ipairs(themeTexts) do pcall(function() obj.TextColor3 = Color3.fromRGB(245, 245, 245) end) end
+                for _, obj in ipairs(themeFills) do pcall(function() obj.BackgroundColor3 = col1 end) end
+                for _, obj in ipairs(themeLeftCornerFills) do pcall(function() obj.BackgroundColor3 = col1 end) end
+                for _, obj in ipairs(themeRightCornerFills) do pcall(function() obj.BackgroundColor3 = col2 end) end
+                for _, updateFunc in ipairs(themeToggles) do pcall(updateFunc) end
+                for name, btn in pairs(UI.tabButtons) do if name == activeTab then btn.TextColor3 = Color3.fromRGB(255, 255, 255) end end
+                UI.updateAllGradients()
+            end
         end
         rainbowActive = false
     end)
@@ -1938,7 +1989,7 @@ UI.InitializeUI = function()
     topTitle.Size = UDim2.new(0, 450, 1, 0); topTitle.Position = UDim2.new(0, 10, 0, 0); topTitle.BackgroundTransparency = 1
     topTitle.Font = Enum.Font.GothamBold; topTitle.TextSize = 11; topTitle.TextColor3 = Color3.fromRGB(255, 255, 255); topTitle.ZIndex = 5
     topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.Text = "<font color='#ffffff'>WeAreSkidding</font> <font color='#e0e0e0'>On Roblox v4.6</font> <font color='#aaaaaa'>(" .. executorName .. ")</font>"
+    topTitle.Text = "<font color='#ffffff'>WeAreSkidding</font> <font color='#e0e0e0'>On Roblox v4.7</font> <font color='#aaaaaa'>(" .. executorName .. ")</font>"
     topTitle.RichText = true; topTitle.Parent = topBar
 
     local hudTextLabel = Instance.new("TextLabel")
@@ -2048,7 +2099,7 @@ UI.InitializeUI = function()
     hudWatermark = Instance.new("TextLabel")
     hudWatermark.Size = UDim2.new(0, 200, 0, 14); hudWatermark.Position = UDim2.new(0, 10, 0, 26); hudWatermark.BackgroundTransparency = 1
     hudWatermark.Font = Enum.Font.GothamBold; hudWatermark.TextSize = 10; hudWatermark.TextColor3 = State.currentThemeColor
-    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 4.6"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
+    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 4.7"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
     table.insert(themeTexts, hudWatermark)
 
     hudCoords = Instance.new("TextLabel")
@@ -2835,8 +2886,11 @@ UI.InitializeUI = function()
         Services.TweenService:Create(searchStroke, TweenInfo.new(0.15), {Color = Color3.fromRGB(45, 45, 45)}):Play()
     end)
 
+    local lastFilterQuery = nil
     local function filterModules(query)
         query = query:lower()
+        if query == lastFilterQuery then return end
+        lastFilterQuery = query
         for _, win in pairs(UI.windows) do
             local hasVisibleModule = false
             for _, child in ipairs(win.List:GetChildren()) do
@@ -2891,7 +2945,7 @@ UI.InitializeUI = function()
                 if writefile then
                     pcall(function() writefile("utility_hub_visited.txt", "true") end)
                 end
-                UI.showToast("Welcome to WASOR 4.6!", State.currentThemeColor)
+                UI.showToast("Welcome to WASOR 4.7!", State.currentThemeColor)
                 task.wait(2.2)
                 UI.showToast("Toggle UI with [Right Control]", State.currentThemeColor)
                 task.wait(2.2)
