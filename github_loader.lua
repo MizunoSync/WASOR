@@ -1,3 +1,28 @@
+local _loaderNow = tick()
+if _G.WASOR_Loading == true and _G.WASOR_LoadingTime and (_loaderNow - _G.WASOR_LoadingTime) < 15 then
+    warn("[WASOR 4.8] Injection already in progress. Aborting duplicate execution.")
+    return
+end
+
+if _G.WASOR_Loaded == true and not _G.WASOR_IsReloading then
+    pcall(function()
+        if _G.VoidHub and _G.VoidHub.UI then
+            local c = _G.VoidHub.UI.GetMainContainer and _G.VoidHub.UI.GetMainContainer()
+            if c then
+                c.Visible = true
+                if _G.VoidHub.State then _G.VoidHub.State.uiVisible = true end
+            end
+            if _G.VoidHub.Utils and _G.VoidHub.Utils.notify then
+                _G.VoidHub.Utils.notify("WASOR is already running! (UI Shown)", Color3.fromRGB(141, 47, 196))
+            end
+        end
+    end)
+    return
+end
+
+_G.WASOR_Loading = true
+_G.WASOR_LoadingTime = _loaderNow
+
 task.spawn(function()
     pcall(function()
         local s = Instance.new("Sound")
@@ -277,7 +302,7 @@ end
 
 checkDeltaCompatibility()
 
-local isReloadingSession = (_G.VoidHub ~= nil) or (_G.WASOR_Loaded == true) or (_G.WASOR_Loading == true) or (_G.WASOR_IsReloading == true)
+local isReloadingSession = (_G.WASOR_IsReloading == true)
 if isReloadingSession then
     pcall(function()
         if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
@@ -302,13 +327,11 @@ if isReloadingSession then
         end
     end)
     _G.VoidHub = nil
-    _G.WASOR_Loading = nil
     _G.WASOR_Loaded = nil
     _G.WASOR_Reloading = nil
     _G.WASOR_IsReloading = nil
     print("[WASOR 4.8] Existing instance detected. Cleaned up and reloading...")
 end
-_G.WASOR_Loading = true
 
 if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
     pcall(_G.VoidHub.Cleanup.cleanupAll)
@@ -1292,8 +1315,11 @@ end
 
 _G.WASOR_Loading = false
 _G.WASOR_Loaded = true
+_G.WASOR_IsReloading = nil
+_G.WASOR_LoadingTime = nil
 
 if not initSuccess then
+    _G.WASOR_Loaded = nil
     writeCrashLog("Loader Initialization", initErr, debug.traceback())
 else
     print("[WASOR] Loader: FileBuild (GitHub)")

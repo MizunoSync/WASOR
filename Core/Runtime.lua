@@ -144,12 +144,24 @@ if not _G.WASOR_ActiveDrawings then
 end
 
 local function newDrawing(dtype)
-    local d = Drawing.new(dtype)
+    local ok, d = pcall(function() return Drawing.new(dtype) end)
+    if not ok or not d then return nil end
     if not _G.WASOR_ActiveDrawings then
         _G.WASOR_ActiveDrawings = {}
     end
     _G.WASOR_ActiveDrawings[d] = true
     return d
+end
+
+local function isDrawingValid(d)
+    if not d then return false end
+    local ok = pcall(function() local _ = d.Visible end)
+    return ok
+end
+
+local function safeHideDrawing(d)
+    if not d then return end
+    pcall(function() d.Visible = false end)
 end
 
 local lastTriggerFire = 0
@@ -473,7 +485,10 @@ local function updateESPAndAimbot()
                     local espDrawCol = espColorMapping[S.ESPColor] or teamCol
                     if S.ESPDistanceColor then local pct = math.clamp(dist / 500, 0, 1); espDrawCol = Color3.fromRGB(255 * pct, 255 * (1 - pct), 0) end
 
-                    if not S.ESPPool[p] then
+                    if not S.ESPPool[p] or not isDrawingValid(S.ESPPool[p].boxOutline) then
+                        if S.ESPPool[p] then
+                            destroyESP(p)
+                        end
                         S.ESPPool[p] = {
                             boxOutline = newDrawing("Square"), boxFill = newDrawing("Square"), tracer = newDrawing("Line"),
                             nameTag = newDrawing("Text"), healthText = newDrawing("Text"), distText = newDrawing("Text"),
@@ -482,8 +497,11 @@ local function updateESPAndAimbot()
                         }
                     end
                     local pool = S.ESPPool[p]
-                    if not pool.losLine then
+                    if not isDrawingValid(pool.losLine) then
                         pool.losLine = newDrawing("Line")
+                    end
+                    if not isDrawingValid(pool.indicator) then
+                        pool.indicator = newDrawing("Triangle")
                     end
 
                     local box = getBoundingBox(char)
@@ -491,12 +509,18 @@ local function updateESPAndAimbot()
                     local showIndicator = oodAllowed and (not onScreen or sp.Z <= 0)
 
                     if showIndicator then
-                        pool.boxOutline.Visible = false; pool.boxFill.Visible = false; pool.tracer.Visible = false; pool.nameTag.Visible = false
-                        pool.healthText.Visible = false; pool.distText.Visible = false; pool.healthBarOutline.Visible = false; pool.healthBarFill.Visible = false
-                        for _, line in ipairs(pool.skeleton) do line.Visible = false end
-                        for _, line in ipairs(pool.corners) do line.Visible = false end
-                        if pool.lines3D then for _, line in ipairs(pool.lines3D) do line.Visible = false end end
-                        if pool.losLine then pool.losLine.Visible = false end
+                        safeHideDrawing(pool.boxOutline)
+                        safeHideDrawing(pool.boxFill)
+                        safeHideDrawing(pool.tracer)
+                        safeHideDrawing(pool.nameTag)
+                        safeHideDrawing(pool.healthText)
+                        safeHideDrawing(pool.distText)
+                        safeHideDrawing(pool.healthBarOutline)
+                        safeHideDrawing(pool.healthBarFill)
+                        for _, line in ipairs(pool.skeleton) do safeHideDrawing(line) end
+                        for _, line in ipairs(pool.corners) do safeHideDrawing(line) end
+                        if pool.lines3D then for _, line in ipairs(pool.lines3D) do safeHideDrawing(line) end end
+                        if pool.losLine then safeHideDrawing(pool.losLine) end
 
                         local dir = (hrp.Position - Camera.CFrame.Position).Unit
                         local camSpaceDir = Camera.CFrame:VectorToObjectSpace(dir)
@@ -804,6 +828,7 @@ local function updateESPAndAimbot()
         end
     end
 end
+pcall(function() RunService:UnbindFromRenderStep("VoidESPUpdate") end)
 RunService:BindToRenderStep("VoidESPUpdate", Enum.RenderPriority.Camera.Value + 1, updateESPAndAimbot)
 
 local fpsCount, lastFpsTick, lastPingTick, pingVal = 0, tick(), tick(), 0

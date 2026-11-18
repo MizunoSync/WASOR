@@ -1533,13 +1533,13 @@ UI.getOrCreateWindow = function(catName, defaultX, defaultY)
                 win.Size = UDim2.new(0, 180, 0, 22)
             end
         else
+            win.AutomaticSize = Enum.AutomaticSize.None
+            win.Size = UDim2.new(0, 180, 0, 22)
             list.Visible = true
             fillL.Visible = true
             fillR.Visible = true
             if State.S.UIAnimations ~= false and Services.TweenService then
                 local targetH = getWindowContentHeight(win, list, 22, 4, 1)
-                win.AutomaticSize = Enum.AutomaticSize.None
-                win.Size = UDim2.new(0, 180, 0, 22)
                 local tw = Services.TweenService:Create(win, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 180, 0, targetH)})
                 tw:Play()
                 tw.Completed:Connect(function()
@@ -2221,9 +2221,15 @@ local function createPanel(title, width, height)
 end
 
 UI.InitializeUI = function()
+    if UI._isInitializing then return end
+    UI._isInitializing = true
+
     local S = (State and State.S) or (VH.State and VH.State.S) or (_G.VoidHub and _G.VoidHub.State and _G.VoidHub.State.S) or {}
 
     pcall(function()
+        if screenGui and screenGui.Parent then
+            pcall(UI.destroyUI)
+        end
         if _G.WASOR_ScreenGui and _G.WASOR_ScreenGui.Parent then
             pcall(function() _G.WASOR_ScreenGui:Destroy() end)
             _G.WASOR_ScreenGui = nil
@@ -3540,6 +3546,7 @@ UI.InitializeUI = function()
 
         makeDraggable(eulaFrame, header)
     end
+    UI._isInitializing = false
 end
 
 UI.updateNetworkUsersHUD = function(activeInServer)
@@ -3823,6 +3830,7 @@ end
 UI.GetScreenGui = function() return screenGui end
 UI.GetMainContainer = function() return mainUIContainer end
 UI.destroyUI = function()
+    UI._isInitializing = false
     toggleAnimToken = toggleAnimToken + 1
     pcall(function()
         if screenGui and screenGui.Parent then

@@ -540,30 +540,33 @@ end
 
 Utils.setupAutoReinject = function()
     local S = State.S
+    pcall(function()
+        if delfile and isfile and isfile("autoexec/WASOR.lua") then
+            delfile("autoexec/WASOR.lua")
+        end
+    end)
+
+    if not S.AutoReinject then
+        State.teleportQueued = false
+        return
+    end
+
+    if State.teleportQueued then return end
+
+    local qot = queue_on_teleport or queueteleport or (syn and syn.queue_on_teleport) or queue_to_teleport or (fluxus and fluxus.queue_on_teleport)
     local code = [[
         repeat task.wait() until game:IsLoaded()
-        local success, err = pcall(function()
+        if _G.WASOR_Loaded or _G.WASOR_Loading then return end
+        pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/github_loader.lua"))()
         end)
-        if not success then
-            pcall(function()
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/github_loader.lua"))()
-            end)
-        end
     ]]
 
-    local qot = queue_on_teleport or queueteleport or (syn and syn.queue_on_teleport)
-    if S.AutoReinject then
-        if qot then
-            pcall(qot, code)
-        end
-        if writefile then
-            pcall(writefile, "autoexec/WASOR.lua", code)
-        end
-    else
-        if writefile and isfile and isfile("autoexec/WASOR.lua") then
-            pcall(delfile, "autoexec/WASOR.lua")
-        end
+    if qot then
+        State.teleportQueued = true
+        pcall(qot, code)
+    elseif writefile then
+        pcall(writefile, "autoexec/WASOR.lua", code)
     end
 end
 
