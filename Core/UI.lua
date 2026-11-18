@@ -1713,9 +1713,9 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         pcall(function() oldContainer:Destroy() end)
     end
     local container = Instance.new("Frame"); container.Name = "Mod_" .. name; container.Size = UDim2.new(1, 0, 0, 20)
-    container.AutomaticSize = Enum.AutomaticSize.None; container.BackgroundColor3 = Color3.fromRGB(24, 24, 28); container.BackgroundTransparency = 1; container.BorderSizePixel = 0; container.ClipsDescendants = true; container.Parent = win.List
+    container.AutomaticSize = Enum.AutomaticSize.Y; container.BackgroundColor3 = Color3.fromRGB(24, 24, 28); container.BackgroundTransparency = 1; container.BorderSizePixel = 0; container.Parent = win.List
     local btn = Instance.new("TextButton"); btn.Size = UDim2.new(1, 0, 0, 20); btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    btn.BackgroundTransparency = 0.5; btn.BorderSizePixel = 0; btn.Text = ""; btn.ZIndex = 2; btn.Parent = container
+    btn.BackgroundTransparency = 0.5; btn.BorderSizePixel = 0; btn.Text = ""; btn.Parent = container
     local isPatched = (patchedModules and patchedModules[name:lower()])
     local inactiveColor = Color3.fromRGB(200, 200, 200)
     if isPatched then
@@ -1728,13 +1728,13 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     if isPatched then
         btn.BackgroundTransparency = 0.75
     end
-    local modTextLabel = Instance.new("TextLabel"); modTextLabel.Name = "ModTextLabel"; modTextLabel.Size = UDim2.new(1, (populateOptionsFunc or isPatched) and -28 or -8, 1, 0)
+    local modTextLabel = Instance.new("TextLabel"); modTextLabel.Name = "ModTextLabel"; modTextLabel.Size = UDim2.new(1, -20, 1, 0)
     modTextLabel.Position = UDim2.new(0, 6, 0, 0); modTextLabel.BackgroundTransparency = 1; modTextLabel.Font = Enum.Font.Gotham; modTextLabel.TextSize = 9
     modTextLabel.TextColor3 = (isToggle and defaultState) and ((isPatched and Color3.fromRGB(235, 75, 75)) or Color3.fromRGB(100, 240, 100)) or inactiveColor
     if isPatched then
         modTextLabel.TextTransparency = 0.45
     end
-    modTextLabel.TextXAlignment = Enum.TextXAlignment.Left; modTextLabel.Text = name; modTextLabel.ZIndex = 3; modTextLabel.Parent = btn
+    modTextLabel.TextXAlignment = Enum.TextXAlignment.Left; modTextLabel.Text = name; modTextLabel.ZIndex = 5; modTextLabel.Parent = btn
     btn.TextColor3 = modTextLabel.TextColor3
 
     UI.moduleCategories[name] = catName
@@ -1801,8 +1801,6 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         updateBg()
     end)
 
-    local drawerAnimTween = nil
-    local containerAnimTween = nil
     local function toggleMenu()
         if useSeparateWindow then
             if not floatingWin then
@@ -1815,73 +1813,15 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
                     brokenLabel.TextXAlignment = Enum.TextXAlignment.Left; brokenLabel.Text = "⚠️ Broken: This module is currently patched"; brokenLabel.Parent = brokenRow
                 end
                 if populateOptionsFunc or isPatched then populateOptionsFunc(drawer) end
-                floatingWin:GetPropertyChangedSignal("Visible"):Connect(updateBg)
-
-                local totalContentH, count = 0, 0
-                for _, ch in ipairs(drawer:GetChildren()) do
-                    if ch:IsA("GuiObject") and ch.Name ~= "resizeHandle" and not ch:IsA("UIListLayout") and not ch:IsA("UIPadding") and not ch:IsA("UIStroke") then
-                        totalContentH = totalContentH + ch.Size.Y.Offset
-                        count = count + 1
-                    end
-                end
-                if count > 0 then
-                    local lL = drawer:FindFirstChildOfClass("UIListLayout")
-                    local pV = lL and lL.Padding.Offset or 4
-                    local uP = drawer:FindFirstChildOfClass("UIPadding")
-                    local pT = uP and uP.PaddingTop.Offset or 4
-                    local pB = uP and uP.PaddingBottom.Offset or 4
-                    local headerH = (floatingWin:FindFirstChild("Header") and floatingWin.Header.Size.Y.Offset > 0) and floatingWin.Header.Size.Y.Offset or 22
-                    local contentH = pT + pB + totalContentH + math.max(0, count - 1) * pV + 2
-                    local idealH = headerH + contentH
-                    local finalH = math.clamp(idealH, 50, math.min(idealH, h))
-                    floatingWin.Size = UDim2.new(0, w, 0, finalH)
-                    floatingWin:SetAttribute("BaseHeight", finalH)
-                end
+                adjustWindowSizeToContent(floatingWin, drawer)
             end
-            local animScale = floatingWin:FindFirstChild("AnimScale")
-            local willOpen = not floatingWin.Visible or floatingWin:GetAttribute("UserOpen") == false
-            if willOpen then
-                floatingWin:SetAttribute("UserOpen", true)
-                if State.S.UIAnimations ~= false and Services.TweenService and animScale then
-                    animScale.Scale = 0.88
-                    floatingWin.Visible = true
-                    Services.TweenService:Create(animScale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1.0}):Play()
-                else
-                    if animScale then animScale.Scale = 1.0 end
-                    floatingWin.Visible = true
-                end
-                if gear and State.S.UIAnimations ~= false and Services.TweenService then
-                    Services.TweenService:Create(gear, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = 90}):Play()
-                end
-                updateBg()
-            else
-                floatingWin:SetAttribute("UserOpen", false)
-                if gear and State.S.UIAnimations ~= false and Services.TweenService then
-                    Services.TweenService:Create(gear, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = 0}):Play()
-                end
-                if State.S.UIAnimations ~= false and Services.TweenService and animScale and floatingWin.Visible then
-                    local tw = Services.TweenService:Create(animScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.88})
-                    tw:Play()
-                    tw.Completed:Connect(function(state)
-                        if state == Enum.PlaybackState.Completed and not floatingWin:GetAttribute("UserOpen") then
-                            floatingWin.Visible = false
-                            animScale.Scale = 1.0
-                            updateBg()
-                        end
-                    end)
-                else
-                    floatingWin.Visible = false
-                    if animScale then animScale.Scale = 1.0 end
-                    updateBg()
-                end
-            end
+            floatingWin.Visible = not floatingWin.Visible; floatingWin:SetAttribute("UserOpen", floatingWin.Visible); updateBg()
         else
             if not drawer then
                 drawer = Instance.new("Frame"); drawer.Name = "drawer"; drawer.Size = UDim2.new(1, 0, 0, 0)
                 drawer.Position = UDim2.new(0, 0, 0, 20)
-                drawer.AutomaticSize = Enum.AutomaticSize.None; drawer.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
-                drawer.BackgroundTransparency = 0; drawer.BorderSizePixel = 0; drawer.ClipsDescendants = false; drawer.Visible = false
-                drawer.ZIndex = 2; drawer.Parent = container
+                drawer.AutomaticSize = Enum.AutomaticSize.Y; drawer.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+                drawer.BackgroundTransparency = 0; drawer.BorderSizePixel = 0; drawer.Visible = false; drawer.Parent = container
                 local layout = Instance.new("UIListLayout"); layout.Padding = UDim.new(0, 2); layout.Parent = drawer
                 local pad = Instance.new("UIPadding"); pad.PaddingTop = UDim.new(0, 4); pad.PaddingBottom = UDim.new(0, 4); pad.PaddingLeft = UDim.new(0, 4); pad.PaddingRight = UDim.new(0, 4); pad.Parent = drawer
                 local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(48, 48, 56); stroke.Thickness = 1; stroke.Parent = drawer
@@ -1892,154 +1832,35 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
                     brokenLabel.TextXAlignment = Enum.TextXAlignment.Left; brokenLabel.Text = "⚠️ Broken: This module is currently patched"; brokenLabel.Parent = brokenRow
                 end
                 if populateOptionsFunc or isPatched then populateOptionsFunc(drawer) end
-
-                layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-                    if drawer and drawer.Visible and not drawerAnimTween then
-                        local scale = getUIScale()
-                        local newH = math.round((layout.AbsoluteContentSize.Y + 8) / scale)
-                        if newH >= 20 and drawer.Size.Y.Offset ~= newH then
-                            drawer.Size = UDim2.new(1, 0, 0, newH)
-                            container.Size = UDim2.new(1, 0, 0, 20 + newH)
-                        end
-                    end
-                end)
             end
-
-            if drawerAnimTween then pcall(function() drawerAnimTween:Cancel() end); drawerAnimTween = nil end
-            if containerAnimTween then pcall(function() containerAnimTween:Cancel() end); containerAnimTween = nil end
-
-            local willOpen = not drawer.Visible
-            local scale = getUIScale()
-            if willOpen then
-                drawer.Visible = true
-                local layout = drawer:FindFirstChildOfClass("UIListLayout")
-                local targetH = 0
-                if layout and layout.AbsoluteContentSize.Y > 0 then
-                    targetH = math.round((layout.AbsoluteContentSize.Y + 8) / scale)
-                else
-                    for _, ch in ipairs(drawer:GetChildren()) do
-                        if ch:IsA("GuiObject") and not ch:IsA("UIListLayout") and not ch:IsA("UIPadding") and not ch:IsA("UIStroke") then
-                            local chH = (ch:GetAttribute("BaseSize") and ch:GetAttribute("BaseSize").Y.Offset) or ch.Size.Y.Offset
-                            targetH = targetH + chH + 2
-                        end
-                    end
-                    targetH = targetH + 8
-                end
-                if targetH < 20 then targetH = 32 end
-
-                if gear and State.S.UIAnimations ~= false and Services.TweenService then
-                    Services.TweenService:Create(gear, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = 90}):Play()
-                end
-                if State.S.UIAnimations ~= false and Services.TweenService then
-                    drawer.Size = UDim2.new(1, 0, 0, 0)
-                    container.Size = UDim2.new(1, 0, 0, 20)
-                    drawer.ClipsDescendants = true
-                    container.ClipsDescendants = true
-                    drawer.AutomaticSize = Enum.AutomaticSize.None
-                    container.AutomaticSize = Enum.AutomaticSize.None
-                    local tInfo = TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-                    drawerAnimTween = Services.TweenService:Create(drawer, tInfo, {Size = UDim2.new(1, 0, 0, targetH)})
-                    containerAnimTween = Services.TweenService:Create(container, tInfo, {Size = UDim2.new(1, 0, 0, 20 + targetH)})
-                    drawerAnimTween:Play()
-                    containerAnimTween:Play()
-                    drawerAnimTween.Completed:Connect(function(state)
-                        if state == Enum.PlaybackState.Completed and drawer.Visible then
-                            drawer.Size = UDim2.new(1, 0, 0, targetH)
-                            container.Size = UDim2.new(1, 0, 0, 20 + targetH)
-                            drawer.AutomaticSize = Enum.AutomaticSize.None
-                            container.AutomaticSize = Enum.AutomaticSize.None
-                            drawer.ClipsDescendants = false
-                            container.ClipsDescendants = false
-                            drawerAnimTween = nil
-                        end
-                    end)
-                else
-                    drawer.Size = UDim2.new(1, 0, 0, targetH)
-                    drawer.AutomaticSize = Enum.AutomaticSize.None
-                    container.Size = UDim2.new(1, 0, 0, 20 + targetH)
-                    container.AutomaticSize = Enum.AutomaticSize.None
-                    drawer.ClipsDescendants = false
-                    container.ClipsDescendants = false
-                end
-                updateBg()
-            else
-                if gear and State.S.UIAnimations ~= false and Services.TweenService then
-                    Services.TweenService:Create(gear, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = 0}):Play()
-                end
-                if State.S.UIAnimations ~= false and Services.TweenService then
-                    local curH = math.round((drawer.AbsoluteSize.Y > 0 and drawer.AbsoluteSize.Y or (drawer.Size.Y.Offset * scale)) / scale)
-                    if curH <= 0 then curH = 30 end
-                    drawer.Size = UDim2.new(1, 0, 0, curH)
-                    container.Size = UDim2.new(1, 0, 0, 20 + curH)
-                    drawer.ClipsDescendants = true
-                    container.ClipsDescendants = true
-                    drawer.AutomaticSize = Enum.AutomaticSize.None
-                    container.AutomaticSize = Enum.AutomaticSize.None
-                    local tInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-                    drawerAnimTween = Services.TweenService:Create(drawer, tInfo, {Size = UDim2.new(1, 0, 0, 0)})
-                    containerAnimTween = Services.TweenService:Create(container, tInfo, {Size = UDim2.new(1, 0, 0, 20)})
-                    drawerAnimTween:Play()
-                    containerAnimTween:Play()
-                    local function finishClose(state)
-                        if state ~= Enum.PlaybackState.Completed then return end
-                        drawer.Visible = false
-                        drawer.Size = UDim2.new(1, 0, 0, 0)
-                        drawer.AutomaticSize = Enum.AutomaticSize.None
-                        container.Size = UDim2.new(1, 0, 0, 20)
-                        container.AutomaticSize = Enum.AutomaticSize.None
-                        drawerAnimTween = nil
-                        updateBg()
-                    end
-                    drawerAnimTween.Completed:Connect(finishClose)
-                else
-                    drawer.Visible = false
-                    drawer.Size = UDim2.new(1, 0, 0, 0)
-                    drawer.AutomaticSize = Enum.AutomaticSize.None
-                    container.Size = UDim2.new(1, 0, 0, 20)
-                    container.AutomaticSize = Enum.AutomaticSize.None
-                    updateBg()
-                end
-            end
+            drawer.Visible = not drawer.Visible; updateBg()
         end
     end
 
+    local gearClicked = false
     if populateOptionsFunc or isPatched then
-        gear = Instance.new("TextButton")
-        gear.Name = "ExpandBtn"
-        gear.Size = UDim2.new(0, 20, 0, 16)
-        gear.Position = UDim2.new(1, -22, 0.5, -8)
-        gear.BackgroundColor3 = Color3.fromRGB(36, 36, 42)
-        gear.BackgroundTransparency = 0.4
-        gear.BorderSizePixel = 0
-        gear.Font = Enum.Font.GothamBold
-        gear.TextSize = 10
-        gear.TextColor3 = Color3.fromRGB(180, 180, 185)
-        gear.Text = "..."
-        gear.ZIndex = 6
-        gear.Parent = container
-
-        local gCorner = Instance.new("UICorner")
-        gCorner.CornerRadius = UDim.new(0, 3)
-        gCorner.Parent = gear
-
-        gear.MouseButton1Click:Connect(toggleMenu)
-        gear.MouseEnter:Connect(function()
-            gear.BackgroundTransparency = 0.1
-            gear.BackgroundColor3 = Color3.fromRGB(48, 48, 56)
-            gear.TextColor3 = State.currentThemeColor
+        gear = Instance.new("TextButton"); gear.Size = UDim2.new(0, 16, 0, 16); gear.Position = UDim2.new(1, -18, 0.5, -8)
+        gear.BackgroundTransparency = 1; gear.Font = Enum.Font.GothamBold; gear.TextSize = 10; gear.TextColor3 = Color3.fromRGB(130, 130, 130)
+        gear.Text = "*"; gear.Parent = btn
+        gear.MouseButton1Click:Connect(function()
+            gearClicked = true
+            task.defer(function()
+                gearClicked = false
+            end)
+            toggleMenu()
         end)
-        gear.MouseLeave:Connect(function()
-            gear.BackgroundTransparency = 0.4
-            gear.BackgroundColor3 = Color3.fromRGB(36, 36, 42)
-            gear.TextColor3 = Color3.fromRGB(180, 180, 185)
-        end)
+        gear.MouseEnter:Connect(function() gear.TextColor3 = State.currentThemeColor end)
+        gear.MouseLeave:Connect(function() gear.TextColor3 = Color3.fromRGB(130, 130, 130) end)
         UI.moduleGears[name] = gear
     end
 
     btn.MouseButton2Click:Connect(toggleMenu)
 
-    local lastClickTime = 0
     btn.MouseButton1Click:Connect(function()
+        if gearClicked then
+            gearClicked = false
+            return
+        end
         if State.S.ModuleDisableMode then
             if catName == "Misc" then
                 UI.showToast("Cannot disable modules in the Misc tab!", Color3.fromRGB(218, 38, 38))
@@ -2056,18 +1877,7 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
             return
         end
 
-        local now = os.clock()
         if isToggle then
-            if (now - lastClickTime) < 0.35 and (populateOptionsFunc or isPatched) then
-                lastClickTime = 0
-                -- Revert accidental toggle from first click and open options
-                active = not active
-                updateColor()
-                if callback then callback(active) end
-                toggleMenu()
-                return
-            end
-            lastClickTime = now
             active = not active
             updateColor()
             if callback then callback(active) end
