@@ -383,7 +383,10 @@ Cleanup.cleanupAll = function()
             local hum = char and char:FindFirstChildOfClass("Humanoid")
             if hum then Services.Camera.CameraSubject = hum end
         end
-        if State.activeTeleportTween then
+        if State.activeTeleportCleanup then
+            pcall(State.activeTeleportCleanup, false)
+            State.activeTeleportCleanup = nil
+        elseif State.activeTeleportTween then
             pcall(function() State.activeTeleportTween:Cancel() end)
             State.activeTeleportTween = nil
         end

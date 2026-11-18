@@ -25,6 +25,7 @@ State.originalAtmospheres = {}
 State.latestFogState = nil
 State.latestAtmospheres = nil
 State.activeTeleportTween = nil
+State.activeTeleportCleanup = nil
 pcall(function()
     if Lighting then
         for _, descendant in ipairs(Lighting:GetDescendants()) do

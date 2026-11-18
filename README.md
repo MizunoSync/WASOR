@@ -167,6 +167,23 @@ To test and modify WASOR source code locally:
 
 ---
 
+## 📝 Release Notes & Changelogs
+
+### ⚡ WASOR v4.8 (Current)
+* **Smooth UI Animations**: Added fluid slide animations for module option drawers and overall UI visibility toggling.
+* **1-Click Module Drawer Opening**: Fixed option drawers requiring multiple clicks to expand; non-toggle utility modules (ScriptHub, Settings, Fun, Console Viewer) now open immediately upon single-click, with double-click support on toggle modules.
+* **Drawer Layout Stabilization**: Eliminated frame clipping and height collapse by retaining calculated dimensions upon tween completion.
+* **Dual-Injection & ESP Hardening**: Added top-level mutex locks and teleport reinjection debounces preventing multiple overlapping UI instances and Drawing API disposal crashes.
+* **ScriptHub & Fun Geometry Clamping**: Removed unused blank padding and dead vertical space across floating and drawer tool windows.
+* **ChatHub Critical Fixes**: Resolved `:167: attempt to index nil with 'green'` badge coloring and font assignment crashes.
+* **CompatibleScripts Upgrades**: FeEmotes & AnimationPicker now persist custom emote names, support direct clipboard asset ID pasting, and direct dance animation playback.
+
+### ⚡ WASOR v4.7
+* Comprehensive UI performance optimization and memory leak mitigation across rendering routines.
+* Stabilized modular loader lifecycle and initial injection hooks.
+
+---
+
 ## 🌐 Community & Links
 
 * 🔗 **Live Documentation**: [https://wasordocumentation.vercel.app/](https://wasordocumentation.vercel.app/#intro)

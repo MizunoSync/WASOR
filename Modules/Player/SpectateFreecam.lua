@@ -112,7 +112,7 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
         end
     end)
 
-    local listContainer = addCustomFrameOption(drawer, 190)
+    local listContainer = addCustomFrameOption(drawer, 130)
     local box = Instance.new("TextBox")
     box.Size = UDim2.new(1, -8, 0, 24)
     box.Position = UDim2.new(0, 4, 0, 2)
@@ -247,4 +247,4 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
     end)
 
     table.insert(S.Connections, addedCon); table.insert(S.Connections, removedCon); renderPlayers()
-end, true, 340, 480)
+end, true, 340, 436)

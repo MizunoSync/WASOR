@@ -612,19 +612,81 @@ Utils.tweenTeleport = function(targetCFrame, speed, callback)
     local tpSpeed = math.max(tonumber(speed) or 100, 10)
     local duration = math.clamp(distance / tpSpeed, 0.1, 15)
 
-    if State.activeTeleportTween then
+    if State.activeTeleportCleanup then
+        pcall(State.activeTeleportCleanup, false)
+        State.activeTeleportCleanup = nil
+    elseif State.activeTeleportTween then
         pcall(function() State.activeTeleportTween:Cancel() end)
         State.activeTeleportTween = nil
     end
 
-    local origAnchored = myHRP.Anchored
-    myHRP.Anchored = true
+    local bv = Instance.new("BodyVelocity")
+    bv.Name = "WASOR_TweenTP_BV"
+    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bv.Velocity = Vector3.zero
+    bv.Parent = myHRP
+
+    myHRP.Anchored = false
     myHRP.AssemblyLinearVelocity = Vector3.zero
+    myHRP.AssemblyAngularVelocity = Vector3.zero
+
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(myHRP, tweenInfo, { CFrame = targetCFrame })
+    State.activeTeleportTween = tween
 
     local noclipConn = nil
+    local completedConn = nil
+    local cleaned = false
+
+    local function cleanup(success)
+        if cleaned then return end
+        cleaned = true
+        if State.activeTeleportCleanup == cleanup then
+            State.activeTeleportCleanup = nil
+        end
+        if State.activeTeleportTween == tween then
+            State.activeTeleportTween = nil
+        end
+        if completedConn then
+            pcall(function() completedConn:Disconnect() end)
+            completedConn = nil
+        end
+        if noclipConn then
+            pcall(function() noclipConn:Disconnect() end)
+            noclipConn = nil
+        end
+        pcall(function() tween:Cancel() end)
+        if bv and bv.Parent then
+            pcall(function() bv:Destroy() end)
+            bv = nil
+        end
+        pcall(function()
+            if myHRP and myHRP.Parent then
+                myHRP.Anchored = false
+                myHRP.AssemblyLinearVelocity = Vector3.zero
+                myHRP.AssemblyAngularVelocity = Vector3.zero
+            end
+            if myHum and myHum.Parent then
+                myHum.PlatformStand = false
+                myHum.Sit = false
+                pcall(function()
+                    myHum:ChangeState(Enum.HumanoidStateType.GettingUp)
+                    task.defer(function()
+                        if myHum and myHum.Parent then
+                            myHum:ChangeState(Enum.HumanoidStateType.Running)
+                        end
+                    end)
+                end)
+            end
+        end)
+        if callback then pcall(callback, success == true) end
+    end
+
+    State.activeTeleportCleanup = cleanup
+
     noclipConn = Services.RunService.Stepped:Connect(function()
-        if not State.activeTeleportTween then
-            if noclipConn then noclipConn:Disconnect() end
+        if not State.activeTeleportTween or State.activeTeleportTween ~= tween then
+            if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
             return
         end
         if myChar and myChar.Parent then
@@ -636,22 +698,8 @@ Utils.tweenTeleport = function(targetCFrame, speed, callback)
         end
     end)
 
-    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
-    local tween = TweenService:Create(myHRP, tweenInfo, { CFrame = targetCFrame })
-    State.activeTeleportTween = tween
-
-    local completedConn
-    completedConn = tween.Completed:Connect(function()
-        if completedConn then completedConn:Disconnect() end
-        if noclipConn then noclipConn:Disconnect() end
-        State.activeTeleportTween = nil
-        pcall(function()
-            if myHRP and myHRP.Parent then
-                myHRP.Anchored = origAnchored
-                myHRP.AssemblyLinearVelocity = Vector3.zero
-            end
-        end)
-        if callback then pcall(callback, true) end
+    completedConn = tween.Completed:Connect(function(playbackState)
+        cleanup(playbackState == Enum.PlaybackState.Completed)
     end)
 
     tween:Play()
