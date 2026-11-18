@@ -1713,7 +1713,7 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         pcall(function() oldContainer:Destroy() end)
     end
     local container = Instance.new("Frame"); container.Name = "Mod_" .. name; container.Size = UDim2.new(1, 0, 0, 20)
-    container.AutomaticSize = Enum.AutomaticSize.Y; container.BackgroundColor3 = Color3.fromRGB(24, 24, 28); container.BackgroundTransparency = 1; container.BorderSizePixel = 0; container.Parent = win.List
+    container.AutomaticSize = Enum.AutomaticSize.None; container.BackgroundColor3 = Color3.fromRGB(24, 24, 28); container.BackgroundTransparency = 1; container.BorderSizePixel = 0; container.ClipsDescendants = false; container.Parent = win.List
     local btn = Instance.new("TextButton"); btn.Size = UDim2.new(1, 0, 0, 20); btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     btn.BackgroundTransparency = 0.5; btn.BorderSizePixel = 0; btn.Text = ""; btn.Parent = container
     local isPatched = (patchedModules and patchedModules[name:lower()])
@@ -1801,6 +1801,40 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         updateBg()
     end)
 
+    local function calculateDrawerHeight()
+        if not drawer then return 0 end
+        local layout = drawer:FindFirstChildOfClass("UIListLayout")
+        local scale = getUIScale and getUIScale() or 1
+        if layout and layout.AbsoluteContentSize.Y > 0 then
+            return math.max(16, math.round(layout.AbsoluteContentSize.Y / scale) + 8)
+        end
+        local contentH = 0
+        local count = 0
+        for _, ch in ipairs(drawer:GetChildren()) do
+            if ch:IsA("GuiObject") and not ch:IsA("UIListLayout") and not ch:IsA("UIPadding") and not ch:IsA("UIStroke") then
+                local chH = (ch:GetAttribute("BaseSize") and ch:GetAttribute("BaseSize").Y.Offset) or ch.Size.Y.Offset
+                if chH <= 0 then chH = 20 end
+                contentH = contentH + chH
+                count = count + 1
+            end
+        end
+        if count > 1 then
+            contentH = contentH + (count - 1) * 2
+        end
+        return math.max(16, contentH + 8)
+    end
+
+    local function syncDrawerSize()
+        if not drawer then return end
+        if drawer.Visible then
+            local dh = calculateDrawerHeight()
+            drawer.Size = UDim2.new(1, 0, 0, dh)
+            container.Size = UDim2.new(1, 0, 0, 20 + dh)
+        else
+            container.Size = UDim2.new(1, 0, 0, 20)
+        end
+    end
+
     local function toggleMenu()
         if useSeparateWindow then
             if not floatingWin then
@@ -1820,8 +1854,8 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
             if not drawer then
                 drawer = Instance.new("Frame"); drawer.Name = "drawer"; drawer.Size = UDim2.new(1, 0, 0, 0)
                 drawer.Position = UDim2.new(0, 0, 0, 20)
-                drawer.AutomaticSize = Enum.AutomaticSize.Y; drawer.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
-                drawer.BackgroundTransparency = 0; drawer.BorderSizePixel = 0; drawer.Visible = false; drawer.Parent = container
+                drawer.AutomaticSize = Enum.AutomaticSize.None; drawer.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+                drawer.BackgroundTransparency = 0; drawer.BorderSizePixel = 0; drawer.ClipsDescendants = false; drawer.Visible = false; drawer.Parent = container
                 local layout = Instance.new("UIListLayout"); layout.Padding = UDim.new(0, 2); layout.Parent = drawer
                 local pad = Instance.new("UIPadding"); pad.PaddingTop = UDim.new(0, 4); pad.PaddingBottom = UDim.new(0, 4); pad.PaddingLeft = UDim.new(0, 4); pad.PaddingRight = UDim.new(0, 4); pad.Parent = drawer
                 local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(48, 48, 56); stroke.Thickness = 1; stroke.Parent = drawer
@@ -1832,8 +1866,16 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
                     brokenLabel.TextXAlignment = Enum.TextXAlignment.Left; brokenLabel.Text = "⚠️ Broken: This module is currently patched"; brokenLabel.Parent = brokenRow
                 end
                 if populateOptionsFunc or isPatched then populateOptionsFunc(drawer) end
+
+                layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                    if drawer and drawer.Visible then
+                        syncDrawerSize()
+                    end
+                end)
             end
-            drawer.Visible = not drawer.Visible; updateBg()
+            drawer.Visible = not drawer.Visible
+            syncDrawerSize()
+            updateBg()
         end
     end
 
