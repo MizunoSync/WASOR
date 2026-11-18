@@ -112,10 +112,38 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
         end
     end)
 
-    local listContainer = addCustomFrameOption(drawer, 100)
-    local box = Instance.new("TextBox"); box.Size = UDim2.new(1, -8, 0, 14); box.Position = UDim2.new(0, 4, 0, 0); box.BackgroundColor3 = Color3.fromRGB(30, 30, 30); box.BorderSizePixel = 0; box.Font = Enum.Font.Gotham; box.TextSize = 7; box.TextColor3 = Color3.fromRGB(240, 240, 240); box.PlaceholderText = "Filter player list..."; box.Text = ""; box.ClearTextOnFocus = false; box.Parent = listContainer
-    local scroll = Instance.new("ScrollingFrame"); scroll.Size = UDim2.new(1, -8, 1, -16); scroll.Position = UDim2.new(0, 4, 0, 16); scroll.BackgroundTransparency = 1; scroll.BorderSizePixel = 0; scroll.ScrollBarThickness = 1; scroll.CanvasSize = UDim2.new(0, 0, 0, 0); scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y; scroll.Parent = listContainer
-    local layout = Instance.new("UIListLayout"); layout.Padding = UDim.new(0, 2); layout.Parent = scroll
+    local listContainer = addCustomFrameOption(drawer, 190)
+    local box = Instance.new("TextBox")
+    box.Size = UDim2.new(1, -8, 0, 24)
+    box.Position = UDim2.new(0, 4, 0, 2)
+    box.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+    box.BorderSizePixel = 0
+    box.Font = Enum.Font.GothamMedium
+    box.TextSize = 10
+    box.TextColor3 = Color3.fromRGB(240, 240, 245)
+    box.PlaceholderText = "Search player name or @username..."
+    box.PlaceholderColor3 = Color3.fromRGB(120, 120, 130)
+    box.Text = ""
+    box.ClearTextOnFocus = false
+    box.Parent = listContainer
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 4)
+    local boxPad = Instance.new("UIPadding", box)
+    boxPad.PaddingLeft = UDim.new(0, 8)
+    boxPad.PaddingRight = UDim.new(0, 8)
+
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Size = UDim2.new(1, -8, 1, -30)
+    scroll.Position = UDim2.new(0, 4, 0, 28)
+    scroll.BackgroundTransparency = 1
+    scroll.BorderSizePixel = 0
+    scroll.ScrollBarThickness = 3
+    scroll.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 90)
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    scroll.Parent = listContainer
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 3)
+    layout.Parent = scroll
 
     local function renderPlayers()
         for _, child in ipairs(scroll:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
@@ -123,11 +151,49 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LP then
                 local formatted = p.DisplayName .. " (@" .. p.Name .. ")"
-                if filter == "" or formatted:lower():find(filter) then
-                    local card = Instance.new("Frame"); card.Size = UDim2.new(1, -2, 0, 16); card.BackgroundColor3 = Color3.fromRGB(25, 25, 25); card.BorderSizePixel = 0; card.Parent = scroll
-                    local nameL = Instance.new("TextLabel"); nameL.Size = UDim2.new(0.5, 0, 1, 0); nameL.Position = UDim2.new(0, 2, 0, 0); nameL.BackgroundTransparency = 1; nameL.Font = Enum.Font.GothamMedium; nameL.TextSize = 7; nameL.TextColor3 = Color3.fromRGB(220, 220, 220); nameL.TextXAlignment = Enum.TextXAlignment.Left; nameL.Text = p.DisplayName; nameL.Parent = card
+                if filter == "" or formatted:lower():find(filter, 1, true) then
+                    local card = Instance.new("Frame")
+                    card.Size = UDim2.new(1, -2, 0, 28)
+                    card.BackgroundColor3 = Color3.fromRGB(26, 26, 30)
+                    card.BorderSizePixel = 0
+                    card.Parent = scroll
+                    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 4)
 
-                    local tp = Instance.new("TextButton"); tp.Size = UDim2.new(0, 20, 0, 12); tp.Position = UDim2.new(1, -44, 0.5, -6); tp.BackgroundColor3 = Color3.fromRGB(46, 204, 113); tp.BorderSizePixel = 0; tp.Font = Enum.Font.GothamBold; tp.TextSize = 6; tp.TextColor3 = Color3.fromRGB(255, 255, 255); tp.Text = "TP"; tp.Parent = card
+                    local nameL = Instance.new("TextLabel")
+                    nameL.Size = UDim2.new(1, -114, 0, 14)
+                    nameL.Position = UDim2.new(0, 8, 0, 2)
+                    nameL.BackgroundTransparency = 1
+                    nameL.Font = Enum.Font.GothamBold
+                    nameL.TextSize = 10
+                    nameL.TextColor3 = Color3.fromRGB(240, 240, 245)
+                    nameL.TextXAlignment = Enum.TextXAlignment.Left
+                    nameL.TextTruncate = Enum.TextTruncate.AtEnd
+                    nameL.Text = p.DisplayName
+                    nameL.Parent = card
+
+                    local userL = Instance.new("TextLabel")
+                    userL.Size = UDim2.new(1, -114, 0, 12)
+                    userL.Position = UDim2.new(0, 8, 0, 14)
+                    userL.BackgroundTransparency = 1
+                    userL.Font = Enum.Font.Gotham
+                    userL.TextSize = 8
+                    userL.TextColor3 = Color3.fromRGB(150, 150, 160)
+                    userL.TextXAlignment = Enum.TextXAlignment.Left
+                    userL.TextTruncate = Enum.TextTruncate.AtEnd
+                    userL.Text = "@" .. p.Name
+                    userL.Parent = card
+
+                    local tp = Instance.new("TextButton")
+                    tp.Size = UDim2.new(0, 34, 0, 20)
+                    tp.Position = UDim2.new(1, -94, 0.5, -10)
+                    tp.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+                    tp.BorderSizePixel = 0
+                    tp.Font = Enum.Font.GothamBold
+                    tp.TextSize = 9
+                    tp.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    tp.Text = "TP"
+                    tp.Parent = card
+                    Instance.new("UICorner", tp).CornerRadius = UDim.new(0, 4)
                     tp.MouseButton1Click:Connect(function()
                         local targetHRP = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
                         if targetHRP then
@@ -141,7 +207,18 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
                         end
                     end)
 
-                    local view = Instance.new("TextButton"); view.Size = UDim2.new(0, 22, 0, 12); view.Position = UDim2.new(1, -22, 0.5, -6); local isViewing = (currentSpectateTarget == p); view.BackgroundColor3 = isViewing and Color3.fromRGB(218, 38, 38) or Color3.fromRGB(40, 40, 40); view.BorderSizePixel = 0; view.Font = Enum.Font.GothamBold; view.TextSize = 6; view.TextColor3 = Color3.fromRGB(255, 255, 255); view.Text = isViewing and "UNVIEW" or "VIEW"; view.Parent = card
+                    local isViewing = (currentSpectateTarget == p)
+                    local view = Instance.new("TextButton")
+                    view.Size = UDim2.new(0, 52, 0, 20)
+                    view.Position = UDim2.new(1, -56, 0.5, -10)
+                    view.BackgroundColor3 = isViewing and Color3.fromRGB(218, 38, 38) or Color3.fromRGB(45, 45, 52)
+                    view.BorderSizePixel = 0
+                    view.Font = Enum.Font.GothamBold
+                    view.TextSize = 9
+                    view.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    view.Text = isViewing and "UNVIEW" or "VIEW"
+                    view.Parent = card
+                    Instance.new("UICorner", view).CornerRadius = UDim.new(0, 4)
 
                     view.MouseButton1Click:Connect(function()
                         if currentSpectateTarget == p then
@@ -160,7 +237,7 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
 
     box:GetPropertyChangedSignal("Text"):Connect(renderPlayers)
 
-    local addedCon = Players.PlayerAdded:Connect(renderPlayers);
+    local addedCon = Players.PlayerAdded:Connect(renderPlayers)
     local removedCon = Players.PlayerRemoving:Connect(function(p)
         if currentSpectateTarget == p then
             spectatePlayer(nil)
@@ -170,4 +247,4 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
     end)
 
     table.insert(S.Connections, addedCon); table.insert(S.Connections, removedCon); renderPlayers()
-end, true, 260, 360)
+end, true, 340, 480)

@@ -28,7 +28,7 @@ if isReloadingSession then
     _G.WASOR_Loaded = nil
     _G.WASOR_Reloading = nil
     _G.WASOR_IsReloading = nil
-    print("[WASOR 4.7] Existing instance detected. Cleaned up and reloading...")
+    print("[WASOR 4.8] Existing instance detected. Cleaned up and reloading...")
 end
 _G.WASOR_Loading = true
 
@@ -274,6 +274,7 @@ local Modules = {
     "Modules/Misc/OnlineFriends",
     "Modules/Misc/ChatLogger",
     "Modules/Misc/ExternalScriptsHub",
+    "Modules/Misc/Fun",
     "Modules/Misc/UNCcomplianceAudits",
     "Modules/Misc/ConsoleLogViewer",
     "Modules/Misc/SettingsKeybinds",
