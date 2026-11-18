@@ -1898,6 +1898,7 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
             local willOpen = not drawer.Visible
             local scale = getUIScale()
             if willOpen then
+                drawer.Visible = true
                 local layout = drawer:FindFirstChildOfClass("UIListLayout")
                 local targetH = 0
                 if layout and layout.AbsoluteContentSize.Y > 0 then
@@ -1905,14 +1906,14 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
                 else
                     for _, ch in ipairs(drawer:GetChildren()) do
                         if ch:IsA("GuiObject") and not ch:IsA("UIListLayout") and not ch:IsA("UIPadding") and not ch:IsA("UIStroke") then
-                            targetH = targetH + ch.Size.Y.Offset + 2
+                            local chH = (ch:GetAttribute("BaseSize") and ch:GetAttribute("BaseSize").Y.Offset) or ch.Size.Y.Offset
+                            targetH = targetH + chH + 2
                         end
                     end
                     targetH = targetH + 8
                 end
                 if targetH < 20 then targetH = 32 end
 
-                drawer.Visible = true
                 if gear and State.S.UIAnimations ~= false and Services.TweenService then
                     Services.TweenService:Create(gear, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = 90}):Play()
                 end
@@ -1926,18 +1927,18 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
                     containerAnimTween = Services.TweenService:Create(container, tInfo, {Size = UDim2.new(1, 0, 0, 20 + targetH)})
                     drawerAnimTween:Play()
                     containerAnimTween:Play()
-                    drawerAnimTween.Completed:Connect(function()
-                        if drawer.Visible then
-                            drawer.Size = UDim2.new(1, 0, 0, 0)
+                    drawerAnimTween.Completed:Connect(function(state)
+                        if state == Enum.PlaybackState.Completed and drawer.Visible then
+                            drawer.Size = UDim2.new(1, 0, 0, targetH)
                             drawer.AutomaticSize = Enum.AutomaticSize.Y
-                            container.Size = UDim2.new(1, 0, 0, 20)
+                            container.Size = UDim2.new(1, 0, 0, 20 + targetH)
                             container.AutomaticSize = Enum.AutomaticSize.Y
                         end
                     end)
                 else
-                    drawer.Size = UDim2.new(1, 0, 0, 0)
+                    drawer.Size = UDim2.new(1, 0, 0, targetH)
                     drawer.AutomaticSize = Enum.AutomaticSize.Y
-                    container.Size = UDim2.new(1, 0, 0, 20)
+                    container.Size = UDim2.new(1, 0, 0, 20 + targetH)
                     container.AutomaticSize = Enum.AutomaticSize.Y
                 end
                 updateBg()
@@ -1957,7 +1958,8 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
                     containerAnimTween = Services.TweenService:Create(container, tInfo, {Size = UDim2.new(1, 0, 0, 20)})
                     drawerAnimTween:Play()
                     containerAnimTween:Play()
-                    local function finishClose()
+                    local function finishClose(state)
+                        if state == Enum.PlaybackState.Completed and not drawer.Visible then return end
                         drawer.Visible = false
                         drawer.Size = UDim2.new(1, 0, 0, 0)
                         drawer.AutomaticSize = Enum.AutomaticSize.None
@@ -1990,6 +1992,7 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
 
     btn.MouseButton2Click:Connect(toggleMenu)
 
+    local lastClickTime = 0
     btn.MouseButton1Click:Connect(function()
         if State.S.ModuleDisableMode then
             if catName == "Misc" then
@@ -2007,7 +2010,24 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
             return
         end
 
-        if isToggle then active = not active; updateColor(); if callback then callback(active) end else if callback then callback() end end
+        local now = os.clock()
+        if isToggle then
+            if (now - lastClickTime) < 0.35 and (populateOptionsFunc or isPatched) then
+                lastClickTime = 0
+                toggleMenu()
+                return
+            end
+            lastClickTime = now
+            active = not active
+            updateColor()
+            if callback then callback(active) end
+        else
+            if callback then
+                callback()
+            elseif populateOptionsFunc or isPatched then
+                toggleMenu()
+            end
+        end
     end)
 
     local itemObj = {
