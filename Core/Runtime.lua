@@ -153,15 +153,25 @@ local function newDrawing(dtype)
     return d
 end
 
+local function checkDrawingVisible(d)
+    local _ = d.Visible
+end
+
 local function isDrawingValid(d)
     if not d then return false end
-    local ok = pcall(function() local _ = d.Visible end)
-    return ok
+    return pcall(checkDrawingVisible, d)
+end
+
+local function setInvisible(d)
+    if d.Visible then
+        d.Visible = false
+    end
 end
 
 local function safeHideDrawing(d)
-    if not d then return end
-    pcall(function() d.Visible = false end)
+    if d then
+        pcall(setInvisible, d)
+    end
 end
 
 local lastTriggerFire = 0

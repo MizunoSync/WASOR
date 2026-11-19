@@ -26,21 +26,32 @@ local function getGuiContainers()
     return containers
 end
 
+local function setInvisible(d)
+    if d.Visible then
+        d.Visible = false
+    end
+end
+
 local function safeHideDrawing(d)
-    if not d then return end
-    pcall(function() d.Visible = false end)
+    if d then
+        pcall(setInvisible, d)
+    end
+end
+
+local function removeDrawingDirect(d)
+    if d.Visible then
+        d.Visible = false
+    end
+    if d.Remove then
+        d:Remove()
+    elseif d.Destroy then
+        d:Destroy()
+    end
 end
 
 local function safeRemoveDrawing(d)
     if not d then return end
-    pcall(function() d.Visible = false end)
-    pcall(function()
-        if d.Remove then
-            d:Remove()
-        elseif d.Destroy then
-            d:Destroy()
-        end
-    end)
+    pcall(removeDrawingDirect, d)
     if _G.WASOR_ActiveDrawings then
         _G.WASOR_ActiveDrawings[d] = nil
     end
@@ -49,52 +60,40 @@ end
 Cleanup.hideESP = function(p)
     local S = State.S
     if not S or not S.ESPPool then return end
-    local poolsToHide = {}
-    if S.ESPPool[p] then
-        table.insert(poolsToHide, S.ESPPool[p])
-    end
-    if type(p) == "userdata" then
+    local pool = S.ESPPool[p]
+    if not pool and type(p) == "userdata" then
+        local pUid = p.UserId
+        local pName = p.Name
         for playerObj, entry in pairs(S.ESPPool) do
-            if playerObj ~= p then
-                local matches = false
-                pcall(function()
-                    if playerObj == p then
-                        matches = true
-                    elseif p.UserId and playerObj.UserId and p.UserId == playerObj.UserId then
-                        matches = true
-                    elseif p.Name and playerObj.Name and p.Name == playerObj.Name then
-                        matches = true
-                    end
-                end)
-                if matches then
-                    table.insert(poolsToHide, entry)
-                end
+            if playerObj == p or (pUid and playerObj.UserId == pUid) or (pName and playerObj.Name == pName) then
+                pool = entry
+                break
             end
         end
     end
-    for _, pool in ipairs(poolsToHide) do
-        safeHideDrawing(pool.boxOutline)
-        safeHideDrawing(pool.boxFill)
-        safeHideDrawing(pool.tracer)
-        safeHideDrawing(pool.nameTag)
-        safeHideDrawing(pool.healthText)
-        safeHideDrawing(pool.distText)
-        safeHideDrawing(pool.healthBarOutline)
-        safeHideDrawing(pool.healthBarFill)
-        safeHideDrawing(pool.losLine)
-        safeHideDrawing(pool.indicator)
-        if pool.skeleton then
-            for _, line in ipairs(pool.skeleton) do safeHideDrawing(line) end
-        end
-        if pool.corners then
-            for _, line in ipairs(pool.corners) do safeHideDrawing(line) end
-        end
-        if pool.lines3D then
-            for _, line in ipairs(pool.lines3D) do safeHideDrawing(line) end
-        end
-        if pool.extraLines then
-            for _, line in ipairs(pool.extraLines) do safeHideDrawing(line) end
-        end
+    if not pool then return end
+
+    safeHideDrawing(pool.boxOutline)
+    safeHideDrawing(pool.boxFill)
+    safeHideDrawing(pool.tracer)
+    safeHideDrawing(pool.nameTag)
+    safeHideDrawing(pool.healthText)
+    safeHideDrawing(pool.distText)
+    safeHideDrawing(pool.healthBarOutline)
+    safeHideDrawing(pool.healthBarFill)
+    safeHideDrawing(pool.losLine)
+    safeHideDrawing(pool.indicator)
+    if pool.skeleton then
+        for _, line in ipairs(pool.skeleton) do safeHideDrawing(line) end
+    end
+    if pool.corners then
+        for _, line in ipairs(pool.corners) do safeHideDrawing(line) end
+    end
+    if pool.lines3D then
+        for _, line in ipairs(pool.lines3D) do safeHideDrawing(line) end
+    end
+    if pool.extraLines then
+        for _, line in ipairs(pool.extraLines) do safeHideDrawing(line) end
     end
 end
 
@@ -141,33 +140,20 @@ end
 Cleanup.destroyESP = function(p)
     local S = State.S
     if not S or not S.ESPPool then return end
-    local poolsToDestroy = {}
-    if S.ESPPool[p] then
-        table.insert(poolsToDestroy, {key = p, pool = S.ESPPool[p]})
-    end
-    if type(p) == "userdata" then
+    local pool = S.ESPPool[p]
+    local poolKey = p
+    if not pool and type(p) == "userdata" then
+        local pUid = p.UserId
+        local pName = p.Name
         for playerObj, entry in pairs(S.ESPPool) do
-            if playerObj ~= p then
-                local matches = false
-                pcall(function()
-                    if playerObj == p then
-                        matches = true
-                    elseif p.UserId and playerObj.UserId and p.UserId == playerObj.UserId then
-                        matches = true
-                    elseif p.Name and playerObj.Name and p.Name == playerObj.Name then
-                        matches = true
-                    end
-                end)
-                if matches then
-                    table.insert(poolsToDestroy, {key = playerObj, pool = entry})
-                end
+            if playerObj == p or (pUid and playerObj.UserId == pUid) or (pName and playerObj.Name == pName) then
+                pool = entry
+                poolKey = playerObj
+                break
             end
         end
     end
-    for _, item in ipairs(poolsToDestroy) do
-        local pool = item.pool
-        local poolKey = item.key
-        pcall(function() Cleanup.hideESP(poolKey) end)
+    if pool then
         safeRemoveDrawing(pool.boxOutline)
         safeRemoveDrawing(pool.boxFill)
         safeRemoveDrawing(pool.tracer)

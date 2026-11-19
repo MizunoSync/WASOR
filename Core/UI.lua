@@ -1875,6 +1875,7 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
             end
             drawer.Visible = not drawer.Visible
             syncDrawerSize()
+            task.defer(syncDrawerSize)
             updateBg()
         end
     end

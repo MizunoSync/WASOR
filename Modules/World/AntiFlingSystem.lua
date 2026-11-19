@@ -33,17 +33,34 @@ local function startAntiFling()
         local maxDist = S.AntiFlingDistance or 35
 
         for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LP and player.Character then
+            if player ~= LP then
                 local char = player.Character
-                local hrp = char.PrimaryPart or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
-                if hrp then
-                    local dist = (hrp.Position - myPos).Magnitude
-                    if dist <= maxDist then
-                        for _, child in ipairs(char:GetChildren()) do
-                            if child:IsA("BasePart") then
-                                child.CanCollide = false
-                                child.AssemblyLinearVelocity = Vector3.zero
-                                child.AssemblyAngularVelocity = Vector3.zero
+                if char then
+                    local hrp = char.PrimaryPart or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
+                    if hrp then
+                        local dist = (hrp.Position - myPos).Magnitude
+                        if dist <= maxDist then
+                            -- Fling is physically caused by parts colliding with high impulse.
+                            -- Disabling collision on nearby characters completely prevents impulse transfer.
+                            for _, child in ipairs(char:GetChildren()) do
+                                if child:IsA("BasePart") then
+                                    if child.CanCollide then
+                                        child.CanCollide = false
+                                    end
+                                end
+                            end
+
+                            -- Only zero velocity if the character is actively flinging/spinning at abnormal speed.
+                            -- This prevents violent replication/physics-solver conflicts for peaceful nearby players.
+                            local linMag = hrp.AssemblyLinearVelocity.Magnitude
+                            local angMag = hrp.AssemblyAngularVelocity.Magnitude
+                            if linMag > 80 or angMag > 80 then
+                                for _, child in ipairs(char:GetChildren()) do
+                                    if child:IsA("BasePart") then
+                                        child.AssemblyLinearVelocity = Vector3.zero
+                                        child.AssemblyAngularVelocity = Vector3.zero
+                                    end
+                                end
                             end
                         end
                     end
@@ -61,7 +78,6 @@ local function startAntiFling()
             end
         end
     end)
-    table.insert(S.Connections, antifling)
 end
 
 local function stopAntiFling()
