@@ -10,7 +10,8 @@ local registerModule = UI.registerModule
 
 local saveConfig = VH.Config.saveConfig
 
-local REMOTE_URL = "https://raw.githubusercontent.com/VenezzaX/detection.lua/refs/heads/main/sigma.lua"
+local REMOTE_URL = "https://raw.githubusercontent.com/MizunoSync/WASOR/main/CompatibleScripts/Chathub.lua"
+local FALLBACK_URL = "https://raw.githubusercontent.com/VenezzaX/detection.lua/refs/heads/main/sigma.lua"
 local CACHE_FILE = "chatroom_cache.lua"
 
 local function tryLoadLocalOverride()
@@ -88,13 +89,19 @@ local function launchChatHub(forceReload)
             return game:HttpGet(freshUrl, true)
         end)
 
+        if not (success and remoteCode and #remoteCode > 100) then
+            success, remoteCode = pcall(function()
+                return game:HttpGet(FALLBACK_URL .. "?t=" .. tostring(os.time()), true)
+            end)
+        end
+
         if success and remoteCode and #remoteCode > 100 then
             pcall(function()
                 if writefile then
                     writefile(CACHE_FILE, remoteCode)
                 end
             end)
-            local fn = loadstring(remoteCode, "sigma.lua")
+            local fn = loadstring(remoteCode, "Chathub.lua")
             if fn then
                 task.spawn(fn)
                 return
@@ -113,29 +120,36 @@ registerModule("Misc", "Network Chat Hub", 720, 50, true, S.NetworkChat, functio
         if _G.ChatHub_Loaded and _G.ChatHub_SetVisible then
             _G.ChatHub_SetVisible(true)
         else
-            task.spawn(function()
-                pcall(launchChatHub, false)
-            end)
+            launchChatHub()
         end
     else
         if _G.ChatHub_SetVisible then
             _G.ChatHub_SetVisible(false)
-        else
-            local CoreGui = game:GetService("CoreGui")
-            local oldChat = CoreGui:FindFirstChild("DiscordNetworkHub") or CoreGui:FindFirstChild("ChatRoom")
-            if oldChat then
-                local mw = oldChat:FindFirstChild("MainWindow")
-                if mw then mw.Visible = false else oldChat:Destroy() end
-            end
-            local pg = LP:WaitForChild("PlayerGui", 2)
-            if pg then
-                local oldChatPg = pg:FindFirstChild("DiscordNetworkHub") or pg:FindFirstChild("ChatRoom")
-                if oldChatPg then
-                    local mw = oldChatPg:FindFirstChild("MainWindow")
-                    if mw then mw.Visible = false else oldChatPg:Destroy() end
-                end
-            end
         end
     end
     saveConfig()
+end, function(drawer)
+    UI.addToggleOption(drawer, "Enabled", S.NetworkChat, function(v)
+        S.NetworkChat = v
+        if v then
+            if _G.ChatHub_Loaded and _G.ChatHub_SetVisible then
+                _G.ChatHub_SetVisible(true)
+            else
+                launchChatHub()
+            end
+        else
+            if _G.ChatHub_SetVisible then
+                _G.ChatHub_SetVisible(false)
+            end
+        end
+        saveConfig()
+    end)
+
+    UI.addButtonOption(drawer, "Open Chat Window", function()
+        launchChatHub()
+    end)
+
+    UI.addButtonOption(drawer, "Force Reload Chat", function()
+        launchChatHub(true)
+    end)
 end)
