@@ -1,12 +1,12 @@
 <div align="center">
 
-  <img src="https://i.imgur.com/XyhEFsY.gif" alt="WASOR v4.8 Banner" width="480" style="border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.6);" />
+  <img src="https://i.imgur.com/XyhEFsY.gif" alt="WASOR v4.9 Banner" width="480" style="border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.6);" />
 
-  # ⚡ WASOR v4.8
+  # ⚡ WASOR v4.9
   ### *We Are Skidding On Roblox*
 
   [![Documentation](https://img.shields.io/badge/Documentation-Live_on_Vercel-34d399?style=for-the-badge&logo=vercel&logoColor=white)](https://wasordocumentation.vercel.app/#intro)
-  [![Version](https://img.shields.io/badge/Version-4.8_Production-7c3aed?style=for-the-badge)](https://wasordocumentation.vercel.app/)
+  [![Version](https://img.shields.io/badge/Version-4.9_Production-7c3aed?style=for-the-badge)](https://wasordocumentation.vercel.app/)
   [![Roblox](https://img.shields.io/badge/Platform-Roblox_Lua-00a2ff?style=for-the-badge&logo=roblox&logoColor=white)](https://wasordocumentation.vercel.app/)
   [![Languages](https://img.shields.io/badge/i18n-10_Languages-f59e0b?style=for-the-badge)](https://wasordocumentation.vercel.app/)
   [![Modules](https://img.shields.io/badge/Modules-98_Active-10b981?style=for-the-badge)](https://wasordocumentation.vercel.app/)
@@ -33,7 +33,7 @@ The complete reference documentation is deployed and accessible at:
 
 ## ⚡ Quickstart & Execution
 
-To execute the production build of WASOR v4.8 directly in any modern executor:
+To execute the production build of WASOR v4.9 directly in any modern executor:
 
 ```lua
 if identifyexecutor then
@@ -169,7 +169,7 @@ To test and modify WASOR source code locally:
 
 ## 📝 Release Notes & Changelogs
 
-### ⚡ WASOR v4.8 (Current)
+### ⚡ WASOR v4.9 (Current)
 * **Smooth UI Animations**: Added fluid slide animations for module option drawers and overall UI visibility toggling.
 * **1-Click Module Drawer Opening**: Fixed option drawers requiring multiple clicks to expand; non-toggle utility modules (ScriptHub, Settings, Fun, Console Viewer) now open immediately upon single-click, with double-click support on toggle modules.
 * **Drawer Layout Stabilization**: Eliminated frame clipping and height collapse by retaining calculated dimensions upon tween completion.
@@ -192,5 +192,5 @@ To test and modify WASOR source code locally:
 ---
 
 <div align="center">
-  <sub>WASOR v4.8 is developed for software interoperability testing and educational security research.</sub>
+  <sub>WASOR v4.9 is developed for software interoperability testing and educational security research.</sub>
 </div>

@@ -1,6 +1,6 @@
 local _loaderNow = tick()
 if _G.WASOR_Loading == true and _G.WASOR_LoadingTime and (_loaderNow - _G.WASOR_LoadingTime) < 15 then
-    warn("[WASOR 4.8] Injection already in progress. Aborting duplicate execution.")
+    warn("[WASOR 4.9] Injection already in progress. Aborting duplicate execution.")
     return
 end
 
@@ -330,7 +330,7 @@ if isReloadingSession then
     _G.WASOR_Loaded = nil
     _G.WASOR_Reloading = nil
     _G.WASOR_IsReloading = nil
-    print("[WASOR 4.8] Existing instance detected. Cleaned up and reloading...")
+    print("[WASOR 4.9] Existing instance detected. Cleaned up and reloading...")
 end
 
 if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then

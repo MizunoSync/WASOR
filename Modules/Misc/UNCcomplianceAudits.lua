@@ -3,13 +3,23 @@ local Utils = VH.Utils
 local UI = VH.UI
 
 local registerModule = UI.registerModule
-
 local addButtonOption = UI.addButtonOption
 
 local runExternalScript = Utils.runExternalScript
 local teleportToPlace = Utils.teleportToPlace
+local notify = Utils.notify
 
 registerModule("Misc", "Map and Executor tests", 720, 50, false, false, nil, function(drawer)
+    addButtonOption(drawer, "Run debUNC Test", function()
+        local s, err = pcall(function()
+            loadstring(game:HttpGet("https://github.com/alyssagithub/debUNC/raw/main/debUNC.luau"))()
+        end)
+        if s then
+            if notify then notify("debUNC Test started!", Color3.fromRGB(50, 195, 75)) end
+        else
+            if notify then notify("Failed to run debUNC: " .. tostring(err), Color3.fromRGB(218, 38, 38)) end
+        end
+    end)
     addButtonOption(drawer, "Run UNC Test", function() runExternalScript("UNC Test", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/Unc.lua") end)
     addButtonOption(drawer, "Run Executor Vuln Test", function() runExternalScript("Vulnerability Test", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/VulnerabilityTest.lua") end)
     addButtonOption(drawer, "Run Workspace Instance Dumper", function() runExternalScript("Workspace Dumper", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/WorkspaceDumper.lua") end)
@@ -17,4 +27,4 @@ registerModule("Misc", "Map and Executor tests", 720, 50, false, false, nil, fun
     addButtonOption(drawer, "Run Myriad Executor Test", function() runExternalScript("Myriad Test", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/MyriadTest.lua", 79035306837882) end)
     addButtonOption(drawer, "Teleport to SUNC Test Game", function() teleportToPlace(90441122676618) end)
     addButtonOption(drawer, "Teleport to Myriad Test Game", function() teleportToPlace(79035306837882) end)
-end, true, 200, 180)
+end, true, 220, 250)
