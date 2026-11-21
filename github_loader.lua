@@ -806,6 +806,7 @@ local Modules = {
     "Modules/Player/AntiAFK",
     "Modules/Player/AutoRejoin",
     "Modules/Player/SpectateFreecam",
+    "Modules/Player/PlayerChecker",
     "Modules/Player/HatDrop",
     "Modules/Player/ReturnByDeath",
 
