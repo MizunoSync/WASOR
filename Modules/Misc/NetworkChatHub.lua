@@ -10,99 +10,63 @@ local registerModule = UI.registerModule
 
 local saveConfig = VH.Config.saveConfig
 
-local REMOTE_URL = "https://raw.githubusercontent.com/VenezzaX/detection.lua/refs/heads/main/sigma.lua"
-local CACHE_FILE = "chatroom_cache.lua"
-
-local function tryLoadLocalOverride()
-    if not (isfile and readfile and loadstring) then
-        return false
-    end
-
-    local overrideCandidates = {
-        "CompatibleScripts/Chathub.lua",
-        "WASOR/CompatibleScripts/Chathub.lua",
-        "WASORCLASSIC/CompatibleScripts/Chathub.lua",
-        "Chathub.lua",
-        "WASOR/Chathub.lua",
-        "WASORCLASSIC/Chathub.lua"
-    }
-
-    for _, path in ipairs(overrideCandidates) do
-        if isfile(path) then
-            local code = readfile(path)
-            if code and #code > 100 then
-                local fn = loadstring(code, path)
-                if fn then
-                    task.spawn(fn)
-                    return true
-                end
-            end
-        end
-    end
-
-    return false
-end
-
-local function tryLoadCachedFallback()
-    if not (isfile and readfile and loadstring) then
-        return false
-    end
-
-    if isfile(CACHE_FILE) then
-        local cachedCode = readfile(CACHE_FILE)
-        if cachedCode and #cachedCode > 100 then
-            local fn = loadstring(cachedCode, CACHE_FILE)
-            if fn then
-                task.spawn(fn)
-                return true
-            end
-        end
-    end
-
-    return false
-end
-
-local function launchChatHub(forceReload)
-    if forceReload then
-        pcall(function()
-            if _G.ChatHub_Cleanup then
-                _G.ChatHub_Cleanup()
-            end
-        end)
-        _G.ChatHub_Loaded = nil
-        _G.ChatHub_Running = nil
-    end
-
+local function launchChatHub()
     if _G.ChatHub_Loaded and _G.ChatHub_SetVisible then
         _G.ChatHub_SetVisible(true)
         return
     end
-
-    if tryLoadLocalOverride() then
-        return
-    end
-
-    task.spawn(function()
-        local freshUrl = REMOTE_URL .. "?t=" .. tostring(os.time())
-        local success, remoteCode = pcall(function()
-            return game:HttpGet(freshUrl, true)
-        end)
-
-        if success and remoteCode and #remoteCode > 100 then
-            pcall(function()
-                if writefile then
-                    writefile(CACHE_FILE, remoteCode)
+    local loaded = false
+    if isfile and readfile and loadstring then
+        local candidates = {
+            "CompatibleScripts/Chathub.lua",
+            "WASOR/CompatibleScripts/Chathub.lua",
+            "WASORCLASSIC/CompatibleScripts/Chathub.lua",
+            "Chathub.lua",
+            "WASOR/Chathub.lua",
+            "WASORCLASSIC/Chathub.lua",
+            "chatroom_cache.lua"
+        }
+        for _, path in ipairs(candidates) do
+            if isfile(path) then
+                local code = readfile(path)
+                if code and #code > 100 then
+                    local fn = loadstring(code, path)
+                    if fn then
+                        task.spawn(fn)
+                        loaded = true
+                        break
+                    end
                 end
-            end)
-            local fn = loadstring(remoteCode, "sigma.lua")
-            if fn then
-                task.spawn(fn)
-                return
             end
         end
-
-        tryLoadCachedFallback()
-    end)
+    end
+    if not loaded then
+        task.spawn(function()
+            local success, remoteCode = pcall(function()
+                return game:HttpGet("https://raw.githubusercontent.com/VenezzaX/detection.lua/refs/heads/main/sigma.lua", true)
+            end)
+            if success and remoteCode and #remoteCode > 100 then
+                pcall(function()
+                    if writefile then
+                        writefile("chatroom_cache.lua", remoteCode)
+                    end
+                end)
+                local fn = loadstring(remoteCode, "sigma.lua")
+                if fn then
+                    task.spawn(fn)
+                end
+            end
+        end)
+    else
+        task.spawn(function()
+            pcall(function()
+                local remoteCode = game:HttpGet("https://raw.githubusercontent.com/VenezzaX/detection.lua/refs/heads/main/sigma.lua", true)
+                if remoteCode and #remoteCode > 100 and writefile then
+                    writefile("chatroom_cache.lua", remoteCode)
+                end
+            end)
+        end)
+    end
 end
 
 VH.launchNetworkChatHub = launchChatHub
@@ -114,7 +78,7 @@ registerModule("Misc", "Network Chat Hub", 720, 50, true, S.NetworkChat, functio
             _G.ChatHub_SetVisible(true)
         else
             task.spawn(function()
-                pcall(launchChatHub, false)
+                pcall(launchChatHub)
             end)
         end
     else

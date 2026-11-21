@@ -19,195 +19,33 @@ end
 Utils.updateLocalNametag = function()
     local char = Services.LP.Character; if not char then return end
     local head = char:FindFirstChild("Head"); if not head then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
     local bill = head:FindFirstChild("VoidCustomNametag")
     local S = State.S
 
-    if S.HideDefaultNametag then
-        if hum then pcall(function() hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end) end
-    else
-        if hum and not S.HideNametags then pcall(function() hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Viewer end) end
-    end
-
     if S.CustomNametag then
-        local offsetStuds = (S.NametagOffsetY or 25) / 10
-        local textSize = S.NametagTextSize or 22
-        local nameText = (S.CustomNametagText and S.CustomNametagText ~= "") and S.CustomNametagText or "WeAreSkidding"
-        local subText = S.CustomNametagSubText or ""
-        local showBadge = S.NametagShowBadge
-        local showHealth = S.NametagShowHealth
-        local colorStyle = S.NametagColorStyle or "Wasor Theme"
-
-        local baseColor = State.currentThemeColor or Color3.fromRGB(141, 47, 196)
-        if colorStyle == "Gold Luxury" or colorStyle == "Gold" then
-            baseColor = Color3.fromRGB(255, 215, 0)
-        elseif colorStyle == "Neon Crimson" or colorStyle == "Crimson" then
-            baseColor = Color3.fromRGB(255, 60, 70)
-        elseif colorStyle == "Cyan Neon" or colorStyle == "Cyan" then
-            baseColor = Color3.fromRGB(0, 230, 255)
-        elseif colorStyle == "Emerald Neon" or colorStyle == "Emerald" then
-            baseColor = Color3.fromRGB(50, 255, 120)
-        elseif colorStyle == "Pure White" or colorStyle == "White" then
-            baseColor = Color3.fromRGB(255, 255, 255)
-        end
-
         if not bill then
-            bill = Instance.new("BillboardGui")
-            bill.Name = "VoidCustomNametag"
-            bill.Size = UDim2.new(0, 260, 0, 70)
-            bill.StudsOffset = Vector3.new(0, offsetStuds, 0)
-            bill.AlwaysOnTop = true
-            bill.ClipsDescendants = false
-            bill.Parent = head
-
-            local container = Instance.new("Frame")
-            container.Name = "Container"
-            container.Size = UDim2.new(1, 0, 1, 0)
-            container.BackgroundTransparency = 1
-            container.BorderSizePixel = 0
-            container.Parent = bill
-
-            local listLayout = Instance.new("UIListLayout")
-            listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-            listLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-            listLayout.Padding = UDim.new(0, 2)
-            listLayout.Parent = container
-
-            local topRow = Instance.new("Frame")
-            topRow.Name = "TopRow"
-            topRow.LayoutOrder = 1
-            topRow.Size = UDim2.new(1, 0, 0, textSize + 4)
-            topRow.BackgroundTransparency = 1
-            topRow.BorderSizePixel = 0
-            topRow.Parent = container
-
-            local rowLayout = Instance.new("UIListLayout")
-            rowLayout.FillDirection = Enum.FillDirection.Horizontal
-            rowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-            rowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-            rowLayout.Padding = UDim.new(0, 4)
-            rowLayout.Parent = topRow
-
-            local badge = Instance.new("ImageLabel")
-            badge.Name = "VerifiedBadge"
-            badge.Size = UDim2.new(0, textSize - 4, 0, textSize - 4)
-            badge.BackgroundTransparency = 1
-            badge.Image = "rbxassetid://10888373651"
-            badge.Visible = showBadge == true
-            badge.Parent = topRow
-
-            local lbl = Instance.new("TextLabel")
-            lbl.Name = "NameLabel"
-            lbl.BackgroundTransparency = 1
-            lbl.Font = Enum.Font.GothamBold
-            lbl.TextColor3 = baseColor
-            lbl.TextSize = textSize
-            lbl.TextStrokeTransparency = 0.4
-            lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-            lbl.Text = nameText
-            lbl.AutomaticSize = Enum.AutomaticSize.X
-            lbl.Size = UDim2.new(0, 0, 1, 0)
-            lbl.Parent = topRow
-
-            local subLbl = Instance.new("TextLabel")
-            subLbl.Name = "SubLabel"
-            subLbl.LayoutOrder = 2
-            subLbl.BackgroundTransparency = 1
-            subLbl.Font = Enum.Font.GothamMedium
-            subLbl.TextColor3 = Color3.fromRGB(220, 220, 230)
-            subLbl.TextSize = math.max(10, textSize - 10)
-            subLbl.TextStrokeTransparency = 0.5
-            subLbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-            subLbl.Text = subText
-            subLbl.Size = UDim2.new(1, 0, 0, 14)
-            subLbl.Visible = (subText ~= "")
-            subLbl.Parent = container
-
-            local hpLbl = Instance.new("TextLabel")
-            hpLbl.Name = "HpLabel"
-            hpLbl.LayoutOrder = 3
-            hpLbl.BackgroundTransparency = 1
-            hpLbl.Font = Enum.Font.GothamBold
-            hpLbl.TextColor3 = Color3.fromRGB(76, 217, 100)
-            hpLbl.TextSize = 10
-            hpLbl.TextStrokeTransparency = 0.5
-            hpLbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-            hpLbl.Size = UDim2.new(1, 0, 0, 12)
-            hpLbl.Visible = showHealth == true
-            hpLbl.Text = hum and string.format("%.0f / %.0f HP", hum.Health, hum.MaxHealth) or ""
-            hpLbl.Parent = container
-
+            bill = Instance.new("BillboardGui"); bill.Name = "VoidCustomNametag"; bill.Size = UDim2.new(0, 200, 0, 50)
+            bill.StudsOffset = Vector3.new(0, 2.5, 0); bill.AlwaysOnTop = true; bill.Parent = head
+            local lbl = Instance.new("TextLabel"); lbl.Name = "TextLabel"; lbl.BackgroundTransparency = 1
+            lbl.Size = UDim2.new(1, 0, 1, 0); lbl.Font = Enum.Font.GothamBold; lbl.TextColor3 = State.currentThemeColor
+            lbl.TextSize = 24; lbl.TextStrokeTransparency = 0.5; lbl.Text = S.CustomNametagText or "WeAreSkidding"; lbl.Parent = bill
+            lbl:GetPropertyChangedSignal("Text"):Connect(function()
+                if S.CustomNametag and lbl.Text ~= S.CustomNametagText then lbl.Text = S.CustomNametagText or "WeAreSkidding" end
+            end)
             bill.AncestryChanged:Connect(function(_, parent)
                 if not parent and S.CustomNametag and char and char.Parent then
-                    task.wait(0.1)
-                    if S.CustomNametag and head and head.Parent then bill.Parent = head end
+                    task.wait(0.1); if S.CustomNametag and head and head.Parent then bill.Parent = head end
                 end
             end)
         else
-            bill.StudsOffset = Vector3.new(0, offsetStuds, 0)
-            local container = bill:FindFirstChild("Container")
-            if container then
-                local topRow = container:FindFirstChild("TopRow")
-                if topRow then
-                    local badge = topRow:FindFirstChild("VerifiedBadge")
-                    if badge then badge.Visible = (showBadge == true) end
-                    local lbl = topRow:FindFirstChild("NameLabel")
-                    if lbl then
-                        lbl.Text = nameText
-                        lbl.TextSize = textSize
-                        lbl.TextColor3 = baseColor
-                    end
-                end
-                local subLbl = container:FindFirstChild("SubLabel")
-                if subLbl then
-                    subLbl.Text = subText
-                    subLbl.Visible = (subText ~= "")
-                    subLbl.TextSize = math.max(10, textSize - 10)
-                end
-                local hpLbl = container:FindFirstChild("HpLabel")
-                if hpLbl then
-                    hpLbl.Visible = (showHealth == true)
-                    if showHealth and hum then
-                        hpLbl.Text = string.format("%.0f / %.0f HP", hum.Health, hum.MaxHealth)
-                    end
-                end
-            end
-        end
-
-        if colorStyle == "Rainbow / Chroma" or colorStyle == "Rainbow" or colorStyle == "Chroma" then
-            if not State.nametagRainbowConn then
-                State.nametagRainbowConn = Services.RunService.RenderStepped:Connect(function()
-                    if not S.CustomNametag or (S.NametagColorStyle ~= "Rainbow / Chroma" and S.NametagColorStyle ~= "Rainbow" and S.NametagColorStyle ~= "Chroma") then
-                        if State.nametagRainbowConn then
-                            State.nametagRainbowConn:Disconnect()
-                            State.nametagRainbowConn = nil
-                        end
-                        return
-                    end
-                    local col = Color3.fromHSV((tick() * 0.4) % 1, 0.85, 1)
-                    local curBill = head and head:FindFirstChild("VoidCustomNametag")
-                    local c = curBill and curBill:FindFirstChild("Container")
-                    local tr = c and c:FindFirstChild("TopRow")
-                    local l = tr and tr:FindFirstChild("NameLabel")
-                    if l then l.TextColor3 = col end
-                end)
-            end
-        else
-            if State.nametagRainbowConn then
-                State.nametagRainbowConn:Disconnect()
-                State.nametagRainbowConn = nil
+            local lbl = bill:FindFirstChild("TextLabel")
+            if lbl then
+                if lbl.Text ~= S.CustomNametagText then lbl.Text = S.CustomNametagText or "WeAreSkidding" end
+                if lbl.TextColor3 ~= State.currentThemeColor then lbl.TextColor3 = State.currentThemeColor end
             end
         end
     else
-        if State.nametagRainbowConn then
-            State.nametagRainbowConn:Disconnect()
-            State.nametagRainbowConn = nil
-        end
         if bill then bill:Destroy() end
-        if hum and not S.HideNametags then
-            pcall(function() hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Viewer end)
-        end
     end
 end
 
@@ -675,7 +513,7 @@ Utils.setupAutoRejoin = function()
             local errMsg = ""
             pcall(function() errMsg = Services.GuiService:GetErrorMessage() end)
             if errMsg:lower():find("teleport") and not errMsg:lower():find("disconnected") then
-                Utils.notify("[WASOR 4.9] Teleport message: " .. errMsg .. " (UI preserved)", Color3.fromRGB(218, 170, 42))
+                Utils.notify("[WASOR 4.8] Teleport message: " .. errMsg .. " (UI preserved)", Color3.fromRGB(218, 170, 42))
                 return
             end
             pcall(function()
@@ -694,7 +532,7 @@ Utils.setupAutoRejoin = function()
     end)
     pcall(function()
         local tpFailConn = Services.TeleportService.TeleportInitFailed:Connect(function(_, result, err)
-            Utils.notify("[WASOR 4.9] Teleport Failed: " .. tostring(err or result) .. " (UI preserved)", Color3.fromRGB(218, 38, 38))
+            Utils.notify("[WASOR 4.8] Teleport Failed: " .. tostring(err or result) .. " (UI preserved)", Color3.fromRGB(218, 38, 38))
         end)
         table.insert(S.Connections, tpFailConn)
     end)
@@ -891,136 +729,12 @@ end
 
 Utils.spectatePlayer = function(target)
     State.currentSpectateTarget = target
-    local CoreGui = (type(gethui) == "function" and gethui()) or Services.CoreGui or (Services.LP and Services.LP:FindFirstChild("PlayerGui"))
-    local oldHud = CoreGui and CoreGui:FindFirstChild("WasorSpectateHud")
-    if oldHud then oldHud:Destroy() end
-
     if target and target.Character then
         local hum = target.Character:FindFirstChildOfClass("Humanoid")
-        if hum then
-            Services.Camera.CameraType = Enum.CameraType.Custom
-            Services.Camera.CameraSubject = hum
-
-            local hud = Instance.new("ScreenGui")
-            hud.Name = "WasorSpectateHud"
-            hud.ResetOnSpawn = false
-            hud.DisplayOrder = 998
-            hud.Parent = CoreGui
-
-            local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(0, 320, 0, 48)
-            frame.Position = UDim2.new(0.5, -160, 1, -80)
-            frame.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
-            frame.BorderSizePixel = 0
-            frame.Parent = hud
-            Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-            local s = Instance.new("UIStroke")
-            s.Color = State.currentThemeColor or Color3.fromRGB(141, 47, 196)
-            s.Thickness = 1.5
-            s.Parent = frame
-
-            local av = Instance.new("ImageLabel")
-            av.Size = UDim2.new(0, 36, 0, 36)
-            av.Position = UDim2.new(0, 6, 0.5, -18)
-            av.BackgroundColor3 = Color3.fromRGB(14, 14, 18)
-            av.BorderSizePixel = 0
-            av.Image = "rbxthumb://type=AvatarHeadShot&id=" .. tostring(target.UserId) .. "&w=150&h=150"
-            av.Parent = frame
-            Instance.new("UICorner", av).CornerRadius = UDim.new(0, 6)
-
-            local info = Instance.new("Frame")
-            info.Size = UDim2.new(1, -160, 1, 0)
-            info.Position = UDim2.new(0, 48, 0, 0)
-            info.BackgroundTransparency = 1
-            info.Parent = frame
-
-            local titleL = Instance.new("TextLabel")
-            titleL.Size = UDim2.new(1, 0, 0, 16)
-            titleL.Position = UDim2.new(0, 0, 0, 6)
-            titleL.BackgroundTransparency = 1
-            titleL.Font = Enum.Font.GothamBold
-            titleL.Text = "SPECTATING: " .. target.DisplayName
-            titleL.TextSize = 11
-            titleL.TextColor3 = Color3.fromRGB(240, 240, 245)
-            titleL.TextXAlignment = Enum.TextXAlignment.Left
-            titleL.TextTruncate = Enum.TextTruncate.AtEnd
-            titleL.Parent = info
-
-            local subL = Instance.new("TextLabel")
-            subL.Size = UDim2.new(1, 0, 0, 14)
-            subL.Position = UDim2.new(0, 0, 0, 24)
-            subL.BackgroundTransparency = 1
-            subL.Font = Enum.Font.Gotham
-            subL.Text = string.format("@%s • %.0f HP", target.Name, hum.Health)
-            subL.TextSize = 9
-            subL.TextColor3 = Color3.fromRGB(46, 204, 113)
-            subL.TextXAlignment = Enum.TextXAlignment.Left
-            subL.Parent = info
-
-            local btnPrev = Instance.new("TextButton")
-            btnPrev.Size = UDim2.new(0, 26, 0, 26)
-            btnPrev.Position = UDim2.new(1, -100, 0.5, -13)
-            btnPrev.BackgroundColor3 = Color3.fromRGB(36, 36, 44)
-            btnPrev.BorderSizePixel = 0
-            btnPrev.Font = Enum.Font.GothamBold
-            btnPrev.Text = "<"
-            btnPrev.TextColor3 = Color3.fromRGB(255, 255, 255)
-            btnPrev.TextSize = 12
-            btnPrev.Parent = frame
-            Instance.new("UICorner", btnPrev).CornerRadius = UDim.new(0, 4)
-
-            local btnNext = Instance.new("TextButton")
-            btnNext.Size = UDim2.new(0, 26, 0, 26)
-            btnNext.Position = UDim2.new(1, -70, 0.5, -13)
-            btnNext.BackgroundColor3 = Color3.fromRGB(36, 36, 44)
-            btnNext.BorderSizePixel = 0
-            btnNext.Font = Enum.Font.GothamBold
-            btnNext.Text = ">"
-            btnNext.TextColor3 = Color3.fromRGB(255, 255, 255)
-            btnNext.TextSize = 12
-            btnNext.Parent = frame
-            Instance.new("UICorner", btnNext).CornerRadius = UDim.new(0, 4)
-
-            local btnStop = Instance.new("TextButton")
-            btnStop.Size = UDim2.new(0, 32, 0, 26)
-            btnStop.Position = UDim2.new(1, -38, 0.5, -13)
-            btnStop.BackgroundColor3 = Color3.fromRGB(218, 38, 38)
-            btnStop.BorderSizePixel = 0
-            btnStop.Font = Enum.Font.GothamBold
-            btnStop.Text = "X"
-            btnStop.TextColor3 = Color3.fromRGB(255, 255, 255)
-            btnStop.TextSize = 11
-            btnStop.Parent = frame
-            Instance.new("UICorner", btnStop).CornerRadius = UDim.new(0, 4)
-
-            local function cycleSpectate(dir)
-                local plrs = Services.Players:GetPlayers()
-                local otherPlrs = {}
-                local curIdx = 1
-                for _, p in ipairs(plrs) do
-                    if p ~= Services.LP then
-                        table.insert(otherPlrs, p)
-                        if p == target then curIdx = #otherPlrs end
-                    end
-                end
-                if #otherPlrs == 0 then return end
-                local nextIdx = curIdx + dir
-                if nextIdx < 1 then nextIdx = #otherPlrs end
-                if nextIdx > #otherPlrs then nextIdx = 1 end
-                Utils.spectatePlayer(otherPlrs[nextIdx])
-            end
-
-            btnPrev.MouseButton1Click:Connect(function() cycleSpectate(-1) end)
-            btnNext.MouseButton1Click:Connect(function() cycleSpectate(1) end)
-            btnStop.MouseButton1Click:Connect(function() Utils.spectatePlayer(nil) end)
-
-            return
-        end
+        if hum then Services.Camera.CameraType = Enum.CameraType.Watch; Services.Camera.CameraSubject = hum; return end
     end
-
     Services.Camera.CameraType = Enum.CameraType.Custom
-    local myChar = Services.LP.Character
-    local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
+    local myChar = Services.LP.Character; local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
     if myHum then Services.Camera.CameraSubject = myHum end
     State.currentSpectateTarget = nil
 end
@@ -1029,170 +743,51 @@ Utils.resetCameraToSelf = function() Utils.spectatePlayer(nil) end
 
 Utils.enableFreecam = function()
     local S = State.S
-    if State.isFreecam then return end
-    State.isFreecam = true
-
-    local char = Services.LP.Character
-    local hrp = Utils.getHRP()
+    if State.isFreecam then return end; State.isFreecam = true
+    local char = Services.LP.Character; local hrp = Utils.getHRP()
     if hrp then hrp.Anchored = true end
+    Services.Camera.CameraType = Enum.CameraType.Scriptable; State.freecamBasePos = Services.Camera.CFrame
+    local moveVector = Vector3.zero
 
-    local camera = Services.Camera
-    camera.CameraType = Enum.CameraType.Scriptable
-
-    local rx, ry, _ = camera.CFrame:ToOrientation()
-    local pitch = rx
-    local yaw = ry
-    local camPos = camera.CFrame.Position
-
-    local moveInputs = { W = 0, S = 0, A = 0, D = 0, Space = 0, Ctrl = 0, Shift = 0 }
-
-    local CoreGui = (type(gethui) == "function" and gethui()) or Services.CoreGui or (Services.LP and Services.LP:FindFirstChild("PlayerGui"))
-    local oldHud = CoreGui and CoreGui:FindFirstChild("WasorFreecamHud")
-    if oldHud then oldHud:Destroy() end
-
-    local fHud = Instance.new("ScreenGui")
-    fHud.Name = "WasorFreecamHud"
-    fHud.ResetOnSpawn = false
-    fHud.DisplayOrder = 999
-    fHud.Parent = CoreGui
-
-    local banner = Instance.new("Frame")
-    banner.Size = UDim2.new(0, 390, 0, 36)
-    banner.Position = UDim2.new(0.5, -195, 0, 16)
-    banner.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
-    banner.BorderSizePixel = 0
-    banner.Parent = fHud
-    Instance.new("UICorner", banner).CornerRadius = UDim.new(0, 6)
-    local bStroke = Instance.new("UIStroke")
-    bStroke.Color = State.currentThemeColor or Color3.fromRGB(141, 47, 196)
-    bStroke.Thickness = 1.5
-    bStroke.Parent = banner
-
-    local bannerText = Instance.new("TextLabel")
-    bannerText.Size = UDim2.new(1, -150, 1, 0)
-    bannerText.Position = UDim2.new(0, 12, 0, 0)
-    bannerText.BackgroundTransparency = 1
-    bannerText.Font = Enum.Font.GothamBold
-    bannerText.TextSize = 10
-    bannerText.TextColor3 = Color3.fromRGB(240, 240, 245)
-    bannerText.TextXAlignment = Enum.TextXAlignment.Left
-    bannerText.Text = "FREECAM [WASD • RMB: Look • Shift: Boost]"
-    bannerText.Parent = banner
-
-    local tpBtn = Instance.new("TextButton")
-    tpBtn.Size = UDim2.new(0, 64, 0, 24)
-    tpBtn.Position = UDim2.new(1, -132, 0.5, -12)
-    tpBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-    tpBtn.BorderSizePixel = 0
-    tpBtn.Font = Enum.Font.GothamBold
-    tpBtn.Text = "TP HERE"
-    tpBtn.TextSize = 9
-    tpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    tpBtn.Parent = banner
-    Instance.new("UICorner", tpBtn).CornerRadius = UDim.new(0, 4)
-
-    tpBtn.MouseButton1Click:Connect(function()
-        local myRoot = Utils.getHRP()
-        if myRoot then
-            myRoot.CFrame = camera.CFrame
-            Utils.notify("Teleported character to camera position!", Color3.fromRGB(46, 204, 113))
-        end
+    State.freecamInputBeganConn = Services.UserInputService.InputBegan:Connect(function(input, gpe)
+        if gpe then return end; local key = input.KeyCode
+        if key == Enum.KeyCode.W then moveVector = moveVector + Vector3.new(0, 0, -1)
+        elseif key == Enum.KeyCode.S then moveVector = moveVector + Vector3.new(0, 0, 1)
+        elseif key == Enum.KeyCode.A then moveVector = moveVector + Vector3.new(-1, 0, 0)
+        elseif key == Enum.KeyCode.D then moveVector = moveVector + Vector3.new(1, 0, 0)
+        elseif key == Enum.KeyCode.Space then moveVector = moveVector + Vector3.new(0, 1, 0)
+        elseif key == Enum.KeyCode.LeftShift then moveVector = moveVector + Vector3.new(0, -1, 0) end
     end)
 
-    local exitBtn = Instance.new("TextButton")
-    exitBtn.Size = UDim2.new(0, 56, 0, 24)
-    exitBtn.Position = UDim2.new(1, -62, 0.5, -12)
-    exitBtn.BackgroundColor3 = Color3.fromRGB(218, 38, 38)
-    exitBtn.BorderSizePixel = 0
-    exitBtn.Font = Enum.Font.GothamBold
-    exitBtn.Text = "EXIT"
-    exitBtn.TextSize = 9
-    exitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    exitBtn.Parent = banner
-    Instance.new("UICorner", exitBtn).CornerRadius = UDim.new(0, 4)
-
-    exitBtn.MouseButton1Click:Connect(function()
-        Utils.disableFreecam()
-    end)
-
-    local UIS = Services.UserInputService
-
-    State.freecamInputBeganConn = UIS.InputBegan:Connect(function(input, gpe)
-        if gpe then return end
+    State.freecamInputEndedConn = Services.UserInputService.InputEnded:Connect(function(input)
         local key = input.KeyCode
-        if key == Enum.KeyCode.W then moveInputs.W = 1
-        elseif key == Enum.KeyCode.S then moveInputs.S = 1
-        elseif key == Enum.KeyCode.A then moveInputs.A = 1
-        elseif key == Enum.KeyCode.D then moveInputs.D = 1
-        elseif key == Enum.KeyCode.Space then moveInputs.Space = 1
-        elseif key == Enum.KeyCode.LeftControl or key == Enum.KeyCode.Q then moveInputs.Ctrl = 1
-        elseif key == Enum.KeyCode.LeftShift then moveInputs.Shift = 1
-        end
-    end)
-
-    State.freecamInputEndedConn = UIS.InputEnded:Connect(function(input)
-        local key = input.KeyCode
-        if key == Enum.KeyCode.W then moveInputs.W = 0
-        elseif key == Enum.KeyCode.S then moveInputs.S = 0
-        elseif key == Enum.KeyCode.A then moveInputs.A = 0
-        elseif key == Enum.KeyCode.D then moveInputs.D = 0
-        elseif key == Enum.KeyCode.Space then moveInputs.Space = 0
-        elseif key == Enum.KeyCode.LeftControl or key == Enum.KeyCode.Q then moveInputs.Ctrl = 0
-        elseif key == Enum.KeyCode.LeftShift then moveInputs.Shift = 0
-        end
+        if key == Enum.KeyCode.W then moveVector = moveVector - Vector3.new(0, 0, -1)
+        elseif key == Enum.KeyCode.S then moveVector = moveVector - Vector3.new(0, 0, 1)
+        elseif key == Enum.KeyCode.A then moveVector = moveVector - Vector3.new(-1, 0, 0)
+        elseif key == Enum.KeyCode.D then moveVector = moveVector - Vector3.new(1, 0, 0)
+        elseif key == Enum.KeyCode.Space then moveVector = moveVector - Vector3.new(0, 1, 0)
+        elseif key == Enum.KeyCode.LeftShift then moveVector = moveVector - Vector3.new(0, -1, 0) end
     end)
 
     State.freecamConnection = Services.RunService.RenderStepped:Connect(function(dt)
-        local isRmbDown = UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
-        if isRmbDown then
-            UIS.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
-            local delta = UIS:GetMouseDelta()
-            local sens = 0.003
-            yaw = yaw - delta.X * sens
-            pitch = math.clamp(pitch - delta.Y * sens, -math.rad(88), math.rad(88))
-        else
-            UIS.MouseBehavior = Enum.MouseBehavior.Default
-        end
-
-        local rotCFrame = CFrame.fromOrientation(pitch, yaw, 0)
-        local rawMove = Vector3.new(moveInputs.D - moveInputs.A, moveInputs.Space - moveInputs.Ctrl, moveInputs.S - moveInputs.W)
-        if rawMove.Magnitude > 0 then
-            rawMove = rawMove.Unit
-        end
-
-        local baseSpeed = S.FreecamSpeed or 60
-        if moveInputs.Shift == 1 then
-            baseSpeed = baseSpeed * 2.2
-        end
-
-        local worldMove = (rotCFrame.RightVector * rawMove.X) + (Vector3.new(0, 1, 0) * rawMove.Y) + (rotCFrame.LookVector * (-rawMove.Z))
-        camPos = camPos + worldMove * (baseSpeed * dt)
-
-        camera.CFrame = CFrame.new(camPos) * rotCFrame
+        if Services.UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then Services.UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
+        else Services.UserInputService.MouseBehavior = Enum.MouseBehavior.Default end
+        local cameraRot = Services.Camera.CFrame - Services.Camera.CFrame.Position
+        local moveDir = cameraRot * moveVector
+        if moveDir.Magnitude > 0 then State.freecamBasePos = State.freecamBasePos + moveDir.Unit * ((S.FreecamSpeed or 40) * dt) end
+        Services.Camera.CFrame = CFrame.new(State.freecamBasePos.Position) * cameraRot
     end)
 end
 
 Utils.disableFreecam = function()
-    if not State.isFreecam then return end
-    State.isFreecam = false
-
+    if not State.isFreecam then return end; State.isFreecam = false
     if State.freecamConnection then State.freecamConnection:Disconnect(); State.freecamConnection = nil end
     if State.freecamInputBeganConn then State.freecamInputBeganConn:Disconnect(); State.freecamInputBeganConn = nil end
     if State.freecamInputEndedConn then State.freecamInputEndedConn:Disconnect(); State.freecamInputEndedConn = nil end
-
-    Services.UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-    Services.Camera.CameraType = Enum.CameraType.Custom
-
-    local char = Services.LP.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    Services.UserInputService.MouseBehavior = Enum.MouseBehavior.Default; Services.Camera.CameraType = Enum.CameraType.Custom
+    local char = Services.LP.Character; local hum = char and char:FindFirstChildOfClass("Humanoid")
     if hum then Services.Camera.CameraSubject = hum end
-
-    local hrp = Utils.getHRP()
-    if hrp then hrp.Anchored = false end
-
-    local CoreGui = (type(gethui) == "function" and gethui()) or Services.CoreGui or (Services.LP and Services.LP:FindFirstChild("PlayerGui"))
-    local oldHud = CoreGui and CoreGui:FindFirstChild("WasorFreecamHud")
-    if oldHud then oldHud:Destroy() end
+    local hrp = Utils.getHRP(); if hrp then hrp.Anchored = false end
 end
 
 Utils.serverHop = function(sortOrder)

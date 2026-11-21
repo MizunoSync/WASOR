@@ -1651,7 +1651,6 @@ UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
     local resizeHandle = Instance.new("Frame"); resizeHandle.Name = "resizeHandle"; resizeHandle.Size = UDim2.new(0, 6, 0, 6)
     resizeHandle.Position = UDim2.new(1, -6, 1, -6); resizeHandle.BackgroundColor3 = State.currentThemeColor; resizeHandle.BackgroundTransparency = 0.3
     resizeHandle.BorderSizePixel = 0; resizeHandle.ZIndex = 10; resizeHandle.Parent = win; table.insert(themeFills, resizeHandle)
-    local rhCorner = Instance.new("UICorner"); rhCorner.CornerRadius = UDim.new(0, 4); rhCorner.Parent = resizeHandle
     makeResizable(win, resizeHandle)
     collapseBtn.MouseButton1Click:Connect(function()
         collapsed = not collapsed
@@ -2137,7 +2136,6 @@ local function createPanel(title, width, height)
     resizeHandle.Position = UDim2.new(1, -8, 1, -8); resizeHandle.BackgroundColor3 = (State.S.ThemeColor == "Galaxy") and getGalaxyBgColor() or State.currentThemeColor
     resizeHandle.BackgroundTransparency = 0.3; resizeHandle.BorderSizePixel = 0; resizeHandle.ZIndex = 12; resizeHandle.Parent = win
     table.insert(themeFills, resizeHandle)
-    local rhCorner2 = Instance.new("UICorner"); rhCorner2.CornerRadius = UDim.new(0, 4); rhCorner2.Parent = resizeHandle
     makeResizable(win, resizeHandle)
     makeDraggable(win, header)
     return win, content
@@ -2241,7 +2239,7 @@ UI.InitializeUI = function()
     topTitle.Size = UDim2.new(0, 450, 1, 0); topTitle.Position = UDim2.new(0, 10, 0, 0); topTitle.BackgroundTransparency = 1
     topTitle.Font = Enum.Font.GothamBold; topTitle.TextSize = 11; topTitle.TextColor3 = Color3.fromRGB(255, 255, 255); topTitle.ZIndex = 5
     topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.Text = "<font color='#ffffff'>WeAreSkidding</font> <font color='#e0e0e0'>On Roblox v4.9</font> <font color='#aaaaaa'>(" .. executorName .. ")</font>"
+    topTitle.Text = "<font color='#ffffff'>WeAreSkidding</font> <font color='#e0e0e0'>On Roblox v4.8</font> <font color='#aaaaaa'>(" .. executorName .. ")</font>"
     topTitle.RichText = true; topTitle.Parent = topBar
 
     local hudTextLabel = Instance.new("TextLabel")
@@ -2385,7 +2383,7 @@ UI.InitializeUI = function()
     hudWatermark = Instance.new("TextLabel")
     hudWatermark.Size = UDim2.new(0, 200, 0, 14); hudWatermark.Position = UDim2.new(0, 10, 0, 26); hudWatermark.BackgroundTransparency = 1
     hudWatermark.Font = Enum.Font.GothamBold; hudWatermark.TextSize = 10; hudWatermark.TextColor3 = State.currentThemeColor
-    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 4.9"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
+    hudWatermark.TextXAlignment = Enum.TextXAlignment.Left; hudWatermark.Text = "WASOR 4.8"; hudWatermark.Visible = S.HUDWatermark; hudWatermark.Parent = screenGui
     table.insert(themeTexts, hudWatermark)
 
     hudCoords = Instance.new("TextLabel")
@@ -3323,7 +3321,7 @@ UI.InitializeUI = function()
                 if writefile then
                     pcall(function() writefile("utility_hub_visited.txt", "true") end)
                 end
-                UI.showToast("Welcome to WASOR 4.9!", State.currentThemeColor)
+                UI.showToast("Welcome to WASOR 4.8!", State.currentThemeColor)
                 task.wait(2.2)
                 UI.showToast("Toggle UI with [Right Control]", State.currentThemeColor)
                 task.wait(2.2)
