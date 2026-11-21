@@ -259,6 +259,63 @@ local function getExecutorBadgeColor(execName)
     return Color3.fromRGB(110, 115, 125)
 end
 
+
+local BAO_STICKER_URL = "https://media.discordapp.net/stickers/1499067663496777729.png"
+local BAO_STICKER_FILE = "WASOR_Assets/bao_sticker.png"
+local cachedBaoAsset = nil
+
+local function getBaoStickerAsset()
+    if cachedBaoAsset then return cachedBaoAsset end
+    local customAssetFn = getcustomasset or getsynasset or (syn and syn.cache_replace)
+    if not customAssetFn then return nil end
+
+    pcall(function()
+        if makefolder and isfolder and not isfolder("WASOR_Assets") then
+            makefolder("WASOR_Assets")
+        end
+    end)
+
+    if isfile and isfile(BAO_STICKER_FILE) then
+        local ok, asset = pcall(customAssetFn, BAO_STICKER_FILE)
+        if ok and asset then
+            cachedBaoAsset = asset
+            return asset
+        end
+    end
+
+    local req = (syn and syn.request) or (http and http.request) or http_request or request
+    local data = nil
+    if req then
+        local ok, res = pcall(req, { Url = BAO_STICKER_URL, Method = "GET" })
+        if ok and res and (res.StatusCode == 200 or res.Status == 200) and res.Body then
+            data = res.Body
+        end
+    end
+    if not data and game.HttpGet then
+        local ok, res = pcall(function() return game:HttpGet(BAO_STICKER_URL) end)
+        if ok and res and #res > 100 then
+            data = res
+        end
+    end
+
+    if data and writefile then
+        pcall(writefile, BAO_STICKER_FILE, data)
+        if isfile and isfile(BAO_STICKER_FILE) then
+            local ok, asset = pcall(customAssetFn, BAO_STICKER_FILE)
+            if ok and asset then
+                cachedBaoAsset = asset
+                return asset
+            end
+        end
+    end
+
+    return nil
+end
+
+task.spawn(function()
+    pcall(getBaoStickerAsset)
+end)
+
 local function cleanUrlDecode(str)
     str = string.gsub(str, "+", " ")
     str = string.gsub(str, "%%(%x%x)", function(hex)
@@ -1090,7 +1147,7 @@ do
     ClearAllBtn.BackgroundColor3 = Color3.fromRGB(36, 20, 24)
     ClearAllBtn.BorderSizePixel = 0
     ClearAllBtn.Font = HubTheme.fontBold
-    ClearAllBtn.Text = "🗑️ Limpar"
+    ClearAllBtn.Text = "🗑️ Clear"
     ClearAllBtn.TextColor3 = Color3.fromRGB(240, 96, 108)
     ClearAllBtn.TextSize = 11
     ClearAllBtn.Parent = h
@@ -1115,7 +1172,7 @@ do
             end
         end
         ChatScrolling.CanvasSize = UDim2.new(0, 0, 0, 0)
-        showToast("Chat limpo!", HubTheme.accent)
+        showToast("Chat cleared!", HubTheme.accent)
     end)
 end
 
@@ -1139,6 +1196,7 @@ end
 
 local TextBox = Instance.new("TextBox")
 local SendBtn = Instance.new("TextButton")
+local BaoBtn = Instance.new("ImageButton")
 do
     local bar = Instance.new("ScrollingFrame")
     bar.Size = UDim2.new(1, 0, 0, 24)
@@ -1146,7 +1204,7 @@ do
     bar.BackgroundTransparency = 1
     bar.BorderSizePixel = 0
     bar.ScrollBarThickness = 0
-    bar.CanvasSize = UDim2.new(0, 440, 0, 0)
+    bar.CanvasSize = UDim2.new(0, 480, 0, 0)
     bar.ScrollingDirection = Enum.ScrollingDirection.X
     bar.Parent = ChatView
 
@@ -1155,13 +1213,50 @@ do
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Padding = UDim.new(0, 4)
 
+    -- Bao sticker shortcut in the emoji bar
+    local baoBarBtn = Instance.new("ImageButton")
+    baoBarBtn.Size = UDim2.new(0, 26, 0, 22)
+    baoBarBtn.BackgroundColor3 = HubTheme.cardBg
+    baoBarBtn.BorderSizePixel = 0
+    baoBarBtn.Parent = bar
+    Instance.new("UICorner", baoBarBtn).CornerRadius = UDim.new(0, 4)
+    local baoBarAsset = getBaoStickerAsset()
+    if baoBarAsset then
+        baoBarBtn.Image = baoBarAsset
+    else
+        local baoBarLbl = Instance.new("TextLabel", baoBarBtn)
+        baoBarLbl.Size = UDim2.new(1, 0, 1, 0)
+        baoBarLbl.BackgroundTransparency = 1
+        baoBarLbl.Text = "🥟"
+        baoBarLbl.TextSize = 13
+    end
+    baoBarBtn.MouseButton1Click:Connect(function()
+        sendChatMessage("[sticker:bao]")
+    end)
+
+    local emojis = {"😀", "😂", "🔥", "❤️", "💀", "👑", "🚀", "👍", "🎮", "⚡", "👋", "🎉", "✨", "👀", "💯"}
+    for _, em in ipairs(emojis) do
+        local emBtn = Instance.new("TextButton")
+        emBtn.Size = UDim2.new(0, 26, 0, 22)
+        emBtn.BackgroundColor3 = HubTheme.cardBg
+        emBtn.Text = em
+        emBtn.TextSize = 12
+        emBtn.Parent = bar
+        Instance.new("UICorner", emBtn).CornerRadius = UDim.new(0, 4)
+        emBtn.MouseButton1Click:Connect(function()
+            TextBox.Text = TextBox.Text .. em .. " "
+            TextBox:CaptureFocus()
+        end)
+    end
+
     local inputC = Instance.new("Frame")
     inputC.Size = UDim2.new(1, 0, 0, 34)
     inputC.Position = UDim2.new(0, 0, 1, -34)
     inputC.BackgroundTransparency = 1
     inputC.Parent = ChatView
 
-    TextBox.Size = UDim2.new(1, -74, 1, 0)
+    -- TextBox positioned with room for BaoBtn and SendBtn
+    TextBox.Size = UDim2.new(1, -126, 1, 0)
     TextBox.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
     TextBox.TextColor3 = Color3.fromRGB(242, 243, 245)
     TextBox.PlaceholderColor3 = Color3.fromRGB(120, 125, 134)
@@ -1188,35 +1283,74 @@ do
         end
     end)
 
-    SendBtn.Size = UDim2.new(0, 68, 1, 0)
-    SendBtn.Position = UDim2.new(1, -68, 0, 0)
-    SendBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    -- Dedicated Bao Sticker button inside input bar
+    BaoBtn.Name = "BaoStickerBtn"
+    BaoBtn.Size = UDim2.new(0, 36, 1, 0)
+    BaoBtn.Position = UDim2.new(1, -120, 0, 0)
+    BaoBtn.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
+    BaoBtn.BorderSizePixel = 0
+    BaoBtn.AutoButtonColor = true
+    BaoBtn.ZIndex = 5
+    BaoBtn.Parent = inputC
+    Instance.new("UICorner", BaoBtn).CornerRadius = UDim.new(0, 4)
+    local baoStroke = Instance.new("UIStroke", BaoBtn)
+    baoStroke.Color = Color3.fromRGB(50, 50, 60)
+    baoStroke.Thickness = 1
+
+    local baoAsset = getBaoStickerAsset()
+    if baoAsset then
+        BaoBtn.Image = baoAsset
+    else
+        local baoLbl = Instance.new("TextLabel", BaoBtn)
+        baoLbl.Size = UDim2.new(1, 0, 1, 0)
+        baoLbl.BackgroundTransparency = 1
+        baoLbl.Text = "🥟"
+        baoLbl.TextSize = 16
+    end
+
+    BaoBtn.MouseEnter:Connect(function()
+        baoStroke.Color = HubTheme.accent
+        BaoBtn.BackgroundColor3 = Color3.fromRGB(36, 36, 46)
+    end)
+    BaoBtn.MouseLeave:Connect(function()
+        baoStroke.Color = Color3.fromRGB(50, 50, 60)
+        BaoBtn.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
+    end)
+
+    BaoBtn.MouseButton1Click:Connect(function()
+        sendChatMessage("[sticker:bao]")
+    end)
+
+    -- Highly visible Send button with bold styling and contrast
+    SendBtn.Size = UDim2.new(0, 80, 1, 0)
+    SendBtn.Position = UDim2.new(1, -80, 0, 0)
+    SendBtn.BackgroundColor3 = HubTheme.accent
     SendBtn.BorderSizePixel = 0
     SendBtn.Text = "Send ⏎"
     SendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     SendBtn.Font = HubTheme.fontBold
-    SendBtn.TextSize = 11
+    SendBtn.TextSize = 12
+    SendBtn.AutoButtonColor = true
+    SendBtn.ZIndex = 5
+    SendBtn.Visible = true
     SendBtn.Parent = inputC
     Instance.new("UICorner", SendBtn).CornerRadius = UDim.new(0, 4)
+
+    local sendBorder = Instance.new("UIStroke", SendBtn)
+    sendBorder.Color = Color3.fromRGB(255, 255, 255)
+    sendBorder.Transparency = 0.8
+    sendBorder.Thickness = 1
 
     local sendGrad = Instance.new("UIGradient", SendBtn)
     sendGrad.Name = "SendGradient"
     sendGrad.Color = ColorSequence.new(HubTheme.accent, HubTheme.accentGradient or HubTheme.accent)
 
-    local emojis = {"😀", "😂", "🔥", "❤️", "💀", "👑", "🚀", "👍", "🎮", "⚡", "👋", "🎉", "✨", "👀", "💯"}
-    for _, em in ipairs(emojis) do
-        local emBtn = Instance.new("TextButton")
-        emBtn.Size = UDim2.new(0, 26, 0, 22)
-        emBtn.BackgroundColor3 = HubTheme.cardBg
-        emBtn.Text = em
-        emBtn.TextSize = 12
-        emBtn.Parent = bar
-        Instance.new("UICorner", emBtn).CornerRadius = UDim.new(0, 4)
-        emBtn.MouseButton1Click:Connect(function()
-            TextBox.Text = TextBox.Text .. em .. " "
-            TextBox:CaptureFocus()
-        end)
-    end
+    SendBtn.MouseEnter:Connect(function()
+        SendBtn.BackgroundTransparency = 0.15
+    end)
+    SendBtn.MouseLeave:Connect(function()
+        SendBtn.BackgroundTransparency = 0
+    end)
 end
 
 local HistoryView = Instance.new("Frame")
@@ -3009,22 +3143,56 @@ local function refreshChatUI(messages, adminPool)
                     ChatScrolling.CanvasSize = UDim2.new(0, 0, 0, l.AbsoluteContentSize.Y + 8)
                 end
             end)
-            showToast("Mensagem apagada!", HubTheme.accent)
+            showToast("Message deleted!", HubTheme.accent)
         end)
 
-        local MsgText = Instance.new("TextLabel")
-        MsgText.Size = UDim2.new(1, 0, 0, 0)
-        MsgText.Position = UDim2.new(0, 0, 0, 20)
-        MsgText.AutomaticSize = Enum.AutomaticSize.Y
-        MsgText.BackgroundTransparency = 1
-        MsgText.Font = HubTheme.font
-        MsgText.TextSize = 13
-        MsgText.TextColor3 = Color3.fromRGB(219, 222, 225)
-        MsgText.TextXAlignment = Enum.TextXAlignment.Left
-        MsgText.TextWrapped = true
-        MsgText.RichText = true
-        MsgText.Text = displayMsg
-        MsgText.Parent = ContentFrame
+        local isBaoSticker = (displayMsg == "[sticker:bao]")
+            or (string.find(displayMsg, "%[sticker:bao%]") ~= nil)
+            or (string.find(displayMsg, "1499067663496777729") ~= nil)
+            or (string.find(string.lower(displayMsg), ":bao:") ~= nil)
+
+        if isBaoSticker then
+            local stickerContainer = Instance.new("Frame")
+            stickerContainer.Size = UDim2.new(0, 85, 0, 85)
+            stickerContainer.Position = UDim2.new(0, 0, 0, 20)
+            stickerContainer.BackgroundTransparency = 1
+            stickerContainer.BorderSizePixel = 0
+            stickerContainer.Parent = ContentFrame
+
+            local stickerImg = Instance.new("ImageLabel")
+            stickerImg.Size = UDim2.new(1, 0, 1, 0)
+            stickerImg.BackgroundTransparency = 1
+            stickerImg.BorderSizePixel = 0
+
+            local baoAsset = getBaoStickerAsset()
+            if baoAsset then
+                stickerImg.Image = baoAsset
+                stickerImg.Parent = stickerContainer
+            else
+                local fallbackLbl = Instance.new("TextLabel")
+                fallbackLbl.Size = UDim2.new(1, 0, 1, 0)
+                fallbackLbl.BackgroundTransparency = 1
+                fallbackLbl.Font = HubTheme.fontBold
+                fallbackLbl.TextSize = 13
+                fallbackLbl.TextColor3 = HubTheme.accent
+                fallbackLbl.Text = "🥟 [Bao Sticker]"
+                fallbackLbl.Parent = stickerContainer
+            end
+        else
+            local MsgText = Instance.new("TextLabel")
+            MsgText.Size = UDim2.new(1, 0, 0, 0)
+            MsgText.Position = UDim2.new(0, 0, 0, 20)
+            MsgText.AutomaticSize = Enum.AutomaticSize.Y
+            MsgText.BackgroundTransparency = 1
+            MsgText.Font = HubTheme.font
+            MsgText.TextSize = 13
+            MsgText.TextColor3 = Color3.fromRGB(219, 222, 225)
+            MsgText.TextXAlignment = Enum.TextXAlignment.Left
+            MsgText.TextWrapped = true
+            MsgText.RichText = true
+            MsgText.Text = displayMsg
+            MsgText.Parent = ContentFrame
+        end
     end
 end
 
@@ -3689,28 +3857,99 @@ task.spawn(function()
     end
 end)
 
+local function syncWithWasorTheme()
+    local currentVH = _G.VoidHub
+    if not (currentVH and currentVH.State and currentVH.State.currentThemeColor) then
+        return false
+    end
+
+    local c1 = currentVH.State.currentThemeColor
+    local c2 = currentVH.State.currentThemeGradientColor or c1
+
+    if not c1 or (c1.R == 0 and c1.G == 0 and c1.B == 0) then
+        if currentVH.UI and currentVH.UI.themeColors then
+            c1 = currentVH.UI.themeColors["Red"] or Color3.fromRGB(218, 38, 38)
+            c2 = c1
+        else
+            c1 = Color3.fromRGB(218, 38, 38)
+            c2 = Color3.fromRGB(180, 28, 28)
+        end
+    end
+
+    HubTheme.accent = c1
+    HubTheme.accentGradient = c2
+
+    -- 1. Title bar accent line
+    if titleBottomLine and titleBottomLine.Parent then
+        titleBottomLine.BackgroundColor3 = c1
+    end
+
+    -- 2. Send button
+    if SendBtn and SendBtn.Parent then
+        SendBtn.BackgroundColor3 = c1
+        local sg = SendBtn:FindFirstChild("SendGradient")
+        if sg then
+            sg.Color = ColorSequence.new(c1, c2)
+        end
+    end
+
+    -- 3. Resize Handle
+    if ResizeHandle and ResizeHandle.Parent then
+        ResizeHandle.TextColor3 = c1
+    end
+
+    -- 4. Spectate HUD
+    if SpectateHud and SpectateHud.Parent then
+        local st = SpectateHud:FindFirstChildOfClass("UIStroke")
+        if st then st.Color = c1 end
+    end
+
+    -- 5. Bao sticker button stroke
+    if BaoBtn and BaoBtn.Parent then
+        local bs = BaoBtn:FindFirstChildOfClass("UIStroke")
+        if bs then bs.Color = c1 end
+    end
+
+    -- 6. Active Tab Lines
+    if TabChatLine and TabChatLine.Parent and currentView == "chat" then
+        TabChatLine.BackgroundColor3 = c1
+    end
+    if TabHistoryLine and TabHistoryLine.Parent and currentView == "history" then
+        TabHistoryLine.BackgroundColor3 = c1
+    end
+
+    return true
+end
+
+-- Hook into WASOR theme toggles if available for zero-latency sync
+pcall(function()
+    local currentVH = _G.VoidHub
+    if currentVH and currentVH.UI and type(currentVH.UI.themeToggles) == "table" then
+        table.insert(currentVH.UI.themeToggles, function()
+            pcall(syncWithWasorTheme)
+        end)
+    end
+end)
+
+-- Continuous watcher loop to ensure dynamic sync regardless of load order
 task.spawn(function()
-    local lastColor = nil
+    local lastSyncedCol = nil
     while running do
-        task.wait(1.0)
-        if running and VH and VH.State and VH.State.currentThemeColor then
-            local c1 = VH.State.currentThemeColor
-            local c2 = VH.State.currentThemeGradientColor or c1
-            if c1 ~= lastColor then
-                lastColor = c1
-                HubTheme.accent = c1
-                HubTheme.accentGradient = c2
-                if SendBtn and SendBtn.Parent then
-                    local sg = SendBtn:FindFirstChild("SendGradient")
-                    if sg then sg.Color = ColorSequence.new(c1, c2) else SendBtn.BackgroundColor3 = c1 end
-                end
-                if SpectateHud and SpectateHud.Parent then
-                    local st = SpectateHud:FindFirstChildOfClass("UIStroke")
-                    if st then st.Color = c1 end
+        task.wait(0.3)
+        if running then
+            local currentVH = _G.VoidHub
+            if currentVH and currentVH.State and currentVH.State.currentThemeColor then
+                local c = currentVH.State.currentThemeColor
+                if c ~= lastSyncedCol then
+                    lastSyncedCol = c
+                    pcall(syncWithWasorTheme)
                 end
             end
         end
     end
 end)
+
+-- Initial sync attempt
+pcall(syncWithWasorTheme)
 
 _G.ChatHub_Loaded = true
