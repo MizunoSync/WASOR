@@ -9,9 +9,9 @@
   [![Version](https://img.shields.io/badge/Version-4.9_Production-7c3aed?style=for-the-badge)](https://wasordocumentation.vercel.app/)
   [![Roblox](https://img.shields.io/badge/Platform-Roblox_Lua-00a2ff?style=for-the-badge&logo=roblox&logoColor=white)](https://wasordocumentation.vercel.app/)
   [![Languages](https://img.shields.io/badge/i18n-10_Languages-f59e0b?style=for-the-badge)](https://wasordocumentation.vercel.app/)
-  [![Modules](https://img.shields.io/badge/Modules-98_Active-10b981?style=for-the-badge)](https://wasordocumentation.vercel.app/)
+  [![Modules](https://img.shields.io/badge/Modules-107_Active-10b981?style=for-the-badge)](https://wasordocumentation.vercel.app/)
 
-  **A high-performance, modular Roblox Lua client-side utility framework featuring 98 distinct modules across Combat, Movement, Render, Player, World, and Utility engines.**
+  **A high-performance, modular Roblox Lua client-side utility framework featuring 107 distinct modules across Combat, Movement, Render, Player, World, and Utility engines.**
 
   [🌐 **Explore Official Live Documentation**](https://wasordocumentation.vercel.app/) • [📖 **API Reference**](https://wasordocumentation.vercel.app/#aimbot) • [⚡ **Quickstart**](#-quickstart--execution) • [🛠️ **Features**](#-features--module-breakdown)
 
@@ -24,7 +24,7 @@
 The complete reference documentation is deployed and accessible at:
 ### 👉 [https://wasordocumentation.vercel.app/](https://wasordocumentation.vercel.app/#intro)
 
-* **Interactive API Reference**: Comprehensive specifications for all 98 modules with live parameter descriptions and reproducible Lua snippets.
+* **Interactive API Reference**: Comprehensive specifications for all 107 modules with live parameter descriptions and reproducible Lua snippets.
 * **10-Language Instant Localization**: Switch seamlessly between **English**, **Español**, **Português**, **简体中文**, **한국어**, **日本語**, **Русский**, **Deutsch**, **Français**, and **Italiano**.
 * **Global Search (Ctrl + K)**: High-speed fuzzy search across all functions, parameters, aliases, and localized keywords.
 * **Status Badges**: Real-time status indicators across all engines (`Working`, `Defunct`, `Patched`, `Broken`).
@@ -46,7 +46,7 @@ end
 
 ## 🛠️ Features & Module Breakdown
 
-WASOR is organized into **6 core modular divisions** containing **98 specialized routines**:
+WASOR is organized into **6 core modular divisions** containing **107 specialized routines**:
 
 ### ⚔️ Combat Operations (12 Modules)
 * **Aimbot** — Smooth camera target tracking with configurable FOV circles, raycast line-of-sight verification, and bone selection (`Head`, `Torso`, `Random`).
@@ -60,7 +60,8 @@ WASOR is organized into **6 core modular divisions** containing **98 specialized
 * **Walkfling** — Gyro-stabilized physical momentum launcher triggering on body contact.
 * **God Mode & No Recoil** — Client-side death suppression and camera recoil spring dampening.
 
-### 👤 Player & Identity (13 Modules)
+### 👤 Player & Identity (16 Modules)
+* **PlayerChecker** — Advanced account intelligence suite displaying account age, RAP, inventory valuation, badges, country, and active executor detection.
 * **Anti-AFK** — Intercepts `LocalPlayer.Idled` to bypass Roblox's 20-minute idle disconnect barrier.
 * **Auto-Rejoin** — Watchdog monitoring CoreGui prompt errors (268, 277) to automatically reconnect.
 * **Click Teleport** — Instantly warps the character's CFrame to the cursor's world position on click.
@@ -170,6 +171,21 @@ To test and modify WASOR source code locally:
 ## 📝 Release Notes & Changelogs
 
 ### ⚡ WASOR v4.9 (Current)
+> **WASOR V4.9** Fixed the DisplayDistanceType runtime crash on character spawn, added the PlayerChecker account inspector suite, overhauled ChatHub with 16 executor badges, interactive message replies with Discord-style quote bubbles, click-to-ping mentions, custom Bao stickers, live WASOR theme matching, and integrated BetterFilter for smart asterisk censorship with separate repository support.
+
+* **DisplayDistanceType Fix**: Resolved the runtime crash on character spawn (`Core/Utils.lua` and `Core/Runtime.lua`).
+* **PlayerChecker Integration**: Added the Account Inspector suite (`Modules/Player/PlayerChecker.lua`) for full account diagnostics, valuation, and presence monitoring.
+* **ChatHub v4.9 Overhaul**:
+  - 16 custom executor identity recognition badges (Volt, Potassium, Wave, SynapseZ, Lucid, Lynx, Real, Madium, Atomic, Isaeva, Volcano, Athena, Velocity, SirHurt, Xeno, Solara).
+  - Interactive Message Reply system (`↩ Reply`) with live preview banner, cancel option, and Discord-style quote bubbles.
+  - Custom Bao sticker (`🥟`) exclusive picker & 85x85 image rendering.
+  - Click-to-ping (@mention) directly from chat sender names and user list.
+  - Dynamic zero-latency WASOR theme color synchronization (`_G.VoidHub.State.currentThemeColor`).
+* **BetterFilter Engine**: Multilingual keyword and slur censorship with asterisk masking, false-positive protection, and decoupled remote repository support (`_G.BETTER_FILTER_URL`).
+
+### ⚡ WASOR v4.8
+> **WASOR V4.8** Added open and close animations for module drawers and when hiding the UI with the bind, fixed drawer visual glitches and the extra empty space in ScriptHub, fixed ChatHub nil crashes, and updated FeEmotes and AnimationPicker to save emote names and let you paste custom IDs straight from your clipboard.
+
 * **Smooth UI Animations**: Added fluid slide animations for module option drawers and overall UI visibility toggling.
 * **1-Click Module Drawer Opening**: Fixed option drawers requiring multiple clicks to expand; non-toggle utility modules (ScriptHub, Settings, Fun, Console Viewer) now open immediately upon single-click, with double-click support on toggle modules.
 * **Drawer Layout Stabilization**: Eliminated frame clipping and height collapse by retaining calculated dimensions upon tween completion.
