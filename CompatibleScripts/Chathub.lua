@@ -1287,7 +1287,7 @@ do
 end
 
 local ChatScrolling = Instance.new("ScrollingFrame")
-ChatScrolling.Size = UDim2.new(1, 0, 1, -95)
+ChatScrolling.Size = UDim2.new(1, 0, 1, -66)
 ChatScrolling.Position = UDim2.new(0, 0, 0, 30)
 ChatScrolling.BackgroundTransparency = 1
 ChatScrolling.BorderSizePixel = 0
@@ -1306,6 +1306,71 @@ end
 
 local TextBox = Instance.new("TextBox")
 local SendBtn = Instance.new("TextButton")
+
+--------------------------------------------------------------------------------
+-- REPLY SYSTEM STATE & HELPERS
+--------------------------------------------------------------------------------
+local activeReply = nil
+local ReplyPreviewBar = nil
+local ReplyPreviewText = nil
+local CancelReplyBtn = nil
+local replyAccentBar = nil
+
+local function cancelReplying()
+    activeReply = nil
+    if ReplyPreviewBar then
+        ReplyPreviewBar.Visible = false
+    end
+    if ChatScrolling then
+        ChatScrolling.Size = UDim2.new(1, 0, 1, -66)
+    end
+end
+
+local function setReplyingTo(targetUser, originalMsg)
+    local cleanSnippet = string.gsub(tostring(originalMsg or ""), "<[^>]*>", "")
+    cleanSnippet = string.gsub(cleanSnippet, "%[reply:@[^:]+:.-%]", "")
+    cleanSnippet = string.gsub(cleanSnippet, "%[sticker:bao%]", "🥟 [Bao Sticker]")
+    cleanSnippet = string.gsub(cleanSnippet, "[
+%c]", " ")
+    cleanSnippet = string.gsub(cleanSnippet, "%]", "")
+    cleanSnippet = string.gsub(cleanSnippet, "%[", "")
+    cleanSnippet = string.match(cleanSnippet, "^%s*(.-)%s*$") or cleanSnippet
+    if #cleanSnippet > 38 then
+        cleanSnippet = string.sub(cleanSnippet, 1, 35) .. "..."
+    end
+    if cleanSnippet == "" then
+        cleanSnippet = "Message"
+    end
+
+    activeReply = {
+        username = targetUser,
+        snippet = cleanSnippet
+    }
+
+    if ReplyPreviewBar and ReplyPreviewText then
+        local accentCol = (HubTheme and HubTheme.accent) or Color3.fromRGB(0, 168, 255)
+        local accentHex = string.format("#%02X%02X%02X",
+            math.floor(accentCol.R * 255),
+            math.floor(accentCol.G * 255),
+            math.floor(accentCol.B * 255)
+        )
+        ReplyPreviewText.Text = string.format('Replying to <b><font color="%s">@%s</font></b>: <font color="#9aa0a6">"%s"</font>', accentHex, targetUser, cleanSnippet)
+        ReplyPreviewBar.Visible = true
+        if replyAccentBar then
+            replyAccentBar.BackgroundColor3 = accentCol
+        end
+        if ChatScrolling then
+            ChatScrolling.Size = UDim2.new(1, 0, 1, -92)
+            ChatScrolling.CanvasPosition = Vector2.new(0, math.max(0, ChatScrolling.CanvasSize.Y.Offset - ChatScrolling.AbsoluteSize.Y))
+        end
+    end
+
+    TextBox:CaptureFocus()
+    pcall(function()
+        TextBox.CursorPosition = #TextBox.Text + 1
+    end)
+    showToast("Replying to @" .. targetUser, HubTheme.accent)
+end
 do
     local bar = Instance.new("ScrollingFrame")
     bar.Size = UDim2.new(1, 0, 0, 24)
@@ -3139,7 +3204,12 @@ local function refreshChatUI(messages, adminPool)
         ContentFrame.BackgroundTransparency = 1
         ContentFrame.Parent = MsgFrame
 
+        local contentLayout = Instance.new("UIListLayout", ContentFrame)
+        contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        contentLayout.Padding = UDim.new(0, 2)
+
         local HeaderLine = Instance.new("Frame")
+        HeaderLine.LayoutOrder = 1
         HeaderLine.Size = UDim2.new(1, 0, 0, 18)
         HeaderLine.BackgroundTransparency = 1
         HeaderLine.Parent = ContentFrame
@@ -3227,8 +3297,38 @@ local function refreshChatUI(messages, adminPool)
         TimeLabel.TextSize = 10
         TimeLabel.Parent = HeaderLine
 
+        local ReplyBtn = Instance.new("TextButton")
+        ReplyBtn.LayoutOrder = 4
+        ReplyBtn.Size = UDim2.new(0, 48, 0, 16)
+        ReplyBtn.BackgroundColor3 = Color3.fromRGB(24, 28, 38)
+        ReplyBtn.BackgroundTransparency = 0.2
+        ReplyBtn.BorderSizePixel = 0
+        ReplyBtn.Font = HubTheme.fontBold
+        ReplyBtn.TextSize = 10
+        ReplyBtn.TextColor3 = Color3.fromRGB(160, 175, 205)
+        ReplyBtn.Text = "↩ Reply"
+        ReplyBtn.ZIndex = 5
+        ReplyBtn.AutoButtonColor = true
+        ReplyBtn.Parent = HeaderLine
+        Instance.new("UICorner", ReplyBtn).CornerRadius = UDim.new(0, 3)
+
+        ReplyBtn.MouseEnter:Connect(function()
+            ReplyBtn.BackgroundColor3 = HubTheme.accent
+            ReplyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            ReplyBtn.BackgroundTransparency = 0
+        end)
+        ReplyBtn.MouseLeave:Connect(function()
+            ReplyBtn.BackgroundColor3 = Color3.fromRGB(24, 28, 38)
+            ReplyBtn.TextColor3 = Color3.fromRGB(160, 175, 205)
+            ReplyBtn.BackgroundTransparency = 0.2
+        end)
+
+        ReplyBtn.MouseButton1Click:Connect(function()
+            setReplyingTo(uName, displayMsg)
+        end)
+
         local DelBtn = Instance.new("TextButton")
-        DelBtn.LayoutOrder = 4
+        DelBtn.LayoutOrder = 5
         DelBtn.Size = UDim2.new(0, 18, 0, 16)
         DelBtn.BackgroundColor3 = Color3.fromRGB(36, 20, 24)
         DelBtn.BackgroundTransparency = 0.3
@@ -3280,15 +3380,57 @@ local function refreshChatUI(messages, adminPool)
             showToast("Message deleted!", HubTheme.accent)
         end)
 
-        local isBaoSticker = (displayMsg == "[sticker:bao]")
-            or (string.find(displayMsg, "%[sticker:bao%]") ~= nil)
-            or (string.find(displayMsg, "1499067663496777729") ~= nil)
-            or (string.find(string.lower(displayMsg), ":bao:") ~= nil)
+        -- Parse reply header if present: [reply:@user:snippet] body
+        local isReply, replyUser, replySnippet, msgBody = false, nil, nil, displayMsg
+        local rUser, rSnip, rText = string.match(displayMsg, "^%[reply:@([^:]+):([^%]]-)%]%s*(.*)$")
+        if rUser and rSnip then
+            isReply = true
+            replyUser = rUser
+            replySnippet = rSnip
+            msgBody = rText or ""
+        end
+
+        if isReply then
+            local ReplyLine = Instance.new("Frame")
+            ReplyLine.LayoutOrder = 2
+            ReplyLine.Size = UDim2.new(1, 0, 0, 15)
+            ReplyLine.BackgroundTransparency = 1
+            ReplyLine.Parent = ContentFrame
+
+            local ReplyLabel = Instance.new("TextLabel")
+            ReplyLabel.Size = UDim2.new(1, 0, 1, 0)
+            ReplyLabel.BackgroundTransparency = 1
+            ReplyLabel.Font = HubTheme.font
+            ReplyLabel.TextSize = 10
+            ReplyLabel.TextXAlignment = Enum.TextXAlignment.Left
+            ReplyLabel.RichText = true
+            ReplyLabel.TextTruncate = Enum.TextTruncate.AtEnd
+
+            local accentCol = (HubTheme and HubTheme.accent) or Color3.fromRGB(0, 168, 255)
+            local accentHex = string.format("#%02X%02X%02X",
+                math.floor(accentCol.R * 255),
+                math.floor(accentCol.G * 255),
+                math.floor(accentCol.B * 255)
+            )
+
+            ReplyLabel.Text = string.format(
+                '<font color="#8c929d">⤷ <i>Replying to</i> </font><b><font color="%s">@%s</font></b> <font color="#6c727d">"%s"</font>',
+                accentHex,
+                replyUser,
+                replySnippet
+            )
+            ReplyLabel.Parent = ReplyLine
+        end
+
+        local isBaoSticker = (msgBody == "[sticker:bao]")
+            or (string.find(msgBody, "%[sticker:bao%]") ~= nil)
+            or (string.find(msgBody, "1499067663496777729") ~= nil)
+            or (string.find(string.lower(msgBody), ":bao:") ~= nil)
 
         if isBaoSticker then
             local stickerContainer = Instance.new("Frame")
+            stickerContainer.LayoutOrder = 3
             stickerContainer.Size = UDim2.new(0, 85, 0, 85)
-            stickerContainer.Position = UDim2.new(0, 0, 0, 20)
             stickerContainer.BackgroundTransparency = 1
             stickerContainer.BorderSizePixel = 0
             stickerContainer.Parent = ContentFrame
@@ -3314,8 +3456,8 @@ local function refreshChatUI(messages, adminPool)
             end
         else
             local MsgText = Instance.new("TextLabel")
+            MsgText.LayoutOrder = 3
             MsgText.Size = UDim2.new(1, 0, 0, 0)
-            MsgText.Position = UDim2.new(0, 0, 0, 20)
             MsgText.AutomaticSize = Enum.AutomaticSize.Y
             MsgText.BackgroundTransparency = 1
             MsgText.Font = HubTheme.font
@@ -3324,7 +3466,7 @@ local function refreshChatUI(messages, adminPool)
             MsgText.TextXAlignment = Enum.TextXAlignment.Left
             MsgText.TextWrapped = true
             MsgText.RichText = true
-            MsgText.Text = displayMsg
+            MsgText.Text = msgBody
             MsgText.Parent = ContentFrame
         end
     end
@@ -3412,6 +3554,10 @@ local function fetchExecutorHistory()
 end
 
 local function sendChatMessage(text)
+    if activeReply and activeReply.username then
+        text = string.format("[reply:@%s:%s] %s", activeReply.username, activeReply.snippet, text)
+        cancelReplying()
+    end
     local cleanMsg = sanitizeText(text)
     if cleanMsg == "" then return end
     if tick() - lastChatTime < 0.6 then
@@ -4031,6 +4177,11 @@ local function syncWithWasorTheme()
         if sg then
             sg.Color = ColorSequence.new(c1, c2)
         end
+    end
+
+    -- 2.1 Reply preview accent bar
+    if replyAccentBar and replyAccentBar.Parent then
+        replyAccentBar.BackgroundColor3 = c1
     end
 
     -- 3. Resize Handle
