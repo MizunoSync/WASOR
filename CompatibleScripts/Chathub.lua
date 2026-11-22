@@ -3622,7 +3622,7 @@ fetchUsers = function(force)
 
     task.spawn(function()
         local allUsers = {}
-        local pageSize = 2000
+        local pageSize = 3000
         local offset = 0
         local fetchSuccess = false
 
