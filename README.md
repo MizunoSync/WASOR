@@ -11,7 +11,7 @@
   [![Languages](https://img.shields.io/badge/i18n-10_Languages-f59e0b?style=for-the-badge)](https://wasordocumentation.vercel.app/)
   [![Modules](https://img.shields.io/badge/Modules-107_Active-10b981?style=for-the-badge)](https://wasordocumentation.vercel.app/)
 
-  **A high-performance, modular Roblox Lua client-side utility framework featuring 107 distinct modules across Combat, Movement, Render, Player, World, and Utility engines.**
+  **A Roblox Lua client-side utility featuring more than 100+ distinct modules across Combat, Movement, Render, Player, World, and Utility.**
 
   [🌐 **Explore Official Live Documentation**](https://wasordocumentation.vercel.app/) • [📖 **API Reference**](https://wasordocumentation.vercel.app/#aimbot) • [⚡ **Quickstart**](#-quickstart--execution) • [🛠️ **Features**](#-features--module-breakdown)
 
@@ -19,21 +19,19 @@
 
 ---
 
-## 📖 Official Interactive Documentation
+## 📖 Official Documentation
 
-The complete reference documentation is deployed and accessible at:
+Deployed at:
 ### 👉 [https://wasordocumentation.vercel.app/](https://wasordocumentation.vercel.app/#intro)
 
-* **Interactive API Reference**: Comprehensive specifications for all 107 modules with live parameter descriptions and reproducible Lua snippets.
-* **10-Language Instant Localization**: Switch seamlessly between **English**, **Español**, **Português**, **简体中文**, **한국어**, **日本語**, **Русский**, **Deutsch**, **Français**, and **Italiano**.
-* **Global Search (Ctrl + K)**: High-speed fuzzy search across all functions, parameters, aliases, and localized keywords.
+* **Interactive API Reference**: Comprehensive specifications for all modules with parameters and descriptions, reproducible Lua snippets.
 * **Status Badges**: Real-time status indicators across all engines (`Working`, `Defunct`, `Patched`, `Broken`).
 
 ---
 
-## ⚡ Quickstart & Execution
+## ⚡ How the hell do i execute it
 
-To execute the production build of WASOR v4.9 directly in any modern executor:
+To execute the github version of W-A-S-O-R(We Are Skidding On Roblox) you must have a roblox executor to start
 
 ```lua
 if identifyexecutor then
@@ -41,85 +39,6 @@ if identifyexecutor then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/refs/heads/main/github_loader.lua", true))()
 end
 ```
-
----
-
-## 🛠️ Features & Module Breakdown
-
-WASOR is organized into **6 core modular divisions** containing **107 specialized routines**:
-
-### ⚔️ Combat Operations (12 Modules)
-* **Aimbot** — Smooth camera target tracking with configurable FOV circles, raycast line-of-sight verification, and bone selection (`Head`, `Torso`, `Random`).
-* **Aimlock** — Direct camera lock-on with instant CFrame snapping without smoothing latency.
-* **Silent Aim** — Hooks raycasts and mouse target queries to redirect weapon trajectories without moving the viewport.
-* **AutoPlayBot** — Autonomous pathfinding AI with obstacle navigation and auto-engagement (custom-tailored for Arsenal).
-* **AutoClicker** — Virtual input loop emulating mouse clicks with customizable CPS rates (1–50+ clicks/sec).
-* **Triggerbot** — Microsecond reaction loop firing weapons the instant an enemy enters the crosshair.
-* **Kill Aura** — Spatial proximity damage generator applying weapon hitboxes across surrounding entities.
-* **Fling Player & Fling All** — High-torque angular velocity transfer catapulting targets out of bounds.
-* **Walkfling** — Gyro-stabilized physical momentum launcher triggering on body contact.
-* **God Mode & No Recoil** — Client-side death suppression and camera recoil spring dampening.
-
-### 👤 Player & Identity (16 Modules)
-* **PlayerChecker** — Advanced account intelligence suite displaying account age, RAP, inventory valuation, badges, country, and active executor detection.
-* **Anti-AFK** — Intercepts `LocalPlayer.Idled` to bypass Roblox's 20-minute idle disconnect barrier.
-* **Auto-Rejoin** — Watchdog monitoring CoreGui prompt errors (268, 277) to automatically reconnect.
-* **Click Teleport** — Instantly warps the character's CFrame to the cursor's world position on click.
-* **Click Delete** — Remove local map obstructions, walls, and collision meshes with `Ctrl + Click`.
-* **Spectate & FreeCam** — Smooth scriptable 6-DOF camera mode with velocity dampening to inspect other players without moving your avatar.
-* **Force Shift Lock** — Bypasses experience developer restrictions to enable mouse-lock anywhere.
-* **Give BTools** — Instantiates client-side HopperBins (Move, Delete, Undo, Clone) in the local Backpack.
-* **Nametag Customizer & UI Spoof** — Client-side overhead billboard styling with neon gradients, plus UI text masking.
-* **Instant Respawn & Character Reset** — Clean state reset and rapid respawn triggers.
-* **Unlock Max Zoom** — Eliminates camera distance restrictions (`CameraMaxZoomDistance = math.huge`).
-
-### 🏃 Advanced Movement (23 Modules)
-* **Auto Bunnyhop** — Replicates CS 1.6 GoldSrc air acceleration, maintaining and compounding speed upon ground contact.
-* **Air Swim & Swim in Air** — Forces native swimming physics states in mid-air for free 3D traversal.
-* **Air Walk Platform** — Spawns an invisible dynamic platform beneath the avatar with elevation hotkeys.
-* **Wall Run & Climb** — Scale sheer vertical cliffs and sprint horizontally across wall surfaces.
-* **Fly & Fly Bypass** — Smooth free-flight system with discretized physics pulses to evade strict anticheats.
-* **Ghost Mode** — Noclip gliding mode with transparent avatar rendering and planar movement.
-* **Spider Climb** — Converts forward running velocity into vertical climbing traction.
-* **Infinite Jump & Jump Force** — Unlimited consecutive mid-air jumps with configurable jump power multipliers.
-* **Water Walk (Jesus Mode)** — Generates dynamic surface colliders over terrain water (optimized for Isle).
-* **Noclip** — Disables `CanCollide` across all character limbs during `RunService.Stepped`.
-* **Player Spin & Spinbot** — High-frequency yaw axis rotation confusing enemy aim tracking.
-* **Ultra Instinct** — Autonomous proximity scanner triggering evasive micro-teleports against incoming threats.
-* **Gravity, Anti-Sit & Anti-Anchor** — Total gravitational control, seat trap prevention, and local anchor overrides.
-
-### 👁️ Visuals, ESP & HUD (24 Modules)
-* **Comprehensive ESP** — 2D Bounding Boxes, Tracers, Player Names, Distance, and Health bars via Drawing API.
-* **Chams & Wallhacks** — Native `Highlight` instances with customizable fill, outline, and `AlwaysOnTop` depth modes.
-* **Line of Sight Lasers** — Projects 3D laser vectors showing the exact gaze and aiming angles of opponents.
-* **Skeleton ESP** — Real-time kinematic bone articulation lines for R6 and R15 avatar rigs.
-* **Radar Minimap HUD** — Orthographic compass-oriented radar display displaying nearby entities.
-* **Minecraft PE Paper Doll** — Authentic Bedrock/PE style HUD doll mirroring live walking, jumping, and swimming animations.
-* **ESP Preview Studio** — Real-time 3D ViewportFrame for calibrating styles, colors, and offsets before deployment.
-* **Map X-Ray & Clear Vision** — Structural transparency overrides combined with total atmospheric fog removal.
-* **Fullbright & Time Cycle** — Permanent daylight illumination with custom ambient color shift controls.
-* **Lag Reducer & 3D Rendering Toggle** — GPU saving modes reducing texture budgets and suspending 3D passes for background farm efficiency.
-
-### 🌍 World Manipulation (13 Modules)
-* **Anti-Fling Guardian** — Cancels foreign angular velocities and neutralizes violent player collisions.
-* **Anti-Void Net** — Safety net repositioning the avatar to safe coordinates prior to falling below the kill boundary.
-* **Proximity Prompt** — Auto-trigger prompts, instant interaction (`HoldDuration = 0`), and global bulk activation.
-* **Fire Touchinterests** — Simulates physical contact with badges, checkpoints, and rewards without walking to them.
-* **Fire ClickDetectors** — Triggers buttons, levers, and switches across the entire map simultaneously.
-* **Destroy Killbricks & Seats** — Client-side purges of lethal lava bricks, lasers, and unwanted seats.
-* **Tool Magnet** — Attracts and claims all loose tools and items on the map straight to your character.
-* **Waypoint Warp** — Coordinate memory system for saving and recalling precise spatial locations.
-
-### ⚙️ Utilities & Diagnostics (12 Modules)
-* **Network Chat Hub** — Inter-server global chat network connecting WASOR users across different games.
-* **Chat Logger** — Archives all local, team, and whispered server communications into an exportable buffer.
-* **Console Viewer** — In-game dark terminal displaying live `LogService` prints, warnings, and errors.
-* **External ScriptHub** — Instant one-click execution catalog for popular community tooling (Dark Dex, RemoteSpy, IY).
-* **UNC Compliance Audits** — Rigorous automated benchmark testing executor environment API compatibility.
-* **Place Archiver (`saveinstance`)** — Exports the current map hierarchy, geometry, and local scripts into a `.rbxl` file.
-* **Favorites & Server Manager** — Server hopping, fast rejoin via `JobId`, and bookmarking system.
-* **Keybind Dispatcher & Module Masking** — High-priority input event mapping and customizable button visibility modes.
-
 ---
 
 ## 📂 Project Architecture
@@ -133,22 +52,18 @@ WASOR/
 │   ├── Config.lua           # Persistent JSON storage handler
 │   ├── Logger.lua           # Chat & system output interceptor
 │   ├── Cleanup.lua          # Garbage collection & Drawing disposal
-│   ├── UI.lua               # Custom dark glassmorphic interface engine
+│   ├── UI.lua              
 │   └── Runtime.lua          # Heartbeat, Stepped & RenderStepped loops
-├── Modules/                 # Modular functional domains
+├── Modules/                 # Current modules
 │   ├── Combat/              # Targeting, weapon mechanics & damage
 │   ├── Player/              # Character state & identity spoofing
 │   ├── Movement/            # Kinematics, flight & physics overrides
 │   ├── Render/              # Drawing API ESP & visual enhancements
 │   ├── World/               # Environment triggers & world interaction
 │   └── Misc/                # Network tools, console & diagnostics
-├── docs/                    # Official Vercel documentation site
-│   ├── index.html           # Full 10-language documentation app
-│   └── assets/              # High-speed animated visual assets
-├── init.lua                 # Primary initialization gateway
-├── dev_loader.lua           # Local workspace testing loader
-├── github_loader.lua        # Production remote GitHub loader
-└── vercel.json              # Vercel deployment & routing config
+├── dev_loader.lua           # Local Testing Loader
+├── github_loader.lua        # Loader
+└── init.lua                 # Primary initialization
 ```
 
 ---
@@ -165,46 +80,7 @@ To test and modify WASOR source code locally:
    ```lua
    loadstring(readfile("WASOR/dev_loader.lua"))()
    ```
-
----
-
-## 📝 Release Notes & Changelogs
-
-### ⚡ WASOR v4.9 (Current)
-> **WASOR V4.9** Fixed the DisplayDistanceType runtime crash on character spawn, added the PlayerChecker account inspector suite, overhauled ChatHub with 16 executor badges, interactive message replies with Discord-style quote bubbles, click-to-ping mentions, custom Bao stickers, live WASOR theme matching, and integrated BetterFilter for smart asterisk censorship with separate repository support.
-
-* **DisplayDistanceType Fix**: Resolved the runtime crash on character spawn (`Core/Utils.lua` and `Core/Runtime.lua`).
-* **PlayerChecker Integration**: Added the Account Inspector suite (`Modules/Player/PlayerChecker.lua`) for full account diagnostics, valuation, and presence monitoring.
-* **ChatHub v4.9 Overhaul**:
-  - 16 custom executor identity recognition badges (Volt, Potassium, Wave, SynapseZ, Lucid, Lynx, Real, Madium, Atomic, Isaeva, Volcano, Athena, Velocity, SirHurt, Xeno, Solara).
-  - Interactive Message Reply system (`↩ Reply`) with live preview banner, cancel option, and Discord-style quote bubbles.
-  - Custom Bao sticker (`🥟`) exclusive picker & 85x85 image rendering.
-  - Click-to-ping (@mention) directly from chat sender names and user list.
-  - Dynamic zero-latency WASOR theme color synchronization (`_G.VoidHub.State.currentThemeColor`).
-* **BetterFilter Engine**: Multilingual keyword and slur censorship with asterisk masking, false-positive protection, and decoupled remote repository support (`_G.BETTER_FILTER_URL`).
-
-### ⚡ WASOR v4.8
-> **WASOR V4.8** Added open and close animations for module drawers and when hiding the UI with the bind, fixed drawer visual glitches and the extra empty space in ScriptHub, fixed ChatHub nil crashes, and updated FeEmotes and AnimationPicker to save emote names and let you paste custom IDs straight from your clipboard.
-
-* **Smooth UI Animations**: Added fluid slide animations for module option drawers and overall UI visibility toggling.
-* **1-Click Module Drawer Opening**: Fixed option drawers requiring multiple clicks to expand; non-toggle utility modules (ScriptHub, Settings, Fun, Console Viewer) now open immediately upon single-click, with double-click support on toggle modules.
-* **Drawer Layout Stabilization**: Eliminated frame clipping and height collapse by retaining calculated dimensions upon tween completion.
-* **Dual-Injection & ESP Hardening**: Added top-level mutex locks and teleport reinjection debounces preventing multiple overlapping UI instances and Drawing API disposal crashes.
-* **ScriptHub & Fun Geometry Clamping**: Removed unused blank padding and dead vertical space across floating and drawer tool windows.
-* **ChatHub Critical Fixes**: Resolved `:167: attempt to index nil with 'green'` badge coloring and font assignment crashes.
-* **CompatibleScripts Upgrades**: FeEmotes & AnimationPicker now persist custom emote names, support direct clipboard asset ID pasting, and direct dance animation playback.
-
-### ⚡ WASOR v4.7
-* Comprehensive UI performance optimization and memory leak mitigation across rendering routines.
-* Stabilized modular loader lifecycle and initial injection hooks.
-
----
-
-## 🌐 Community & Links
-
-* 🔗 **Live Documentation**: [https://wasordocumentation.vercel.app/](https://wasordocumentation.vercel.app/#intro)
-* 🐙 **GitHub Repository**: [https://github.com/VenezzaX/WASORCLASSIC](https://github.com/VenezzaX/WASORCLASSIC)
-
+   
 ---
 
 <div align="center">
