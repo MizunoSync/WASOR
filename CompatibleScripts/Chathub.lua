@@ -1196,7 +1196,6 @@ end
 
 local TextBox = Instance.new("TextBox")
 local SendBtn = Instance.new("TextButton")
-local BaoBtn = Instance.new("ImageButton")
 do
     local bar = Instance.new("ScrollingFrame")
     bar.Size = UDim2.new(1, 0, 0, 24)
@@ -1213,13 +1212,18 @@ do
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Padding = UDim.new(0, 4)
 
-    -- Bao sticker shortcut in the emoji bar
+    -- Bao sticker exclusively in the picker bar
     local baoBarBtn = Instance.new("ImageButton")
-    baoBarBtn.Size = UDim2.new(0, 26, 0, 22)
+    baoBarBtn.Size = UDim2.new(0, 28, 0, 22)
     baoBarBtn.BackgroundColor3 = HubTheme.cardBg
     baoBarBtn.BorderSizePixel = 0
+    baoBarBtn.AutoButtonColor = true
     baoBarBtn.Parent = bar
     Instance.new("UICorner", baoBarBtn).CornerRadius = UDim.new(0, 4)
+    local baoBStroke = Instance.new("UIStroke", baoBarBtn)
+    baoBStroke.Color = Color3.fromRGB(50, 50, 60)
+    baoBStroke.Thickness = 1
+
     local baoBarAsset = getBaoStickerAsset()
     if baoBarAsset then
         baoBarBtn.Image = baoBarAsset
@@ -1228,10 +1232,26 @@ do
         baoBarLbl.Size = UDim2.new(1, 0, 1, 0)
         baoBarLbl.BackgroundTransparency = 1
         baoBarLbl.Text = "🥟"
-        baoBarLbl.TextSize = 13
+        baoBarLbl.TextSize = 14
     end
+
+    baoBarBtn.MouseEnter:Connect(function()
+        baoBStroke.Color = HubTheme.accent
+        baoBarBtn.BackgroundColor3 = HubTheme.cardHover or Color3.fromRGB(40, 40, 50)
+    end)
+    baoBarBtn.MouseLeave:Connect(function()
+        baoBStroke.Color = Color3.fromRGB(50, 50, 60)
+        baoBarBtn.BackgroundColor3 = HubTheme.cardBg
+    end)
+
     baoBarBtn.MouseButton1Click:Connect(function()
-        sendChatMessage("[sticker:bao]")
+        if TextBox.Text == "" then
+            sendChatMessage("[sticker:bao]")
+        else
+            TextBox.Text = TextBox.Text .. "[sticker:bao] "
+            TextBox:CaptureFocus()
+            pcall(function() TextBox.CursorPosition = #TextBox.Text + 1 end)
+        end
     end)
 
     local emojis = {"😀", "😂", "🔥", "❤️", "💀", "👑", "🚀", "👍", "🎮", "⚡", "👋", "🎉", "✨", "👀", "💯"}
@@ -1255,8 +1275,9 @@ do
     inputC.BackgroundTransparency = 1
     inputC.Parent = ChatView
 
-    -- TextBox positioned with room for BaoBtn and SendBtn
-    TextBox.Size = UDim2.new(1, -126, 1, 0)
+    -- TextBox takes clean full width up to the Send button
+    TextBox.Size = UDim2.new(1, -86, 1, 0)
+    TextBox.Position = UDim2.new(0, 0, 0, 0)
     TextBox.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
     TextBox.TextColor3 = Color3.fromRGB(242, 243, 245)
     TextBox.PlaceholderColor3 = Color3.fromRGB(120, 125, 134)
@@ -1281,44 +1302,6 @@ do
         if enterPressed then
             handleSendMessage()
         end
-    end)
-
-    -- Dedicated Bao Sticker button inside input bar
-    BaoBtn.Name = "BaoStickerBtn"
-    BaoBtn.Size = UDim2.new(0, 36, 1, 0)
-    BaoBtn.Position = UDim2.new(1, -120, 0, 0)
-    BaoBtn.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
-    BaoBtn.BorderSizePixel = 0
-    BaoBtn.AutoButtonColor = true
-    BaoBtn.ZIndex = 5
-    BaoBtn.Parent = inputC
-    Instance.new("UICorner", BaoBtn).CornerRadius = UDim.new(0, 4)
-    local baoStroke = Instance.new("UIStroke", BaoBtn)
-    baoStroke.Color = Color3.fromRGB(50, 50, 60)
-    baoStroke.Thickness = 1
-
-    local baoAsset = getBaoStickerAsset()
-    if baoAsset then
-        BaoBtn.Image = baoAsset
-    else
-        local baoLbl = Instance.new("TextLabel", BaoBtn)
-        baoLbl.Size = UDim2.new(1, 0, 1, 0)
-        baoLbl.BackgroundTransparency = 1
-        baoLbl.Text = "🥟"
-        baoLbl.TextSize = 16
-    end
-
-    BaoBtn.MouseEnter:Connect(function()
-        baoStroke.Color = HubTheme.accent
-        BaoBtn.BackgroundColor3 = Color3.fromRGB(36, 36, 46)
-    end)
-    BaoBtn.MouseLeave:Connect(function()
-        baoStroke.Color = Color3.fromRGB(50, 50, 60)
-        BaoBtn.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
-    end)
-
-    BaoBtn.MouseButton1Click:Connect(function()
-        sendChatMessage("[sticker:bao]")
     end)
 
     -- Highly visible Send button with bold styling and contrast
@@ -2625,13 +2608,14 @@ local function createUserRow(user, online)
     NameContLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     NameContLayout.Padding = UDim.new(0, 6)
 
-    local NameLabel = Instance.new("TextLabel")
+    local NameLabel = Instance.new("TextButton")
     NameLabel.Size = UDim2.new(0, 0, 1, 0)
     NameLabel.AutomaticSize = Enum.AutomaticSize.X
     NameLabel.BackgroundTransparency = 1
     NameLabel.Font = HubTheme.fontSemibold
     NameLabel.TextSize = 13
     NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    NameLabel.AutoButtonColor = true
 
     if user.is_admin == true then
         NameLabel.TextColor3 = Color3.fromRGB(255, 235, 59)
@@ -2647,6 +2631,21 @@ local function createUserRow(user, online)
         NameLabel.Text = uName
     end
     NameLabel.Parent = NameContainer
+
+    NameLabel.MouseButton1Click:Connect(function()
+        selectTab(currentTab == "users" and "global" or currentTab)
+        local mention = "@" .. uName .. " "
+        if string.find(TextBox.Text, mention, 1, true) == nil then
+            if TextBox.Text == "" or string.sub(TextBox.Text, -1) == " " then
+                TextBox.Text = TextBox.Text .. mention
+            else
+                TextBox.Text = TextBox.Text .. " " .. mention
+            end
+        end
+        TextBox:CaptureFocus()
+        pcall(function() TextBox.CursorPosition = #TextBox.Text + 1 end)
+        showToast("Mentioning @" .. uName, HubTheme.accent)
+    end)
 
     local RowExecBadge = Instance.new("Frame")
     RowExecBadge.Size = UDim2.new(0, 0, 0, 16)
@@ -3049,22 +3048,43 @@ local function refreshChatUI(messages, adminPool)
         NameBtn.Font = HubTheme.fontBold
         NameBtn.TextSize = 12
         NameBtn.TextXAlignment = Enum.TextXAlignment.Left
+        NameBtn.ZIndex = 4
+        NameBtn.AutoButtonColor = true
 
+        local originalNameCol = Color3.fromRGB(242, 243, 245)
         if adminPool[uName] then
-            NameBtn.TextColor3 = Color3.fromRGB(255, 235, 59)
+            originalNameCol = Color3.fromRGB(255, 235, 59)
             NameBtn.Text = "👑 " .. uName
         elseif uName == Username then
-            NameBtn.TextColor3 = HubTheme.accent
+            originalNameCol = HubTheme.accent
             NameBtn.Text = uName
         else
-            NameBtn.TextColor3 = Color3.fromRGB(242, 243, 245)
             NameBtn.Text = uName
         end
+        NameBtn.TextColor3 = originalNameCol
         NameBtn.Parent = HeaderLine
 
+        NameBtn.MouseEnter:Connect(function()
+            NameBtn.TextColor3 = HubTheme.accent
+        end)
+        NameBtn.MouseLeave:Connect(function()
+            NameBtn.TextColor3 = originalNameCol
+        end)
+
         NameBtn.MouseButton1Click:Connect(function()
-            TextBox.Text = TextBox.Text .. "@" .. uName .. " "
+            local mention = "@" .. uName .. " "
+            if string.find(TextBox.Text, mention, 1, true) == nil then
+                if TextBox.Text == "" or string.sub(TextBox.Text, -1) == " " then
+                    TextBox.Text = TextBox.Text .. mention
+                else
+                    TextBox.Text = TextBox.Text .. " " .. mention
+                end
+            end
             TextBox:CaptureFocus()
+            pcall(function()
+                TextBox.CursorPosition = #TextBox.Text + 1
+            end)
+            showToast("Mentioning @" .. uName, HubTheme.accent)
         end)
 
         local ChatExecBadge = Instance.new("Frame")
@@ -3099,24 +3119,28 @@ local function refreshChatUI(messages, adminPool)
 
         local DelBtn = Instance.new("TextButton")
         DelBtn.LayoutOrder = 4
-        DelBtn.Size = UDim2.new(0, 20, 0, 16)
+        DelBtn.Size = UDim2.new(0, 18, 0, 16)
         DelBtn.BackgroundColor3 = Color3.fromRGB(36, 20, 24)
-        DelBtn.BackgroundTransparency = 0.4
+        DelBtn.BackgroundTransparency = 0.3
         DelBtn.BorderSizePixel = 0
         DelBtn.Font = HubTheme.fontBold
-        DelBtn.TextSize = 10
+        DelBtn.TextSize = 11
         DelBtn.TextColor3 = Color3.fromRGB(240, 96, 108)
-        DelBtn.Text = "✕"
+        DelBtn.Text = "X"
+        DelBtn.ZIndex = 5
+        DelBtn.AutoButtonColor = true
         DelBtn.Parent = HeaderLine
         Instance.new("UICorner", DelBtn).CornerRadius = UDim.new(0, 3)
 
         DelBtn.MouseEnter:Connect(function()
             DelBtn.BackgroundColor3 = Color3.fromRGB(220, 38, 38)
             DelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            DelBtn.BackgroundTransparency = 0
         end)
         DelBtn.MouseLeave:Connect(function()
             DelBtn.BackgroundColor3 = Color3.fromRGB(36, 20, 24)
             DelBtn.TextColor3 = Color3.fromRGB(240, 96, 108)
+            DelBtn.BackgroundTransparency = 0.3
         end)
 
         DelBtn.MouseButton1Click:Connect(function()
@@ -3194,6 +3218,12 @@ local function refreshChatUI(messages, adminPool)
             MsgText.Parent = ContentFrame
         end
     end
+
+    task.defer(function()
+        if ChatScrolling and ChatScrolling.Parent then
+            ChatScrolling.CanvasPosition = Vector2.new(0, math.max(0, ChatScrolling.CanvasSize.Y.Offset - ChatScrolling.AbsoluteSize.Y))
+        end
+    end)
 end
 
 local function updatePresence()
@@ -3904,11 +3934,7 @@ local function syncWithWasorTheme()
         if st then st.Color = c1 end
     end
 
-    -- 5. Bao sticker button stroke
-    if BaoBtn and BaoBtn.Parent then
-        local bs = BaoBtn:FindFirstChildOfClass("UIStroke")
-        if bs then bs.Color = c1 end
-    end
+
 
     -- 6. Active Tab Lines
     if TabChatLine and TabChatLine.Parent and currentView == "chat" then
