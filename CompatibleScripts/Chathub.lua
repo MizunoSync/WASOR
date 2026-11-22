@@ -45,6 +45,14 @@ local HubTheme = nil
 local SUPABASE_URL = "https://nlavwcbdqcmoqmojraeu.supabase.co"
 local SUPABASE_KEY = "sb_publishable__HC4Z5_wV2Daf8o-mgt89Q_z_JH2cif"
 
+--------------------------------------------------------------------------------
+-- BETTER FILTER CONFIGURATION
+-- You can set _G.BETTER_FILTER_URL or edit this URL to host Betterfilter.lua
+-- in ANY separate repository (e.g. secondary GitHub repo, Gist, Pastebin).
+--------------------------------------------------------------------------------
+local BETTER_FILTER_URL = _G.BETTER_FILTER_URL or "https://raw.githubusercontent.com/MizunoSync/WASOR/main/Betterfilter.lua"
+local BETTER_FILTER_CACHE_FILE = "Betterfilter.lua"
+
 local KEY_FILENAME = "admin_key.txt"
 local function loadLocalAdminKey()
     if isfile and readfile and isfile(KEY_FILENAME) then
@@ -392,8 +400,110 @@ table.sort(FilterWords, function(a, b)
     return #a > #b
 end)
 
+--------------------------------------------------------------------------------
+-- BETTER FILTER INTEGRATION (MODULAR / SEPARATE REPO SUPPORT)
+--------------------------------------------------------------------------------
+local BetterFilter = nil
+
+local function loadBetterFilter()
+    if BetterFilter and type(BetterFilter.Censor) == "function" then
+        return BetterFilter
+    end
+    if _G.BetterFilter and type(_G.BetterFilter.Censor) == "function" then
+        BetterFilter = _G.BetterFilter
+        return BetterFilter
+    end
+
+    local function runFilterScript(src)
+        if not src or type(src) ~= "string" or #src < 10 then return nil end
+        local fn = loadstring(src)
+        if fn then
+            local ok, res = pcall(fn)
+            if ok and type(res) == "table" and type(res.Censor) == "function" then
+                return res
+            elseif ok and _G.BetterFilter and type(_G.BetterFilter.Censor) == "function" then
+                return _G.BetterFilter
+            end
+        end
+        return nil
+    end
+
+    -- 1. Check local files in executor workspace
+    local localCandidates = {
+        BETTER_FILTER_CACHE_FILE,
+        "WASOR/Betterfilter.lua",
+        "CompatibleScripts/Betterfilter.lua"
+    }
+    for _, path in ipairs(localCandidates) do
+        if isfile and readfile and isfile(path) then
+            local fileContent = nil
+            pcall(function() fileContent = readfile(path) end)
+            local filterObj = runFilterScript(fileContent)
+            if filterObj then
+                BetterFilter = filterObj
+                _G.BetterFilter = filterObj
+                return BetterFilter
+            end
+        end
+    end
+
+    -- 2. Fetch from remote repository URL (GitHub raw, Gist, etc.)
+    local fetchedCode = nil
+    local req = (syn and syn.request) or (http and http.request) or http_request or request
+    if req and type(BETTER_FILTER_URL) == "string" and BETTER_FILTER_URL ~= "" then
+        pcall(function()
+            local resp = req({
+                Url = BETTER_FILTER_URL,
+                Method = "GET",
+                Headers = { ["Cache-Control"] = "no-cache" }
+            })
+            if resp and (resp.StatusCode == 200 or resp.Status == 200) and resp.Body then
+                fetchedCode = resp.Body
+            end
+        end)
+    end
+
+    if not fetchedCode and game and game.HttpGet and type(BETTER_FILTER_URL) == "string" and BETTER_FILTER_URL ~= "" then
+        pcall(function()
+            fetchedCode = game:HttpGet(BETTER_FILTER_URL)
+        end)
+    end
+
+    if fetchedCode then
+        local filterObj = runFilterScript(fetchedCode)
+        if filterObj then
+            BetterFilter = filterObj
+            _G.BetterFilter = filterObj
+            if writefile then
+                pcall(writefile, BETTER_FILTER_CACHE_FILE, fetchedCode)
+            end
+            return BetterFilter
+        end
+    end
+
+    return nil
+end
+
+task.spawn(function()
+    loadBetterFilter()
+end)
+
 local function filterProfanityAndSlurs(text)
     if not text or type(text) ~= "string" then return "" end
+
+    if BetterFilter and type(BetterFilter.Censor) == "function" then
+        local ok, censored = pcall(BetterFilter.Censor, text)
+        if ok and censored then
+            return censored
+        end
+    elseif _G.BetterFilter and type(_G.BetterFilter.Censor) == "function" then
+        BetterFilter = _G.BetterFilter
+        local ok, censored = pcall(BetterFilter.Censor, text)
+        if ok and censored then
+            return censored
+        end
+    end
+
     local filtered = text
     for _, pattern in ipairs(FilterWords) do
         local pLen = #pattern
