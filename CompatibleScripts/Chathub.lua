@@ -4057,7 +4057,6 @@ local function syncWithWasorTheme()
     return true
 end
 
--- Hook into WASOR theme toggles if available for zero-latency sync
 pcall(function()
     local currentVH = _G.VoidHub
     if currentVH and currentVH.UI and type(currentVH.UI.themeToggles) == "table" then
@@ -4067,7 +4066,6 @@ pcall(function()
     end
 end)
 
--- Continuous watcher loop to ensure dynamic sync regardless of load order
 task.spawn(function()
     local lastSyncedCol = nil
     while running do
@@ -4085,7 +4083,6 @@ task.spawn(function()
     end
 end)
 
--- Initial sync attempt
 pcall(syncWithWasorTheme)
 
 _G.ChatHub_Loaded = true
