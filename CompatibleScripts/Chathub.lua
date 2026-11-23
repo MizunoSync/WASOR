@@ -98,6 +98,7 @@ local isRenderingOfflineBatch = false
 local OFFLINE_CHUNK_SIZE = 25
 
 local function trackUserExecutor(uname, execName)
+    execName = sanitizeExecutor(execName)
     if not uname or uname == "" or not execName or execName == "" then return end
     if not userExecutorsHistory[uname] then
         userExecutorsHistory[uname] = {}
@@ -160,56 +161,106 @@ task.spawn(function()
     end)
 end)
 
+local KNOWN_EXECUTORS = {
+    { pattern = "potassium", official = "Potassium" },
+    { pattern = "volt", official = "Volt" },
+    { pattern = "wave", official = "Wave" },
+    { pattern = "synapse", official = "SynapseZ" },
+    { pattern = "solara", official = "Solara" },
+    { pattern = "lucid", official = "Lucid" },
+    { pattern = "lynx", official = "Lynx" },
+    { pattern = "real", official = "Real" },
+    { pattern = "madium", official = "Madium" },
+    { pattern = "atomic", official = "Atomic" },
+    { pattern = "isaeva", official = "Isaeva" },
+    { pattern = "volcano", official = "Volcano" },
+    { pattern = "athena", official = "Athena" },
+    { pattern = "velocity", official = "Velocity" },
+    { pattern = "sirhurt", official = "SirHurt" },
+    { pattern = "xeno", official = "Xeno" },
+    { pattern = "delta", official = "Delta" },
+    { pattern = "codex", official = "Codex" },
+    { pattern = "celery", official = "Celery" },
+    { pattern = "fluxus", official = "Fluxus" },
+    { pattern = "krnl", official = "KRNL" },
+    { pattern = "electron", official = "Electron" },
+    { pattern = "wearedevs", official = "WeAreDevs" },
+    { pattern = "wrd", official = "WeAreDevs" }
+}
+
+local function sanitizeExecutor(rawName, fallback)
+    fallback = fallback or "Exec"
+    if not rawName or type(rawName) ~= "string" or rawName == "" then
+        return fallback
+    end
+
+    local low = string.lower(rawName)
+    for _, item in ipairs(KNOWN_EXECUTORS) do
+        if string.find(low, item.pattern, 1, true) then
+            return item.official
+        end
+    end
+
+    return fallback
+end
+
 local function getExecutor()
-    local name = nil
+    local raw = nil
     if type(identifyexecutor) == "function" then
         local ok, res = pcall(identifyexecutor)
         if ok and res and type(res) == "string" and res ~= "" then
-            name = res
+            raw = res
         end
     end
-    if not name and type(getexecutorname) == "function" then
+    if not raw and type(getexecutorname) == "function" then
         local ok, res = pcall(getexecutorname)
         if ok and res and type(res) == "string" and res ~= "" then
-            name = res
+            raw = res
         end
     end
-    if not name and type(whoname) == "function" then
+    if not raw and type(whoname) == "function" then
         local ok, res = pcall(whoname)
         if ok and res and type(res) == "string" and res ~= "" then
-            name = res
+            raw = res
         end
     end
 
+    -- 1. If raw identity contains a known official executor, extract ONLY the real official name
+    -- (stripping any custom hub tampering like "ToxHub | Potassium" -> "Potassium")
+    if raw and type(raw) == "string" then
+        local low = string.lower(raw)
+        for _, item in ipairs(KNOWN_EXECUTORS) do
+            if string.find(low, item.pattern, 1, true) then
+                return item.official
+            end
+        end
+    end
+
+    -- 2. Fallback to direct environment global verification
     local genv = (type(getgenv) == "function" and getgenv()) or _G
-    if not name or name == "Unknown" or name == "Potassium" then
-        if genv.volt or genv.VOLT or genv.Volt then name = "Volt"
-        elseif genv.potassium or genv.POTASSIUM or genv.Potassium then name = "Potassium"
-        elseif genv.wave or genv.WAVE or genv.Wave then name = "Wave"
-        elseif genv.SynapseZ or genv.synapsez or genv.Synapse_Z or genv.syn_z then name = "SynapseZ"
-        elseif genv.lucid or genv.LUCID or genv.Lucid then name = "Lucid"
-        elseif genv.lynx or genv.LYNX or genv.Lynx then name = "Lynx"
-        elseif genv.real or genv.REAL or genv.Real then name = "Real"
-        elseif genv.madium or genv.MADIUM or genv.Madium then name = "Madium"
-        elseif genv.atomic or genv.ATOMIC or genv.Atomic then name = "Atomic"
-        elseif genv.isaeva or genv.ISAEVA or genv.Isaeva then name = "Isaeva"
-        elseif genv.volcano or genv.VOLCANO or genv.Volcano then name = "Volcano"
-        elseif genv.athena or genv.ATHENA or genv.Athena then name = "Athena"
-        elseif genv.velocity or genv.VELOCITY or genv.Velocity then name = "Velocity"
-        elseif genv.SIRHURT_V4 or genv.sirhurt or genv.SirHurt then name = "SirHurt"
-        elseif genv.xeno or genv.XENO or genv.Xeno then name = "Xeno"
-        elseif genv.solara or genv.SOLARA or genv.Solara then name = "Solara"
-        elseif genv.delta or genv.DELTA then name = "Delta"
-        elseif genv.codex or genv.CODEX then name = "Codex"
-        elseif genv.celery or genv.CELERY then name = "Celery"
-        elseif genv.fluxus or genv.FLUXUS then name = "Fluxus"
-        end
+    if genv.volt or genv.VOLT or genv.Volt then return "Volt"
+    elseif genv.potassium or genv.POTASSIUM or genv.Potassium then return "Potassium"
+    elseif genv.wave or genv.WAVE or genv.Wave then return "Wave"
+    elseif genv.SynapseZ or genv.synapsez or genv.Synapse_Z or genv.syn_z then return "SynapseZ"
+    elseif genv.lucid or genv.LUCID or genv.Lucid then return "Lucid"
+    elseif genv.lynx or genv.LYNX or genv.Lynx then return "Lynx"
+    elseif genv.real or genv.REAL or genv.Real then return "Real"
+    elseif genv.madium or genv.MADIUM or genv.Madium then return "Madium"
+    elseif genv.atomic or genv.ATOMIC or genv.Atomic then return "Atomic"
+    elseif genv.isaeva or genv.ISAEVA or genv.Isaeva then return "Isaeva"
+    elseif genv.volcano or genv.VOLCANO or genv.Volcano then return "Volcano"
+    elseif genv.athena or genv.ATHENA or genv.Athena then return "Athena"
+    elseif genv.velocity or genv.VELOCITY or genv.Velocity then return "Velocity"
+    elseif genv.SIRHURT_V4 or genv.sirhurt or genv.SirHurt then return "SirHurt"
+    elseif genv.xeno or genv.XENO or genv.Xeno then return "Xeno"
+    elseif genv.solara or genv.SOLARA or genv.Solara then return "Solara"
+    elseif genv.delta or genv.DELTA then return "Delta"
+    elseif genv.codex or genv.CODEX then return "Codex"
+    elseif genv.celery or genv.CELERY then return "Celery"
+    elseif genv.fluxus or genv.FLUXUS then return "Fluxus"
     end
 
-    if not name or name == "" then
-        name = "Potassium"
-    end
-    return name
+    return "Potassium"
 end
 local myExecutor = getExecutor()
 loadLocalExecHistory()
@@ -1827,7 +1878,7 @@ local function refreshHistoryUI(historyData, usersData)
 
     for _, item in ipairs(entries) do
         local uName = tostring(item.username or "Unknown")
-        local uExec = tostring(item.executor or "Unknown")
+        local uExec = sanitizeExecutor(tostring(item.executor or "Unknown"))
         local uGame = tostring(item.current_game or "Roblox")
         local uTime = formatIsoToTime(item.logged_at)
 
@@ -2562,7 +2613,7 @@ openUserProfile = function(user)
     local uId = tonumber(user.user_id) or 0
     local isOnline = isUserOnline(user.updated_at)
     local inSameServer = (user.job_id == JobId)
-    local uExec = tostring(user.executor or "Exec")
+    local uExec = sanitizeExecutor(tostring(user.executor or "Exec"))
 
     ProfileAvatar.Image = getAvatarThumb(uId, uName)
     ProfileName.Text = uName
@@ -2739,7 +2790,7 @@ end
 local function createUserRow(user, online)
     local uName = tostring(user.username or "Unknown")
     local uId = tonumber(user.user_id) or 0
-    local uExec = tostring(user.executor or "Exec")
+    local uExec = sanitizeExecutor(tostring(user.executor or "Exec"))
     if uId > 0 then cachedUserIds[uName] = uId end
     cachedUserExecutors[uName] = uExec
 
@@ -3139,7 +3190,7 @@ local function refreshChatUI(messages, adminPool)
                 end
             end
         end
-        uExec = uExec or "Exec"
+        uExec = sanitizeExecutor(uExec)
 
         local MsgFrame = Instance.new("Frame")
         MsgFrame.Size = UDim2.new(1, 0, 0, 0)
@@ -3675,8 +3726,11 @@ fetchUsers = function(force)
             local users = allUsers
             for _, u in ipairs(users) do
                 if u.user_id then cachedUserIds[u.username] = u.user_id end
-                if u.executor then cachedUserExecutors[u.username] = u.executor end
-                if u.username and u.executor then trackUserExecutor(u.username, u.executor) end
+                if u.executor then
+                    local cleanEx = sanitizeExecutor(u.executor)
+                    cachedUserExecutors[u.username] = cleanEx
+                    if u.username then trackUserExecutor(u.username, cleanEx) end
+                end
                 if u.is_admin == true or u.is_sub_admin == true then
                     adminPool[u.username] = true
                 end
